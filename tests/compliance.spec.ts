@@ -41,7 +41,7 @@ test.describe("Compliance — legal pages accessible", () => {
     await page.goto("/terms");
     await dismissAgeGate(page);
     await expect(page.locator("main").first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: /terms/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /terms/i }).first()).toBeVisible();
   });
 
   test("game rules page loads", async ({ page }) => {
