@@ -2,7 +2,7 @@ import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
 
 // Market cards with watchlist buttons are on the homepage (/), confirmed via live app inspection.
-// aria-label on each star button: "Add to watchlist" (matches /watchlist/i pattern).
+// aria-label on each star button: "Add to watchlist" (matches /add to watchlist/i pattern).
 
 test.describe("Watchlist functionality — star/unstar flow", () => {
   test("markets listing displays watchlist star buttons on market cards", async ({ page }) => {
@@ -10,7 +10,7 @@ test.describe("Watchlist functionality — star/unstar flow", () => {
     await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible();
 
-    const starButtons = page.getByRole("button", { name: /watchlist/i });
+    const starButtons = page.getByRole("button", { name: /add to watchlist/i });
     await starButtons.first().waitFor({ state: "visible", timeout: 8000 });
     const starButtonCount = await starButtons.count();
     expect(starButtonCount).toBeGreaterThan(0);
@@ -20,7 +20,7 @@ test.describe("Watchlist functionality — star/unstar flow", () => {
     await page.goto("/");
     await dismissAgeGate(page);
 
-    const starButton = page.getByRole("button", { name: /watchlist/i }).first();
+    const starButton = page.getByRole("button", { name: /add to watchlist/i }).first();
     await expect(starButton).toBeVisible({ timeout: 8000 });
 
     const ariaPressedValue = await starButton.getAttribute("aria-pressed");
@@ -38,7 +38,7 @@ test.describe("Watchlist functionality — star/unstar flow", () => {
     await page.goto("/");
     await dismissAgeGate(page);
 
-    const starButton = page.getByRole("button", { name: /watchlist/i }).first();
+    const starButton = page.getByRole("button", { name: /add to watchlist/i }).first();
     await expect(starButton).toBeVisible({ timeout: 8000 });
 
     const starIcon = starButton.locator("svg");
@@ -49,19 +49,19 @@ test.describe("Watchlist functionality — star/unstar flow", () => {
     await page.goto("/");
     await dismissAgeGate(page);
 
-    const starButton = page.getByRole("button", { name: /watchlist/i }).first();
+    const starButton = page.getByRole("button", { name: /add to watchlist/i }).first();
     await expect(starButton).toBeVisible({ timeout: 8000 });
 
     const ariaLabel = await starButton.getAttribute("aria-label");
     expect(ariaLabel).toBeDefined();
-    expect(ariaLabel).toMatch(/watchlist/i);
+    expect(ariaLabel).toMatch(/add to watchlist/i);
   });
 
   test("market cards display star button alongside market information", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
 
-    const starButtons = page.getByRole("button", { name: /watchlist/i });
+    const starButtons = page.getByRole("button", { name: /add to watchlist/i });
     await starButtons.first().waitFor({ state: "visible", timeout: 8000 });
     const count = await starButtons.count();
     expect(count).toBeGreaterThanOrEqual(1);
@@ -74,7 +74,7 @@ test.describe("Watchlist functionality — star/unstar flow", () => {
     await page.goto("/");
     await dismissAgeGate(page);
 
-    const starButtons = page.getByRole("button", { name: /watchlist/i });
+    const starButtons = page.getByRole("button", { name: /add to watchlist/i });
     await starButtons.first().waitFor({ state: "visible", timeout: 8000 });
     const count = await starButtons.count();
     expect(count).toBeGreaterThan(0);
@@ -87,7 +87,7 @@ test.describe("Watchlist functionality — star/unstar flow", () => {
     await page.goto("/");
     await dismissAgeGate(page);
 
-    const starButton = page.getByRole("button", { name: /watchlist/i }).first();
+    const starButton = page.getByRole("button", { name: /add to watchlist/i }).first();
     await expect(starButton).toBeVisible({ timeout: 8000 });
 
     await starButton.focus();
@@ -99,7 +99,7 @@ test.describe("Watchlist functionality — star/unstar flow", () => {
     await page.goto("/");
     await dismissAgeGate(page);
 
-    const starButton = page.getByRole("button", { name: /watchlist/i }).first();
+    const starButton = page.getByRole("button", { name: /add to watchlist/i }).first();
     await expect(starButton).toBeVisible({ timeout: 8000 });
 
     const isDisableSupported = await starButton.evaluate(

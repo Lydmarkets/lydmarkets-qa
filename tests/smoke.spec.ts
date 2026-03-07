@@ -11,12 +11,14 @@ test.describe("Smoke tests — critical user flows", () => {
 
   test("login page renders BankID sign-in form", async ({ page }) => {
     await page.goto("/login");
+    await dismissAgeGate(page);
     await expect(page.getByText("Welcome back")).toBeVisible();
     await expect(page.getByRole("button", { name: /Sign in with BankID/i })).toBeVisible();
   });
 
   test("register page renders BankID account creation", async ({ page }) => {
     await page.goto("/register");
+    await dismissAgeGate(page);
     await expect(page.getByRole("heading", { name: /create an account/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /Start BankID/i })).toBeVisible();
   });
@@ -24,7 +26,7 @@ test.describe("Smoke tests — critical user flows", () => {
   test("markets page loads", async ({ page }) => {
     await page.goto("/markets");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("search page loads and accepts input", async ({ page }) => {
@@ -33,19 +35,19 @@ test.describe("Smoke tests — critical user flows", () => {
     const searchInput = page.getByPlaceholder(/search/i).first();
     await expect(searchInput).toBeVisible();
     await searchInput.fill("test");
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("leaderboard page loads", async ({ page }) => {
     await page.goto("/leaderboard");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("how it works page loads", async ({ page }) => {
     await page.goto("/how-it-works");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("404 page for unknown routes", async ({ page }) => {
