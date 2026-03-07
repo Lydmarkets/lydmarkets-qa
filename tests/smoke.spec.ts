@@ -1,49 +1,50 @@
 import { test, expect } from "../fixtures/base";
+import { dismissAgeGate } from "../helpers/age-gate";
 
 test.describe("Smoke tests — critical user flows", () => {
   test("homepage loads with key elements", async ({ page }) => {
     await page.goto("/");
-    // Navbar should be visible
+    await dismissAgeGate(page);
     await expect(page.locator("nav")).toBeVisible();
-    // Page should have at least one market card or heading
-    await expect(
-      page.getByRole("heading").first()
-    ).toBeVisible();
+    await expect(page.getByRole("heading").first()).toBeVisible();
   });
 
-  test("auth page renders login form", async ({ page }) => {
-    await page.goto("/auth");
-    await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeVisible();
-    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+  test("login page renders BankID sign-in form", async ({ page }) => {
+    await page.goto("/login");
+    await expect(page.getByText("Welcome back")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Sign in with BankID/i })).toBeVisible();
   });
 
-  test("auth page switches to signup mode", async ({ page }) => {
-    await page.goto("/auth?mode=signup");
-    await expect(page.getByRole("heading", { name: /create account/i })).toBeVisible();
+  test("register page renders BankID account creation", async ({ page }) => {
+    await page.goto("/register");
+    await expect(page.getByRole("heading", { name: /create an account/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Start BankID/i })).toBeVisible();
   });
 
   test("markets page loads", async ({ page }) => {
     await page.goto("/markets");
+    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible();
   });
 
   test("search page loads and accepts input", async ({ page }) => {
     await page.goto("/search");
+    await dismissAgeGate(page);
     const searchInput = page.getByPlaceholder(/search/i).first();
     await expect(searchInput).toBeVisible();
     await searchInput.fill("test");
-    // Should not crash
     await expect(page.locator("main")).toBeVisible();
   });
 
   test("leaderboard page loads", async ({ page }) => {
     await page.goto("/leaderboard");
+    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible();
   });
 
   test("how it works page loads", async ({ page }) => {
     await page.goto("/how-it-works");
+    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible();
   });
 

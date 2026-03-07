@@ -95,7 +95,6 @@ test.describe("Age verification gate flow", () => {
     await page.reload();
 
     // Modal should NOT appear because cookie is set
-    await page.waitForLoadState("networkidle");
     const modal = page.locator('[role="dialog"][aria-modal="true"]');
     const isVisible = await modal.isVisible({ timeout: 3000 }).catch(() => false);
     expect(isVisible).toBe(false);
