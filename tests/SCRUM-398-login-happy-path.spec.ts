@@ -4,6 +4,7 @@ import { dismissAgeGate } from "../helpers/age-gate";
 test.describe("SCRUM-398: Login happy path — successful login redirects to dashboard", () => {
   test("login page renders with BankID sign-in options", async ({ page }) => {
     await page.goto("/login");
+    await dismissAgeGate(page);
     await expect(
       page.getByRole("heading", { name: /welcome back/i })
     ).toBeVisible({ timeout: 10000 });
@@ -14,6 +15,7 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
 
   test("login page shows BankID device options", async ({ page }) => {
     await page.goto("/login");
+    await dismissAgeGate(page);
     await expect(
       page.getByRole("button", { name: /bankid on another device/i })
     ).toBeVisible({ timeout: 10000 });
@@ -24,6 +26,7 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
 
   test("login page shows subtitle explaining BankID flow", async ({ page }) => {
     await page.goto("/login");
+    await dismissAgeGate(page);
     await expect(
       page.getByText(/sign in to your lydmarkets account with bankid/i)
     ).toBeVisible({ timeout: 10000 });
@@ -31,6 +34,7 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
 
   test("login page has link to create an account", async ({ page }) => {
     await page.goto("/login");
+    await dismissAgeGate(page);
     await expect(
       page.getByRole("link", { name: /create one/i })
     ).toBeVisible({ timeout: 10000 });
@@ -69,6 +73,7 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
 
   test("BankID on this device tab switches instruction text", async ({ page }) => {
     await page.goto("/login");
+    await dismissAgeGate(page);
     await page.getByRole("button", { name: /bankid on this device/i }).click();
     // After switching tab, sign-in button should still be present
     await expect(

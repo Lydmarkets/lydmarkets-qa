@@ -32,7 +32,7 @@ test.describe("SCRUM-405 — Admin panel market approval", () => {
   test("admin markets list shows pending/active/closed tabs or filter", async ({ page }) => {
     // Requires admin-authenticated storageState — set up via global setup
     // test.use({ storageState: "playwright/.auth/admin.json" });
-    await page.goto(`${ADMIN_URL}/markets`);
+    await page.goto(`${ADMIN_URL}/admin/markets`);
 
     // If redirected to auth, skip the remaining assertions
     if (page.url().includes("login") || page.url().includes("auth")) {
@@ -68,7 +68,7 @@ test.describe("SCRUM-405 — Admin panel market approval", () => {
   test("clicking a pending market shows Approve and Reject buttons", async ({ page }) => {
     // Requires admin-authenticated storageState — set up via global setup
     // test.use({ storageState: "playwright/.auth/admin.json" });
-    await page.goto(`${ADMIN_URL}/markets?status=pending`);
+    await page.goto(`${ADMIN_URL}/admin/markets?status=pending`);
 
     if (page.url().includes("login") || page.url().includes("auth")) {
       expect(page.url()).toMatch(/login|auth/);
@@ -108,7 +108,7 @@ test.describe("SCRUM-405 — Admin panel market approval", () => {
   test("approving a market updates its status to approved/active", async ({ page }) => {
     // Requires admin-authenticated storageState — set up via global setup
     // test.use({ storageState: "playwright/.auth/admin.json" });
-    await page.goto(`${ADMIN_URL}/markets?status=pending`);
+    await page.goto(`${ADMIN_URL}/admin/markets?status=pending`);
 
     if (page.url().includes("login") || page.url().includes("auth")) {
       expect(page.url()).toMatch(/login|auth/);
@@ -169,7 +169,7 @@ test.describe("SCRUM-405 — Admin panel market approval", () => {
   test("admin markets list shows market title and status columns", async ({ page }) => {
     // Requires admin-authenticated storageState — set up via global setup
     // test.use({ storageState: "playwright/.auth/admin.json" });
-    await page.goto(`${ADMIN_URL}/markets`);
+    await page.goto(`${ADMIN_URL}/admin/markets`);
 
     if (page.url().includes("login") || page.url().includes("auth")) {
       expect(page.url()).toMatch(/login|auth/);

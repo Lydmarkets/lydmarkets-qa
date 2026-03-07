@@ -10,7 +10,7 @@ export default defineConfig({
     ["html", { open: "never" }],
   ],
   use: {
-    baseURL: process.env.BASE_URL || "http://localhost:3000",
+    baseURL: process.env.BASE_URL || "https://web-production-bb35.up.railway.app",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
