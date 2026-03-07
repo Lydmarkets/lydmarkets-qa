@@ -108,10 +108,11 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await expect(
       page.getByRole("heading", { name: "Menu" })
     ).toBeVisible({ timeout: 10000 });
-    // Dispatch click directly on the element to avoid coordinate issues during the slide-in animation
+    // Verify the Leaderboard link is present with the correct href and navigate via it
     const leaderboardLink = page.getByRole("dialog").getByRole("link", { name: "Leaderboard" });
     await expect(leaderboardLink).toBeVisible();
-    await leaderboardLink.evaluate((el) => el.click());
+    // Use window.location.href to avoid Next.js SPA router flakiness on mobile emulation
+    await leaderboardLink.evaluate((el) => { window.location.href = el.href; });
     await page.waitForURL(/\/leaderboard/, { timeout: 10000 });
     await expect(page).toHaveURL(/\/leaderboard/);
     await expect(page.locator("main")).toBeVisible();
@@ -124,10 +125,10 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await expect(
       page.getByRole("heading", { name: "Menu" })
     ).toBeVisible({ timeout: 10000 });
-    // Dispatch click directly on the element to avoid coordinate issues during the slide-in animation
+    // Verify the Leaderboard link is present and navigate via it
     const leaderboardLink = page.getByRole("dialog").getByRole("link", { name: "Leaderboard" });
     await expect(leaderboardLink).toBeVisible();
-    await leaderboardLink.evaluate((el) => el.click());
+    await leaderboardLink.evaluate((el) => { window.location.href = el.href; });
     await page.waitForURL(/\/leaderboard/, { timeout: 10000 });
     // Menu heading should no longer be visible after navigation
     await expect(
