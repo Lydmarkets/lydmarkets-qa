@@ -5,7 +5,7 @@ import { dismissAgeGate } from "../helpers/age-gate";
 const MOBILE_VIEWPORT = { width: 393, height: 851 };
 
 test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link accessibility", () => {
-  test.use({ viewport: MOBILE_VIEWPORT });
+  test.use({ viewport: MOBILE_VIEWPORT, isMobile: true, hasTouch: true });
 
   test("hamburger menu button is visible on mobile", async ({ page }) => {
     await page.goto("/");
