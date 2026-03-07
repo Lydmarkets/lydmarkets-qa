@@ -32,6 +32,7 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
 
   test("login page is accessible at /login", async ({ page }) => {
     await page.goto("/login");
+    await dismissAgeGate(page);
     await expect(
       page.getByRole("button", { name: /sign in with bankid/i })
     ).toBeVisible({ timeout: 10000 });

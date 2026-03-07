@@ -159,6 +159,7 @@ test.describe("SCRUM-407 — Leaderboard rankings", () => {
 
   test("leaderboard is publicly accessible without sign-in", async ({ page }) => {
     await page.goto("/leaderboard");
+    await dismissAgeGate(page);
     // Should NOT redirect to auth
     await expect(page.getByRole("heading", { name: /leaderboard/i })).toBeVisible({
       timeout: 8000,

@@ -38,14 +38,14 @@ test.describe("SCRUM-402: Market search and category filters", () => {
     await page.goto("/");
     await dismissAgeGate(page);
     // Category tabs: Trending, All, Live, New, etc.
-    await expect(page.getByRole("button", { name: "Trending" })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: "All" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Trending", exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: "All", exact: true })).toBeVisible();
   });
 
   test("clicking a category filter button updates the displayed markets", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    const sportsButton = page.getByRole("button", { name: "Sports" });
+    const sportsButton = page.getByRole("button", { name: "Sports", exact: true });
     await sportsButton.waitFor({ state: "visible", timeout: 10000 });
     await sportsButton.click();
     // After clicking Sports, the page should still show market content
@@ -55,10 +55,10 @@ test.describe("SCRUM-402: Market search and category filters", () => {
   test("multiple category filters are available including Sports, Music, Politics, Finance", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.getByRole("button", { name: "Sports" })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: "Music" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Politics" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Finance" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sports", exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: "Music", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Politics", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Finance", exact: true })).toBeVisible();
   });
 
   test("Farming category filter button is present", async ({ page }) => {
@@ -96,7 +96,7 @@ test.describe("SCRUM-402: Market search and category filters", () => {
     await page.goto("/");
     await dismissAgeGate(page);
     await expect(
-      page.getByRole("button", { name: "New" })
+      page.getByRole("button", { name: "New", exact: true })
     ).toBeVisible({ timeout: 10000 });
   });
 });

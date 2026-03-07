@@ -33,26 +33,25 @@ test.describe("SCRUM-400: Market detail page — order form interactions", () =>
     await page.goto(MARKET_URL);
     await dismissAgeGate(page);
     await expect(page.getByText("Place Order")).toBeVisible({ timeout: 10000 });
-    // Place Order section has YES and NO buttons
-    const placeOrderSection = page.getByText("Place Order").locator("..").locator("..");
-    await expect(placeOrderSection.getByRole("button", { name: /yes/i })).toBeVisible();
-    await expect(placeOrderSection.getByRole("button", { name: /no/i })).toBeVisible();
+    // Place Order section has "Buy Yes" and "Buy No" buttons
+    await expect(page.getByRole("button", { name: /buy yes/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /buy no/i })).toBeVisible();
   });
 
   test("Conditional Orders section has New Order and My Orders tabs", async ({ page }) => {
     await page.goto(MARKET_URL);
     await dismissAgeGate(page);
     await expect(page.getByText("Conditional Orders")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: "New Order" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "My Orders" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "New Order" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "My Orders" })).toBeVisible();
   });
 
   test("Conditional Orders section has Stop-Loss and Take-Profit tabs", async ({ page }) => {
     await page.goto(MARKET_URL);
     await dismissAgeGate(page);
     await expect(page.getByText("Conditional Orders")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: /stop-loss/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /take-profit/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Stop-Loss", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Take-Profit", exact: true })).toBeVisible();
   });
 
   test("conditional order form shows Trigger price and Quantity inputs", async ({ page }) => {

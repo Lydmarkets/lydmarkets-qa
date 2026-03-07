@@ -79,6 +79,7 @@ test.describe("SCRUM-406: User profile page — view stats and edit display name
 
   test("login page is reachable and shows BankID flow", async ({ page }) => {
     await page.goto("/login");
+    await dismissAgeGate(page);
     await expect(
       page.getByRole("heading", { name: /welcome back/i })
     ).toBeVisible({ timeout: 10000 });
