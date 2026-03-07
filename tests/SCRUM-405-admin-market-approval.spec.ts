@@ -5,13 +5,13 @@ import { test, expect } from "../fixtures/base";
 // The admin panel is a separate deployment from the user-facing app.
 // Replace ADMIN_URL with the actual deployed URL when available.
 // The user-facing app is at https://web-production-bb35.up.railway.app
-// The admin panel URL is expected at port 3001 locally or a separate Railway service.
+// Admin panel production: https://lydmarkets-admin-production.up.railway.app (port 3001 locally)
 //
 // Requires admin-authenticated storageState — set up via global setup.
 // test.use({ storageState: "playwright/.auth/admin.json" });
 
 const ADMIN_URL =
-  process.env.ADMIN_URL || "https://admin-production.up.railway.app"; // TODO: update with actual admin deployment URL
+  process.env.ADMIN_URL || "https://lydmarkets-admin-production.up.railway.app";
 
 const USER_FACING_BASE_URL =
   process.env.BASE_URL || "https://web-production-bb35.up.railway.app";
