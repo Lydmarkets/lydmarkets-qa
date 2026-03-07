@@ -1,42 +1,59 @@
 import { test, expect } from "../fixtures/base";
+import { dismissAgeGate } from "../helpers/age-gate";
+
+// Auth uses BankID exclusively — no email/password form exists.
 
 test.describe("Authentication flows", () => {
-  test("login with invalid credentials shows error", async ({ page }) => {
-    await page.goto("/auth");
-    await page.getByLabel("Email").fill("nonexistent@test.com");
-    await page.getByLabel("Password").fill("wrongpassword123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-
-    // Should show an error toast or message
-    await expect(
-      page.getByText(/invalid|failed|incorrect/i).first()
-    ).toBeVisible({ timeout: 10000 });
+  test("login page renders BankID sign-in options", async ({ page }) => {
+    await page.goto("/login");
+    await dismissAgeGate(page);
+    await expect(page.getByText("Welcome back")).toBeVisible();
+    await expect(page.getByRole("button", { name: /BankID on another device/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /BankID on this device/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Sign in with BankID/i })).toBeVisible();
   });
 
-  test("signup with weak password shows strength indicator", async ({ page }) => {
-    await page.goto("/auth?mode=signup");
-    await page.getByLabel("Password").fill("123");
-    // Password strength meter should appear
-    await expect(page.getByText(/weak/i)).toBeVisible();
+  test("login page has link to create account", async ({ page }) => {
+    await page.goto("/login");
+    await dismissAgeGate(page);
+    await expect(page.getByText(/Don't have an account/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /create one/i })).toBeVisible();
   });
 
-  test("signup with strong password shows strong indicator", async ({ page }) => {
-    await page.goto("/auth?mode=signup");
-    await page.getByLabel("Password").fill("Str0ng!P@ssword");
-    await expect(page.getByText(/strong/i)).toBeVisible();
+  test("create one link navigates to register", async ({ page }) => {
+    await page.goto("/login");
+    await dismissAgeGate(page);
+    await page.getByRole("link", { name: /create one/i }).click();
+    await page.waitForURL(/\/register/);
   });
 
-  test("email validation shows error for invalid format", async ({ page }) => {
-    await page.goto("/auth");
-    const emailInput = page.getByLabel("Email");
-    await emailInput.fill("not-an-email");
-    await emailInput.blur();
-    await expect(page.getByText(/valid email/i)).toBeVisible();
+  test("register page renders BankID account creation", async ({ page }) => {
+    await page.goto("/register");
+    await dismissAgeGate(page);
+    await expect(page.getByRole("heading", { name: /create an account/i })).toBeVisible();
+    await expect(page.getByText(/Swedish BankID/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /BankID on another device/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Start BankID/i })).toBeVisible();
   });
 
-  test("forgot password link navigates correctly", async ({ page }) => {
-    await page.goto("/auth");
-    await page.getByRole("link", { name: /forgot password/i }).click();
-    await expect(page).toHaveURL(/forgot-password/);
+  test("register page has link back to login", async ({ page }) => {
+    await page.goto("/register");
+    await dismissAgeGate(page);
+    await expect(page.getByText(/Already have an account/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /sign in/i })).toBeVisible();
+  });
+
+  test("sign in link on register navigates to login", async ({ page }) => {
+    await page.goto("/register");
+    await dismissAgeGate(page);
+    await page.getByRole("link", { name: /sign in/i }).click();
+    await page.waitForURL(/\/login/);
+  });
+
+  test("protected routes redirect unauthenticated users to login", async ({ page }) => {
+    await page.goto("/wallet");
+    await page.waitForURL(/\/login/);
+    await dismissAgeGate(page);
+    await expect(page.getByText("Welcome back")).toBeVisible();
   });
 });

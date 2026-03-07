@@ -1,43 +1,67 @@
 import { test, expect } from "../fixtures/base";
 import { devices } from "@playwright/test";
+import { dismissAgeGate } from "../helpers/age-gate";
 
 test.describe("Responsive design tests", () => {
-  const viewports = [
-    { name: "Mobile", ...devices["Pixel 5"] },
-    { name: "Tablet", ...devices["iPad Air"] },
-    { name: "Desktop", width: 1920, height: 1080 },
-  ];
+  test("homepage is responsive on Mobile (Pixel 5)", async ({ browser }) => {
+    const context = await browser.newContext({ ...devices["Pixel 5"] });
+    const page = await context.newPage();
 
-  for (const viewport of viewports) {
-    test(`homepage is responsive on ${viewport.name}`, async ({
-      browser,
-    }) => {
-      const context = await browser.newContext(viewport);
-      const page = await context.newPage();
+    await page.goto("/");
+    await dismissAgeGate(page);
 
-      await page.goto("/");
-      await expect(page.locator("nav")).toBeVisible();
-      await expect(page.locator("main")).toBeVisible();
+    // On mobile the desktop nav is hidden — hamburger button is visible instead
+    await expect(page.getByRole("button", { name: /open navigation menu/i })).toBeVisible();
+    await expect(page.locator("main")).toBeVisible();
 
-      // Check for responsive menu on mobile
-      if (viewport.name === "Mobile") {
-        const button = page.getByRole("button").filter({ has: page.locator("svg") });
-        if (await button.count() > 0) {
-          await expect(button.first()).toBeVisible();
-        }
-      }
+    await context.close();
+  });
 
-      await context.close();
-    });
+  test("homepage is responsive on Tablet (iPad Air)", async ({ browser }) => {
+    const context = await browser.newContext({ ...devices["iPad Air"] });
+    const page = await context.newPage();
 
-    test(`markets page loads on ${viewport.name}`, async ({ browser }) => {
-      const context = await browser.newContext(viewport);
-      const page = await context.newPage();
+    await page.goto("/");
+    await dismissAgeGate(page);
 
-      await page.goto("/markets");
-      await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("nav")).toBeVisible();
+    await expect(page.locator("main")).toBeVisible();
 
-      await context.close();
-    });
-  }
+    await context.close();
+  });
+
+  test("homepage is responsive on Desktop", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+    const page = await context.newPage();
+
+    await page.goto("/");
+    await dismissAgeGate(page);
+
+    await expect(page.locator("nav")).toBeVisible();
+    await expect(page.locator("main")).toBeVisible();
+
+    await context.close();
+  });
+
+  test("markets page loads on Mobile", async ({ browser }) => {
+    const context = await browser.newContext({ ...devices["Pixel 5"] });
+    const page = await context.newPage();
+
+    await page.goto("/markets");
+    await dismissAgeGate(page);
+    await expect(page.locator("main")).toBeVisible();
+
+    await context.close();
+  });
+
+  test("markets page loads on Desktop", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+    const page = await context.newPage();
+
+    await page.goto("/markets");
+    await dismissAgeGate(page);
+    await expect(page.locator("main")).toBeVisible();
+
+    await context.close();
+  });
 });

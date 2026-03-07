@@ -1,154 +1,110 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
 
+// Market cards with watchlist buttons are on the homepage (/), confirmed via live app inspection.
+// aria-label on each star button: "Add to watchlist" (matches /add to watchlist/i pattern).
+
 test.describe("Watchlist functionality — star/unstar flow", () => {
   test("markets listing displays watchlist star buttons on market cards", async ({ page }) => {
-    await page.goto("/markets");
+    await page.goto("/");
     await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible();
 
-    // Look for star buttons (add to watchlist buttons)
-    const starButtons = page.getByRole("button", { name: /watchlist|starred/i });
+    const starButtons = page.getByRole("button", { name: /add to watchlist/i });
+    await starButtons.first().waitFor({ state: "visible", timeout: 8000 });
     const starButtonCount = await starButtons.count();
     expect(starButtonCount).toBeGreaterThan(0);
   });
 
   test("star button has aria-pressed attribute for state management", async ({ page }) => {
-    await page.goto("/markets");
+    await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible();
 
-    // Get first star button
-    const starButton = page.getByRole("button", { name: /watchlist/i }).first();
-    await expect(starButton).toBeVisible({ timeout: 5000 });
+    const starButton = page.getByRole("button", { name: /add to watchlist/i }).first();
+    await expect(starButton).toBeVisible({ timeout: 8000 });
 
-    // Check aria-pressed state (controls whether star is filled or not)
     const ariaPressedValue = await starButton.getAttribute("aria-pressed");
     expect(ariaPressedValue).toBeDefined();
     expect(["true", "false"]).toContain(ariaPressedValue);
   });
 
-  test("watchlist page requires authentication and redirects appropriately", async ({ page }) => {
+  test("watchlist page requires authentication and redirects to login", async ({ page }) => {
     await page.goto("/watchlist");
-
-    // Since /watchlist is protected, unauthenticated users should be redirected
-    // to /login. This is handled by the middleware.
-    const currentUrl = page.url();
-    const isRedirected = currentUrl.includes("/login") || currentUrl.includes("/watchlist");
-    expect(isRedirected).toBeTruthy();
+    await page.waitForURL(/\/login/, { timeout: 8000 });
+    expect(page.url()).toMatch(/\/login/);
   });
 
-  test("star icon has proper SVG and styling classes", async ({ page }) => {
-    await page.goto("/markets");
+  test("star button contains an SVG icon", async ({ page }) => {
+    await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible();
 
-    // Get first star button
-    const starButton = page.getByRole("button", { name: /watchlist/i }).first();
-    await expect(starButton).toBeVisible({ timeout: 5000 });
+    const starButton = page.getByRole("button", { name: /add to watchlist/i }).first();
+    await expect(starButton).toBeVisible({ timeout: 8000 });
 
-    // Find the SVG icon inside the button
     const starIcon = starButton.locator("svg");
     await expect(starIcon).toBeVisible();
-
-    // Star icon should have transition classes for visual feedback
-    const starIconClasses = await starIcon.getAttribute("class");
-    expect(starIconClasses).toContain("transition");
   });
 
-  test("star button is keyboard accessible with proper aria labels", async ({ page }) => {
-    await page.goto("/markets");
+  test("star button has aria-label matching watchlist pattern", async ({ page }) => {
+    await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible();
 
-    // Get first star button
-    const starButton = page.getByRole("button", { name: /watchlist/i }).first();
-    await expect(starButton).toBeVisible({ timeout: 5000 });
+    const starButton = page.getByRole("button", { name: /add to watchlist/i }).first();
+    await expect(starButton).toBeVisible({ timeout: 8000 });
 
-    // Should have meaningful aria-label
     const ariaLabel = await starButton.getAttribute("aria-label");
     expect(ariaLabel).toBeDefined();
-    expect(ariaLabel).toMatch(/watchlist|starred/i);
+    expect(ariaLabel).toMatch(/add to watchlist/i);
   });
 
   test("market cards display star button alongside market information", async ({ page }) => {
-    await page.goto("/markets");
+    await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible();
 
-    // Each market card should have a star button
-    const starButtons = page.getByRole("button", { name: /watchlist/i });
+    const starButtons = page.getByRole("button", { name: /add to watchlist/i });
+    await starButtons.first().waitFor({ state: "visible", timeout: 8000 });
     const count = await starButtons.count();
-
-    // Should have at least a few market cards with star buttons
     expect(count).toBeGreaterThanOrEqual(1);
 
-    // Get the first star button and verify its parent card structure
-    const firstStarButton = starButtons.first();
-    await expect(firstStarButton).toBeVisible({ timeout: 5000 });
-
-    // Star button should be within a card-like container
-    const cardContainer = firstStarButton.locator("..");
-    const isVisible = await cardContainer.isVisible();
-    expect(isVisible).toBeTruthy();
+    const cardContainer = starButtons.first().locator("..");
+    await expect(cardContainer).toBeVisible();
   });
 
-  test("navigating to markets page shows star buttons for all visible cards", async ({ page }) => {
-    await page.goto("/markets");
+  test("all visible market cards have a star button", async ({ page }) => {
+    await page.goto("/");
     await dismissAgeGate(page);
 
-    // Wait for market cards to load
-    const starButtons = page.getByRole("button", { name: /watchlist/i });
-    await starButtons.first().waitFor({ state: "visible", timeout: 5000 });
+    const starButtons = page.getByRole("button", { name: /add to watchlist/i });
+    await starButtons.first().waitFor({ state: "visible", timeout: 8000 });
+    const count = await starButtons.count();
+    expect(count).toBeGreaterThan(0);
 
-    // Count star buttons
-    const starButtonCount = await starButtons.count();
-
-    // Should have multiple market cards displayed
-    expect(starButtonCount).toBeGreaterThan(0);
-
-    // Verify buttons are properly spaced across the page
-    const firstButton = starButtons.first();
-    const lastButton = starButtons.nth(Math.min(starButtonCount - 1, 5));
-
-    await expect(firstButton).toBeVisible();
-    await expect(lastButton).toBeVisible();
+    await expect(starButtons.first()).toBeVisible();
+    await expect(starButtons.nth(Math.min(count - 1, 5))).toBeVisible();
   });
 
-  test("star button maintains focus visibility for keyboard navigation", async ({ page }) => {
-    await page.goto("/markets");
+  test("star button is focusable for keyboard navigation", async ({ page }) => {
+    await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible();
 
-    // Get first star button
-    const starButton = page.getByRole("button", { name: /watchlist/i }).first();
-    await expect(starButton).toBeVisible({ timeout: 5000 });
+    const starButton = page.getByRole("button", { name: /add to watchlist/i }).first();
+    await expect(starButton).toBeVisible({ timeout: 8000 });
 
-    // Focus on the button
     await starButton.focus();
-
-    // Check that button has focus-visible styling
-    const isFocused = await starButton.evaluate((el: HTMLElement) => {
-      return document.activeElement === el;
-    });
-
+    const isFocused = await starButton.evaluate((el: HTMLElement) => document.activeElement === el);
     expect(isFocused).toBeTruthy();
   });
 
-  test("star button shows loading state during mutation attempt", async ({ page }) => {
-    // This test verifies the button UI structure supports loading states
-    await page.goto("/markets");
+  test("star button supports disabled attribute for loading state", async ({ page }) => {
+    await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible();
 
-    const starButton = page.getByRole("button", { name: /watchlist/i }).first();
-    await expect(starButton).toBeVisible({ timeout: 5000 });
+    const starButton = page.getByRole("button", { name: /add to watchlist/i }).first();
+    await expect(starButton).toBeVisible({ timeout: 8000 });
 
-    // Button should support disabled state for loading
-    const isDisableSupported = await starButton.evaluate((el: HTMLButtonElement) => {
-      return "disabled" in el;
-    });
-
+    const isDisableSupported = await starButton.evaluate(
+      (el: HTMLButtonElement) => "disabled" in el
+    );
     expect(isDisableSupported).toBeTruthy();
   });
 });

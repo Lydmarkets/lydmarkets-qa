@@ -1,212 +1,98 @@
 import { test, expect } from "../fixtures/base";
 
+// The age gate modal shows "Åldersbekräftelse" with two buttons:
+// "Jag är 18 år eller äldre" (confirm) and "Lämna sidan" (leave).
+// There is no date-of-birth input — it is a simple confirmation modal.
+
 test.describe("Age verification gate flow", () => {
-  test("modal appears for unauthenticated users", async ({ page, context }) => {
-    // Clear cookies to ensure no age verification exists
+  test("modal appears for unauthenticated users on homepage", async ({ page, context }) => {
     await context.clearCookies();
-
-    // Navigate to homepage
     await page.goto("/");
 
-    // Age verification modal should be visible
-    const modal = page.locator('[role="dialog"][aria-modal="true"]');
-    await expect(modal).toBeVisible({ timeout: 5000 });
-
-    // Modal should have required elements
-    await expect(page.getByRole("heading", { name: /age verification/i })).toBeVisible();
-    await expect(page.getByLabel(/date of birth/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /confirm age/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /åldersbekräftelse/i })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("button", { name: /jag är 18/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /lämna sidan/i })).toBeVisible();
   });
 
-  test("modal rejects users under 18", async ({ page, context }) => {
-    // Clear cookies
+  test("confirming age dismisses the modal", async ({ page, context }) => {
     await context.clearCookies();
-
     await page.goto("/");
 
-    // Wait for modal
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("button", { name: /jag är 18/i })).toBeVisible({ timeout: 5000 });
+    await page.getByRole("button", { name: /jag är 18/i }).click();
 
-    // Enter a date of birth for someone under 18
-    const today = new Date();
-    const underageDate = new Date(today.getFullYear() - 17, today.getMonth(), today.getDate());
-    const dateString = underageDate.toISOString().split("T")[0];
-
-    await page.getByLabel(/date of birth/i).fill(dateString);
-    await page.getByRole("button", { name: /confirm age/i }).click();
-
-    // Error message should appear
-    await expect(page.getByText(/must be at least 18 years old/i)).toBeVisible();
-
-    // Modal should still be visible
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible();
+    await expect(page.getByRole("heading", { name: /åldersbekräftelse/i })).not.toBeVisible({ timeout: 5000 });
   });
 
-  test("verification succeeds for users over 18", async ({ page, context }) => {
-    // Clear cookies
+  test("main content is accessible after confirming age", async ({ page, context }) => {
     await context.clearCookies();
-
     await page.goto("/");
 
-    // Wait for modal
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible({ timeout: 5000 });
+    await page.getByRole("button", { name: /jag är 18/i }).waitFor({ state: "visible", timeout: 5000 });
+    await page.getByRole("button", { name: /jag är 18/i }).click();
 
-    // Enter a date of birth for someone over 18
-    const today = new Date();
-    const validDate = new Date(today.getFullYear() - 25, today.getMonth(), today.getDate());
-    const dateString = validDate.toISOString().split("T")[0];
-
-    await page.getByLabel(/date of birth/i).fill(dateString);
-    await page.getByRole("button", { name: /confirm age/i }).click();
-
-    // Modal should disappear after successful verification
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).not.toBeVisible({ timeout: 5000 });
-
-    // Success toast should appear
-    await expect(page.getByText(/age verified/i)).toBeVisible();
+    await expect(page.locator("main")).toBeVisible({ timeout: 5000 });
   });
 
-  test("verification persists via cookie across page reloads", async ({ page, context }) => {
-    // Clear cookies
+  test("modal does not reappear after confirming (cookie persists on reload)", async ({ page, context }) => {
     await context.clearCookies();
-
     await page.goto("/");
 
-    // Wait for modal and verify age
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible({ timeout: 5000 });
+    await page.getByRole("button", { name: /jag är 18/i }).waitFor({ state: "visible", timeout: 5000 });
+    await page.getByRole("button", { name: /jag är 18/i }).click();
+    await expect(page.getByRole("heading", { name: /åldersbekräftelse/i })).not.toBeVisible({ timeout: 5000 });
 
-    const today = new Date();
-    const validDate = new Date(today.getFullYear() - 25, today.getMonth(), today.getDate());
-    const dateString = validDate.toISOString().split("T")[0];
-
-    await page.getByLabel(/date of birth/i).fill(dateString);
-    await page.getByRole("button", { name: /confirm age/i }).click();
-
-    // Wait for modal to disappear
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).not.toBeVisible({ timeout: 5000 });
-
-    // Check that cookie was set
-    const cookies = await context.cookies();
-    const ageVerifiedCookie = cookies.find((c) => c.name === "age_verified");
-    expect(ageVerifiedCookie).toBeDefined();
-    expect(ageVerifiedCookie?.value).toBe("1");
-
-    // Reload page
     await page.reload();
 
-    // Modal should NOT appear because cookie is set
-    await page.waitForLoadState("networkidle");
-    const modal = page.locator('[role="dialog"][aria-modal="true"]');
+    const modal = page.getByRole("heading", { name: /åldersbekräftelse/i });
     const isVisible = await modal.isVisible({ timeout: 3000 }).catch(() => false);
     expect(isVisible).toBe(false);
   });
 
-  test("blocked users cannot proceed to main content", async ({ page, context }) => {
-    // Clear cookies
+  test("modal does not reappear when navigating between pages", async ({ page, context }) => {
     await context.clearCookies();
-
     await page.goto("/");
 
-    // Wait for modal
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible({ timeout: 5000 });
+    await page.getByRole("button", { name: /jag är 18/i }).waitFor({ state: "visible", timeout: 5000 });
+    await page.getByRole("button", { name: /jag är 18/i }).click();
+    await expect(page.getByRole("heading", { name: /åldersbekräftelse/i })).not.toBeVisible({ timeout: 5000 });
 
-    // Modal should have backdrop with pointer-events that block interaction
-    const modalContent = page.locator('[role="dialog"][aria-modal="true"]');
-    await expect(modalContent).toHaveAttribute("aria-modal", "true");
-
-    // Try clicking outside modal (on backdrop)
-    await page.locator("body").click({ position: { x: 10, y: 10 } });
-
-    // Modal should still be visible - cannot escape
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible();
+    await page.goto("/leaderboard");
+    const isVisible = await page.getByRole("heading", { name: /åldersbekräftelse/i }).isVisible({ timeout: 3000 }).catch(() => false);
+    expect(isVisible).toBe(false);
   });
 
-  test("modal closes only after valid age submission", async ({ page, context }) => {
-    // Clear cookies
+  test("modal blocks background interaction until dismissed", async ({ page, context }) => {
     await context.clearCookies();
-
     await page.goto("/");
 
-    // Wait for modal
-    const modal = page.locator('[role="dialog"][aria-modal="true"]');
+    const modal = page.locator('[role="dialog"]');
     await expect(modal).toBeVisible({ timeout: 5000 });
 
-    // Try invalid age first
-    const today = new Date();
-    const underageDate = new Date(today.getFullYear() - 16, today.getMonth(), today.getDate());
-    const underageDateString = underageDate.toISOString().split("T")[0];
-
-    await page.getByLabel(/date of birth/i).fill(underageDateString);
-    await page.getByRole("button", { name: /confirm age/i }).click();
-
-    // Modal should still be visible with error
+    // Try clicking outside the modal — it should remain visible
+    await page.locator("body").click({ position: { x: 10, y: 10 } });
     await expect(modal).toBeVisible();
-    await expect(page.getByText(/must be at least 18 years old/i)).toBeVisible();
-
-    // Clear and enter valid age
-    const validDate = new Date(today.getFullYear() - 25, today.getMonth(), today.getDate());
-    const validDateString = validDate.toISOString().split("T")[0];
-
-    await page.getByLabel(/date of birth/i).fill(validDateString);
-    await page.getByRole("button", { name: /confirm age/i }).click();
-
-    // Modal should now close
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
   });
 
-  test("age verification works correctly on boundary dates", async ({ page, context }) => {
-    // Clear cookies
+  test("leave page button is present as an alternative", async ({ page, context }) => {
     await context.clearCookies();
+    await page.goto("/");
+
+    await expect(page.getByRole("button", { name: /lämna sidan/i })).toBeVisible({ timeout: 5000 });
+  });
+
+  test("modal does not appear when age cookie is already set", async ({ page, context }) => {
+    // Set the cookie directly before navigating
+    await context.addCookies([{
+      name: "age_verified",
+      value: "1",
+      domain: "web-production-bb35.up.railway.app",
+      path: "/",
+    }]);
 
     await page.goto("/");
 
-    // Wait for modal
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible({ timeout: 5000 });
-
-    // Test with exactly 18 years old (born today 18 years ago)
-    const today = new Date();
-    const exactlyEighteen = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-    const dateString = exactlyEighteen.toISOString().split("T")[0];
-
-    await page.getByLabel(/date of birth/i).fill(dateString);
-    await page.getByRole("button", { name: /confirm age/i }).click();
-
-    // Should succeed
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).not.toBeVisible({ timeout: 5000 });
-  });
-
-  test("cookie persists across different routes", async ({ page, context }) => {
-    // Clear cookies
-    await context.clearCookies();
-
-    await page.goto("/");
-
-    // Verify age
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).toBeVisible({ timeout: 5000 });
-
-    const today = new Date();
-    const validDate = new Date(today.getFullYear() - 25, today.getMonth(), today.getDate());
-    const dateString = validDate.toISOString().split("T")[0];
-
-    await page.getByLabel(/date of birth/i).fill(dateString);
-    await page.getByRole("button", { name: /confirm age/i }).click();
-
-    // Wait for modal to close
-    await expect(page.locator('[role="dialog"][aria-modal="true"]')).not.toBeVisible({ timeout: 5000 });
-
-    // Navigate to different route
-    await page.goto("/markets");
-
-    // Modal should not appear
-    const modal = page.locator('[role="dialog"][aria-modal="true"]');
-    const isVisible = await modal.isVisible({ timeout: 3000 }).catch(() => false);
+    const isVisible = await page.getByRole("heading", { name: /åldersbekräftelse/i }).isVisible({ timeout: 3000 }).catch(() => false);
     expect(isVisible).toBe(false);
-
-    // Navigate to another route
-    await page.goto("/leaderboard");
-
-    // Modal should still not appear
-    const isVisibleOnLeaderboard = await modal.isVisible({ timeout: 3000 }).catch(() => false);
-    expect(isVisibleOnLeaderboard).toBe(false);
   });
 });
