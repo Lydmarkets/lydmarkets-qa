@@ -254,7 +254,7 @@ test.describe("SCRUM-289 — Swish e-commerce payment request flow (SCRUM-257)",
           await page.waitForTimeout(2000);
           if (capturedBody) {
             // The request body should contain the phone number (payerAlias)
-            expect(capturedBody).toMatch(/07|phone|payer/i);
+            expect(capturedBody as string).toMatch(/07|phone|payer/i);
           } else {
             // Request not captured — form may not have submitted via this route
             const hasPage = await page.locator("main").isVisible();
