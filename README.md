@@ -96,6 +96,7 @@ playwright.config.ts
 
 ## Test coverage by sprint
 
+### Sprint 25 — Core flows
 | Ticket | Area | Spec |
 |--------|------|------|
 | SCRUM-398 | Login / BankID happy path | `SCRUM-398-login-happy-path.spec.ts` |
@@ -109,6 +110,24 @@ playwright.config.ts
 | SCRUM-407 | Leaderboard rankings | `SCRUM-407-leaderboard-rankings.spec.ts` |
 | SCRUM-408 | Mobile navigation | `SCRUM-408-mobile-navigation.spec.ts` |
 | SCRUM-409 | Settings & responsible gambling | `SCRUM-409-settings-responsible-gambling.spec.ts` |
+
+### Sprint 26 — E2E tests
+| Ticket | Area | Spec | Notes |
+|--------|------|------|-------|
+| SCRUM-227 | Landing / home page (unauthenticated & authenticated) | `SCRUM-227-landing-home-page.spec.ts` | |
+| SCRUM-228 | Market card visual design (thumbnail, Yes/No pills, volume, likes) | `SCRUM-228-market-card-visual-design.spec.ts` | |
+| SCRUM-247 | 90-day interrupted market auto-close admin UI (SIFS 7 kap. 4§) | `SCRUM-247-market-auto-close-90-day.spec.ts` | Cron trigger skipped (requires DB access) |
+| SCRUM-248 | Deposit confirmation modal >10,000 SEK (SIFS M6) | `SCRUM-248-deposit-confirmation-modal.spec.ts` | |
+| SCRUM-249 | Unauthorized login attempt notification (SIFS 9 kap. 4§) | `SCRUM-249-unauthorized-login-notification.spec.ts` | BankID threshold trigger skipped |
+| SCRUM-250 | Last login time display on login page (SIFS 9 kap. 5§) | `SCRUM-250-last-login-time-display.spec.ts` | |
+| SCRUM-289 | Swish e-commerce payment request flow | `SCRUM-289-swish-ecommerce-payment-flow.spec.ts` | Live mTLS tests skipped; API mocked via `page.route()` |
+| SCRUM-290 | Swish m-commerce token flow (deep-link) | `SCRUM-290-swish-mcommerce-token-flow.spec.ts` | Token creation skipped |
+| SCRUM-291 | Swish QR code from m-commerce token | `SCRUM-291-swish-qr-code.spec.ts` | QR render mocked |
+| SCRUM-292 | Swish callback receiver endpoint UI | `SCRUM-292-swish-callback-receiver.spec.ts` | Callback POST skipped |
+| SCRUM-294 | Swish refund API — full and partial | `SCRUM-294-swish-refund-api.spec.ts` | API mocked |
+| SCRUM-295 | Swish payout API | `SCRUM-295-swish-payout-api.spec.ts` | API mocked |
+| SCRUM-296 | Swish error codes (BE18, RP06) and 429 rate-limiting UI | `SCRUM-296-swish-error-codes.spec.ts` | |
+| SCRUM-297 | Swish checkout UI — e-commerce phone input & m-commerce | `SCRUM-297-swish-checkout-ui.spec.ts` | QR/deep-link skipped (requires live Swish) |
 
 ## Helpers reference
 
