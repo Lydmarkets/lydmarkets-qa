@@ -16,8 +16,7 @@ import { dismissAgeGate } from "../helpers/age-gate";
 //
 // The cron job itself (90-day auto-close) cannot be triggered in E2E — those tests skip.
 
-const ADMIN_URL =
-  process.env.ADMIN_URL ?? "https://lydmarkets-admin-production.up.railway.app";
+const ADMIN_URL = "https://lydmarkets-admin-production.up.railway.app";
 
 test.describe("SCRUM-247 — 90-day interrupted market auto-close admin UI (SCRUM-215)", () => {
   // ---------------------------------------------------------------------------
