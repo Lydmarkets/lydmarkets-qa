@@ -15,8 +15,7 @@ import { dismissAgeGate } from "../helpers/age-gate";
 //
 // Tests that require triggering N real failed logins against BankID are marked skip.
 
-const ADMIN_URL =
-  process.env.ADMIN_URL ?? "https://lydmarkets-admin-production.up.railway.app";
+const ADMIN_URL = "https://lydmarkets-admin-production.up.railway.app";
 
 test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)", () => {
   // ---------------------------------------------------------------------------
