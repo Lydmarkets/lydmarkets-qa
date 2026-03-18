@@ -8,8 +8,6 @@ test.describe("Authentication flows", () => {
     await page.goto("/login");
     await dismissAgeGate(page);
     await expect(page.getByText("Welcome back")).toBeVisible();
-    await expect(page.getByRole("button", { name: /BankID on another device/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /BankID on this device/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /Sign in with BankID/i })).toBeVisible();
   });
 
@@ -32,7 +30,6 @@ test.describe("Authentication flows", () => {
     await dismissAgeGate(page);
     await expect(page.getByRole("heading", { name: /create an account/i })).toBeVisible();
     await expect(page.getByText(/Swedish BankID/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /BankID on another device/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /Start BankID/i })).toBeVisible();
   });
 

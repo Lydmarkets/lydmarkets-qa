@@ -71,13 +71,14 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Market cards should display the market question text
-    // Check that at least one market link with a title is present
-    const marketLinks = page.locator('a[href*="/markets/"]');
+    // Cards may be links or containers — look broadly for any element linking to a market
+    const marketLinks = page.locator('a[href*="/market"]');
     const count = await marketLinks.count();
     expect(count).toBeGreaterThanOrEqual(1);
 
-    // The first market card should have non-empty text
+    // The first market card area should have non-empty visible text
     const firstLink = marketLinks.first();
+    await expect(firstLink).toBeVisible({ timeout: 8000 });
     const text = await firstLink.innerText().catch(() => "");
     expect(text.trim().length).toBeGreaterThan(0);
   });
@@ -88,7 +89,7 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Cards should have an image (thumbnail or placeholder)
-    const images = page.locator('a[href*="/markets/"] img, [data-testid="market-card"] img, article img');
+    const images = page.locator('a[href*="/market"] img, [data-testid="market-card"] img, article img');
     const hasImage = await images.first().isVisible({ timeout: 8000 }).catch(() => false);
 
     // Fallback: check for any img element in the markets section

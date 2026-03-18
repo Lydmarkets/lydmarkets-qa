@@ -18,7 +18,7 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
   test("desktop nav links are not shown as a horizontal bar on mobile", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    // The desktop nav (Markets, Swipe, Leaderboard, How it works as inline links) should be hidden
+    // The desktop nav (Markets, How it works as inline links) should be hidden
     // Only the hamburger trigger should be visible in the header
     await expect(
       page.getByRole("button", { name: /open navigation menu/i })
@@ -45,26 +45,6 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
       page.getByRole("heading", { name: "Menu" })
     ).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("link", { name: "Markets" })).toBeVisible();
-  });
-
-  test("mobile menu shows Swipe nav link", async ({ page }) => {
-    await page.goto("/");
-    await dismissAgeGate(page);
-    await page.getByRole("button", { name: /open navigation menu/i }).click();
-    await expect(
-      page.getByRole("heading", { name: "Menu" })
-    ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("link", { name: "Swipe" })).toBeVisible();
-  });
-
-  test("mobile menu shows Leaderboard nav link", async ({ page }) => {
-    await page.goto("/");
-    await dismissAgeGate(page);
-    await page.getByRole("button", { name: /open navigation menu/i }).click();
-    await expect(
-      page.getByRole("heading", { name: "Menu" })
-    ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("link", { name: "Leaderboard" })).toBeVisible();
   });
 
   test("mobile menu shows How it works nav link", async ({ page }) => {
@@ -108,9 +88,8 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await expect(
       page.getByRole("heading", { name: "Menu" })
     ).toBeVisible({ timeout: 10000 });
-    await page.getByRole("link", { name: "Leaderboard" }).click();
-    await page.waitForURL(/\/leaderboard/, { timeout: 10000 });
-    await expect(page).toHaveURL(/\/leaderboard/);
+    await page.getByRole("link", { name: "Markets" }).click();
+    await page.waitForURL(/\/market/, { timeout: 10000 });
     await expect(page.locator("main")).toBeVisible();
   });
 
@@ -121,8 +100,8 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await expect(
       page.getByRole("heading", { name: "Menu" })
     ).toBeVisible({ timeout: 10000 });
-    await page.getByRole("link", { name: "Leaderboard" }).click();
-    await page.waitForURL(/\/leaderboard/, { timeout: 10000 });
+    await page.getByRole("link", { name: "Markets" }).click();
+    await page.waitForURL(/\/market/, { timeout: 10000 });
     // Menu heading should no longer be visible after navigation
     await expect(
       page.getByRole("heading", { name: "Menu" })

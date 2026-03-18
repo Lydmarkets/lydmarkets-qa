@@ -72,24 +72,4 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
     await expect(page).toHaveURL(new RegExp(marketUrl));
   });
 
-  test("session-required: authenticated reload preserves user nav state (requires storageState)", async ({ page }) => {
-    // requires auth storageState
-    // This test structure is ready; enable by providing a storageState in playwright.config.ts
-    // pointing to a valid BankID session.
-    test.skip();
-    // After login:
-    // await page.goto("/");
-    // await page.reload();
-    // await expect(page.getByRole("button", { name: /avatar|profile|account/i })).toBeVisible();
-    // await expect(page.getByRole("link", { name: /sign in/i })).not.toBeVisible();
-  });
-
-  test("session-required: authenticated user can access /profile without redirect (requires storageState)", async ({ page }) => {
-    // requires auth storageState
-    test.skip();
-    // After login:
-    // await page.goto("/profile");
-    // await expect(page).not.toHaveURL(/\/login/);
-    // await expect(page.locator("main")).toBeVisible();
-  });
 });
