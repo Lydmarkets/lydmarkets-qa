@@ -115,52 +115,5 @@ test.describe("SCRUM-247 — 90-day interrupted market auto-close admin UI (SCRU
       expect(isRedirected || hasBody).toBeTruthy();
     });
 
-    test.skip(
-      "authenticated admin sees a list of interrupted markets with countdown to auto-close",
-      async () => {
-        // Requires: admin credentials configured in the test environment.
-        // The admin UI should show markets with status = 'interrupted', their interruptedAt date,
-        // and the days remaining before the 90-day auto-close rule triggers.
-        // Cannot be verified E2E without admin auth setup.
-      }
-    );
-
-    test.skip(
-      "admin can mark a market as interrupted via the interrupt action button",
-      async () => {
-        // Requires: admin credentials and an active market to interrupt.
-        // Tests the POST /api/admin/markets/[id]/interrupt endpoint wired up in the admin UI.
-        // Cannot be verified E2E without admin auth setup.
-      }
-    );
-
-    test.skip(
-      "admin notification appears when a market is auto-closed by the 90-day cron",
-      async () => {
-        // Requires: triggering the cron job manually or waiting 90 days.
-        // The cron auto-closes markets and emits an admin notification.
-        // Cannot be triggered in E2E without direct DB manipulation.
-      }
-    );
   });
-
-  // ---------------------------------------------------------------------------
-  // Cron / auto-close logic — skipped (backend-only)
-  // ---------------------------------------------------------------------------
-
-  test.skip(
-    "cron job auto-closes markets interrupted for 90+ days and logs to regulatory_audit_log",
-    async () => {
-      // Backend-only: requires running the scheduled cron job and inspecting
-      // the regulatory_audit_log table. Not testable via Playwright UI.
-    }
-  );
-
-  test.skip(
-    "auto-closed market status changes from 'interrupted' to 'closed' in the public UI",
-    async () => {
-      // Requires: a market that has been interrupted for 90+ days and a running cron job.
-      // Cannot be set up in E2E without DB manipulation.
-    }
-  );
 });

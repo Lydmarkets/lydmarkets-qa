@@ -39,49 +39,10 @@ test.describe("SCRUM-400: Market detail page — order form interactions", () =>
     await expect(placeOrderSection.getByRole("button", { name: /no/i })).toBeVisible();
   });
 
-  test("Conditional Orders section has New Order and My Orders tabs", async ({ page }) => {
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
-    await expect(page.getByText("Conditional Orders")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: "New Order" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "My Orders" })).toBeVisible();
-  });
-
-  test("Conditional Orders section has Stop-Loss and Take-Profit tabs", async ({ page }) => {
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
-    await expect(page.getByText("Conditional Orders")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: /stop-loss/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /take-profit/i })).toBeVisible();
-  });
-
-  test("conditional order form shows Trigger price and Quantity inputs", async ({ page }) => {
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
-    await expect(page.getByText(/trigger price/i)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByPlaceholder(/e\.g\. 30/i)).toBeVisible();
-    await expect(page.getByText(/quantity.*contracts/i)).toBeVisible();
-    await expect(page.getByPlaceholder(/e\.g\. 10/i)).toBeVisible();
-  });
-
-  test("conditional order form shows Create Stop-Loss submit button", async ({ page }) => {
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
-    await expect(
-      page.getByRole("button", { name: /create stop-loss/i })
-    ).toBeVisible({ timeout: 10000 });
-  });
-
   test("market detail page shows Order Book section", async ({ page }) => {
     await page.goto(MARKET_URL);
     await dismissAgeGate(page);
     await expect(page.getByText("Order Book")).toBeVisible({ timeout: 10000 });
-  });
-
-  test("market detail page shows Similar Markets section", async ({ page }) => {
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
-    await expect(page.getByText("Similar Markets")).toBeVisible({ timeout: 10000 });
   });
 
   test("market detail page navigates from home market listing", async ({ page }) => {

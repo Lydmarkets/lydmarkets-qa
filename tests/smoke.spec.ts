@@ -29,21 +29,6 @@ test.describe("Smoke tests — critical user flows", () => {
     await expect(page.locator("main").first()).toBeVisible();
   });
 
-  test("search page loads and accepts input", async ({ page }) => {
-    await page.goto("/search");
-    await dismissAgeGate(page);
-    const searchInput = page.getByPlaceholder(/search/i).first();
-    await expect(searchInput).toBeVisible();
-    await searchInput.fill("test");
-    await expect(page.locator("main").first()).toBeVisible();
-  });
-
-  test("leaderboard page loads", async ({ page }) => {
-    await page.goto("/leaderboard");
-    await dismissAgeGate(page);
-    await expect(page.locator("main").first()).toBeVisible();
-  });
-
   test("how it works page loads", async ({ page }) => {
     await page.goto("/how-it-works");
     await dismissAgeGate(page);

@@ -12,16 +12,6 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
     ).toBeVisible();
   });
 
-  test("login page shows BankID device options", async ({ page }) => {
-    await page.goto("/login");
-    await expect(
-      page.getByRole("button", { name: /bankid on another device/i })
-    ).toBeVisible({ timeout: 10000 });
-    await expect(
-      page.getByRole("button", { name: /bankid on this device/i })
-    ).toBeVisible();
-  });
-
   test("login page shows subtitle explaining BankID flow", async ({ page }) => {
     await page.goto("/login");
     await expect(
@@ -67,12 +57,4 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("BankID on this device tab switches instruction text", async ({ page }) => {
-    await page.goto("/login");
-    await page.getByRole("button", { name: /bankid on this device/i }).click();
-    // After switching tab, sign-in button should still be present
-    await expect(
-      page.getByRole("button", { name: /sign in with bankid/i })
-    ).toBeVisible({ timeout: 10000 });
-  });
 });

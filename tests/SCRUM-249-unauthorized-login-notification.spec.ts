@@ -270,35 +270,5 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
       ).toBeVisible({ timeout: 8000 });
     });
 
-    test.skip(
-      "admin loginAttempts view lists failed login events",
-      async () => {
-        // Requires: admin credentials configured in the test environment.
-        // The admin panel should surface failed login-attempt events per user,
-        // including timestamp, IP address, and count.
-        // Cannot be verified E2E without admin auth setup.
-      }
-    );
   });
-
-  // ---------------------------------------------------------------------------
-  // Live BankID / security threshold — skipped
-  // ---------------------------------------------------------------------------
-
-  test.skip(
-    "3 failed BankID login attempts within 1 hour trigger a security_alert notification",
-    async () => {
-      // Requires: ability to trigger N failed BankID authentication attempts.
-      // The threshold (e.g. 3 in 1 hour) is defined in the compliance-service.
-      // Cannot be triggered in E2E without BankID test environment.
-    }
-  );
-
-  test.skip(
-    "security alert email is sent to the user after N failed login attempts",
-    async () => {
-      // Requires: email delivery testing infrastructure (e.g. Mailhog/Mailpit).
-      // Out of scope for Playwright UI testing.
-    }
-  );
 });

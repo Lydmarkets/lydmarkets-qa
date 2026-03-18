@@ -21,62 +21,6 @@ test.describe("SCRUM-406: User profile page — view stats and edit display name
     expect(url.includes("redirect") || url.includes("login")).toBeTruthy();
   });
 
-  test("profile: page renders username and avatar (requires storageState)", async ({ page }) => {
-    // requires auth storageState
-    test.skip();
-    // await page.goto("/profile");
-    // await expect(page).not.toHaveURL(/\/login/);
-    // await expect(page.locator("main")).toBeVisible();
-    // Avatar or username should be visible
-    // await expect(page.getByText(/username|display name|profile/i).first()).toBeVisible({ timeout: 10000 });
-  });
-
-  test("profile: user stats section shows trades, win rate and balance (requires storageState)", async ({ page }) => {
-    // requires auth storageState
-    test.skip();
-    // await page.goto("/profile");
-    // await expect(page.getByText(/trades/i).first()).toBeVisible({ timeout: 10000 });
-    // await expect(page.getByText(/win rate/i).first()).toBeVisible();
-    // await expect(page.getByText(/balance/i).first()).toBeVisible();
-  });
-
-  test("profile: edit button is present on the profile page (requires storageState)", async ({ page }) => {
-    // requires auth storageState
-    test.skip();
-    // await page.goto("/profile");
-    // await expect(page.getByRole("button", { name: /edit/i })).toBeVisible({ timeout: 10000 });
-  });
-
-  test("profile: clicking Edit opens an editable display name field (requires storageState)", async ({ page }) => {
-    // requires auth storageState
-    test.skip();
-    // await page.goto("/profile");
-    // await page.getByRole("button", { name: /edit/i }).click();
-    // await expect(page.getByLabel(/display name/i)).toBeVisible({ timeout: 5000 });
-  });
-
-  test("profile: saving a new display name shows success feedback (requires storageState)", async ({ page }) => {
-    // requires auth storageState
-    test.skip();
-    // await page.goto("/profile");
-    // await page.getByRole("button", { name: /edit/i }).click();
-    // const nameInput = page.getByLabel(/display name/i);
-    // await nameInput.clear();
-    // await nameInput.fill("TestUser_QA");
-    // await page.getByRole("button", { name: /save/i }).click();
-    // Success toast or confirmation
-    // await expect(page.getByText(/saved|updated|success/i)).toBeVisible({ timeout: 10000 });
-  });
-
-  test("profile: display name persists after page reload (requires storageState)", async ({ page }) => {
-    // requires auth storageState
-    test.skip();
-    // await page.goto("/profile");
-    // ... edit and save flow ...
-    // await page.reload();
-    // await expect(page.getByText("TestUser_QA")).toBeVisible({ timeout: 10000 });
-  });
-
   test("login page is reachable and shows BankID flow", async ({ page }) => {
     await page.goto("/login");
     await expect(

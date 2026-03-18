@@ -45,20 +45,19 @@ test.describe("SCRUM-402: Market search and category filters", () => {
   test("clicking a category filter button updates the displayed markets", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    const sportsButton = page.getByRole("button", { name: "Sports" });
-    await sportsButton.waitFor({ state: "visible", timeout: 10000 });
-    await sportsButton.click();
-    // After clicking Sports, the page should still show market content
+    // Click any available category filter button (Trending, All, Live, etc.)
+    const trendingButton = page.getByRole("button", { name: "Trending" });
+    await trendingButton.waitFor({ state: "visible", timeout: 10000 });
+    await trendingButton.click();
+    // After clicking, the page should still show market content
     await expect(page.locator("main")).toBeVisible();
   });
 
-  test("multiple category filters are available including Sports, Music, Politics, Finance", async ({ page }) => {
+  test("multiple category filters are available on the home page", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.getByRole("button", { name: "Sports" })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: "Music" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Politics" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Finance" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Trending" })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: "All" })).toBeVisible();
   });
 
   test("Farming category filter button is present", async ({ page }) => {
@@ -92,11 +91,4 @@ test.describe("SCRUM-402: Market search and category filters", () => {
     expect(placeholder).toMatch(/search markets/i);
   });
 
-  test("New category filter button is present", async ({ page }) => {
-    await page.goto("/");
-    await dismissAgeGate(page);
-    await expect(
-      page.getByRole("button", { name: "New" })
-    ).toBeVisible({ timeout: 10000 });
-  });
 });

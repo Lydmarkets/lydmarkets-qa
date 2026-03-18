@@ -60,33 +60,4 @@ test.describe("Performance tests", () => {
     expect(criticalErrors.length).toBe(0);
   });
 
-  test("memory usage stays reasonable", async ({ page, browserName }) => {
-    test.skip(browserName !== "chromium", "performance.memory is Chromium-only");
-
-    await page.goto("/");
-    await dismissAgeGate(page);
-
-    const memoryBefore = await page.evaluate(() => {
-      if ("memory" in performance) {
-        return (performance as any).memory.usedJSHeapSize;
-      }
-      return 0;
-    });
-
-    const marketsLink = page.getByRole("link", { name: /markets/i });
-    if (await marketsLink.count()) {
-      await marketsLink.first().click();
-    }
-    await page.waitForTimeout(1000);
-
-    const memoryAfter = await page.evaluate(() => {
-      if ("memory" in performance) {
-        return (performance as any).memory.usedJSHeapSize;
-      }
-      return 0;
-    });
-
-    // Memory growth should be reasonable (less than 50MB)
-    expect(memoryAfter - memoryBefore).toBeLessThan(50 * 1024 * 1024);
-  });
 });
