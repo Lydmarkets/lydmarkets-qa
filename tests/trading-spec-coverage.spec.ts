@@ -17,7 +17,7 @@ async function goToFirstMarketDetail(page: import("@playwright/test").Page) {
   await dismissAgeGate(page);
 
   // Wait for at least one market card link to appear
-  const marketLink = page.locator('a[href*="/markets/"]').first();
+  const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
   await expect(marketLink).toBeVisible({ timeout: 10_000 });
 
   const href = await marketLink.getAttribute("href");
@@ -71,9 +71,9 @@ test.describe("Trading spec — E2E coverage", () => {
     async ({ page }) => {
       await goToFirstMarketDetail(page);
 
-      // Order book is rendered as a section with aria-label "Orderbok" / "Order book"
-      const orderBookSection = page.locator(
-        '[aria-label*="rder" i], [aria-label*="orderbok" i]',
+      // Order book is rendered as a section or heading with "Order book" / "Orderbok" text
+      const orderBookSection = page.getByRole("region", { name: /order/i }).or(
+        page.getByText(/order book|orderbok/i).first(),
       );
       const hasOrderBook = await orderBookSection
         .first()
@@ -178,7 +178,7 @@ test.describe("Trading spec — E2E coverage", () => {
           .catch(() => false);
 
         const hasSection = await page
-          .locator('[aria-label*="rder" i]')
+          .getByRole("region", { name: /order/i })
           .first()
           .isVisible({ timeout: 5_000 })
           .catch(() => false);

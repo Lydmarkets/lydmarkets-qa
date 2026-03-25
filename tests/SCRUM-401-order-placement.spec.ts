@@ -6,17 +6,27 @@ import { dismissAgeGate } from "../helpers/age-gate";
 // Tests are structured to run with auth; assertions reflect the expected
 // authenticated-user UI. In CI, set up playwright/.auth/user.json first.
 
-// Known open market UUID used throughout tests
-const MARKET_ID = "e15107eb-74be-4b63-a1ef-87e064ff7548";
-const MARKET_URL = `/markets/${MARKET_ID}`;
+/** Navigate to /markets and click the first available market link. */
+async function goToFirstMarket(page: import("@playwright/test").Page) {
+  await page.goto("/markets");
+  await dismissAgeGate(page);
+
+  const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
+  await expect(marketLink).toBeVisible({ timeout: 10_000 });
+
+  const href = await marketLink.getAttribute("href");
+  expect(href).toBeTruthy();
+
+  await page.goto(href!);
+  await dismissAgeGate(page);
+}
 
 test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
   // Requires auth — apply storageState when available
   // test.use({ storageState: "playwright/.auth/user.json" });
 
   test("market detail page shows YES and NO order buttons", async ({ page }) => {
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
+    await goToFirstMarket(page);
 
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
@@ -28,8 +38,7 @@ test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
   });
 
   test("market detail page shows a Place Order section", async ({ page }) => {
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
+    await goToFirstMarket(page);
 
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
@@ -38,8 +47,7 @@ test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
   });
 
   test("clicking YES selects YES outcome in order form", async ({ page }) => {
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
+    await goToFirstMarket(page);
 
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
@@ -59,8 +67,7 @@ test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
   });
 
   test("order form opens QuickBet modal when clicking Yes or No", async ({ page }) => {
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
+    await goToFirstMarket(page);
 
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
@@ -75,7 +82,7 @@ test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
       .isVisible({ timeout: 5000 })
       .catch(() => false);
     const hasInput = await page
-      .locator('input[type="number"], input[inputmode="numeric"], input[inputmode="decimal"]')
+      .getByRole("spinbutton")
       .first()
       .isVisible({ timeout: 5000 })
       .catch(() => false);
@@ -88,8 +95,7 @@ test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
   }) => {
     // Requires authenticated storageState — set up via global setup
     // test.use({ storageState: "playwright/.auth/user.json" });
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
+    await goToFirstMarket(page);
 
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
@@ -113,8 +119,7 @@ test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
   test("placing an order as authenticated user opens QuickBet modal", async ({ page }) => {
     // Requires authenticated storageState — set up via global setup
     // test.use({ storageState: "playwright/.auth/user.json" });
-    await page.goto(MARKET_URL);
-    await dismissAgeGate(page);
+    await goToFirstMarket(page);
 
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
@@ -128,12 +133,12 @@ test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
     if (!hasModal) {
       // No modal — the order form may require auth or the feature changed
       const url = page.url();
-      expect(url.includes("/auth") || url.includes(MARKET_ID)).toBeTruthy();
+      expect(url.includes("/auth") || url.includes("/markets/")).toBeTruthy();
       return;
     }
 
     // Fill stake amount in the modal
-    const stakeInput = page.locator('input[type="number"], input[inputmode="numeric"], input[inputmode="decimal"]').first();
+    const stakeInput = page.getByRole("spinbutton").first();
     const hasInput = await stakeInput.isVisible({ timeout: 3000 }).catch(() => false);
     if (!hasInput) {
       // Modal opened but input may be different — just verify modal is visible
@@ -158,7 +163,7 @@ test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
     } else {
       // If submit button not found (unauthenticated), assert redirect to auth
       const url = page.url();
-      expect(url.includes("/auth") || url.includes(MARKET_ID)).toBeTruthy();
+      expect(url.includes("/auth") || url.includes("/markets/")).toBeTruthy();
     }
   });
 

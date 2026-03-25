@@ -66,7 +66,7 @@ test.describe("Age verification gate flow", () => {
     await context.clearCookies();
     await page.goto("/");
 
-    const modal = page.locator('[role="dialog"]');
+    const modal = page.getByRole("dialog");
     await expect(modal).toBeVisible({ timeout: 5000 });
 
     // Try clicking outside the modal — it should remain visible
@@ -81,12 +81,14 @@ test.describe("Age verification gate flow", () => {
     await expect(page.getByRole("button", { name: /lämna sidan/i })).toBeVisible({ timeout: 5000 });
   });
 
-  test("modal does not appear when age cookie is already set", async ({ page, context }) => {
+  test("modal does not appear when age cookie is already set", async ({ page, context, baseURL }) => {
+    // Extract domain from the baseURL dynamically
+    const domain = new URL(baseURL ?? "https://web-production-bb35.up.railway.app").hostname;
     // Set the cookie directly before navigating
     await context.addCookies([{
       name: "age_verified",
       value: "1",
-      domain: "web-production-bb35.up.railway.app",
+      domain,
       path: "/",
     }]);
 

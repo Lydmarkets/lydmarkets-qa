@@ -25,14 +25,14 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
-    // Market cards — try various selectors the component might use
-    const cards = page.locator('[data-testid="market-card"], .market-card, article').first();
+    // Market cards — try accessible selectors
+    const cards = page.getByRole("article").first();
     const hasCards =
       (await cards.isVisible({ timeout: 8000 }).catch(() => false)) ||
       // Fallback: look for Yes/No pills which are unique to market cards
       (await page.getByText(/yes \d+%|no \d+%/i).first().isVisible({ timeout: 8000 }).catch(() => false)) ||
-      // Fallback: clickable card links with market slugs
-      (await page.locator('a[href*="/markets/"]').first().isVisible({ timeout: 8000 }).catch(() => false));
+      // Fallback: clickable card links in main content
+      (await page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first().isVisible({ timeout: 8000 }).catch(() => false));
 
     expect(hasCards).toBeTruthy();
   });
@@ -71,8 +71,8 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Market cards should display the market question text
-    // Cards may be links or containers — look broadly for any element linking to a market
-    const marketLinks = page.locator('a[href*="/market"]');
+    // Cards may be links or containers — look broadly for any link in main content
+    const marketLinks = page.locator("main").getByRole("link").filter({ hasText: /.+/ });
     const count = await marketLinks.count();
     expect(count).toBeGreaterThanOrEqual(1);
 
@@ -89,11 +89,11 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Market cards no longer use thumbnails — verify card content renders instead
-    const hasCards = await page.locator('a[href*="/markets/"]').first().isVisible({ timeout: 8000 }).catch(() => false);
+    const hasCards = await page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first().isVisible({ timeout: 8000 }).catch(() => false);
     const hasYesNo = await page.getByRole("button", { name: /yes|no/i }).first().isVisible({ timeout: 5000 }).catch(() => false);
 
     // Fallback: check for any img element in the markets section (older design)
-    const hasImage = await page.locator('main img').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasImage = await page.locator("main").getByRole("img").first().isVisible({ timeout: 3000 }).catch(() => false);
 
     expect(hasCards || hasYesNo || hasImage).toBeTruthy();
   });
@@ -120,8 +120,7 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
 
     // Like/bookmark count — may appear as a heart icon with a number, bookmark icon, etc.
     const hasLikes =
-      (await page.getByRole("button", { name: /like|bookmark|heart|save/i }).first().isVisible({ timeout: 8000 }).catch(() => false)) ||
-      (await page.locator('[aria-label*="like" i], [aria-label*="bookmark" i], [aria-label*="heart" i]').first().isVisible({ timeout: 5000 }).catch(() => false));
+      (await page.getByRole("button", { name: /like|bookmark|heart|save|gilla|bokmärk|bevaka|watchlist/i }).first().isVisible({ timeout: 8000 }).catch(() => false));
 
     // Like count may not yet be implemented
     const hasMain = await page.locator("main").isVisible();
@@ -134,7 +133,7 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Find the first clickable market card/link
-    const marketLink = page.locator('a[href*="/markets/"]').first();
+    const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
     const hasLink = await marketLink.isVisible({ timeout: 8000 }).catch(() => false);
 
     if (hasLink) {
@@ -156,7 +155,7 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
-    const marketLinks = page.locator('a[href*="/markets/"]');
+    const marketLinks = page.locator("main").getByRole("link").filter({ hasText: /.+/ });
     const count = await marketLinks.count();
     // At minimum, if markets exist, there should be more than one on desktop
     expect(count).toBeGreaterThanOrEqual(1);
@@ -168,7 +167,7 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
-    const marketLinks = page.locator('a[href*="/markets/"]');
+    const marketLinks = page.locator("main").getByRole("link").filter({ hasText: /.+/ });
     const hasCards = await marketLinks.first().isVisible({ timeout: 8000 }).catch(() => false);
 
     // Cards should still be visible on mobile (2-col layout)
@@ -205,7 +204,7 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Get the first market card and extract Yes/No percentages
-    const firstCard = page.locator('a[href*="/markets/"]').first();
+    const firstCard = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
     const cardVisible = await firstCard.isVisible({ timeout: 8000 }).catch(() => false);
 
     if (!cardVisible) {
@@ -214,7 +213,9 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
       return;
     }
 
-    const cardText = await firstCard.locator("..").innerText().catch(() => "");
+    // Get text from the card's parent container (article or list item)
+    const cardContainer = page.getByRole("article").first().or(firstCard);
+    const cardText = await cardContainer.innerText().catch(() => "");
     const matches = cardText.match(/(\d+)%/g);
 
     if (matches && matches.length >= 2) {

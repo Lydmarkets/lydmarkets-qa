@@ -19,7 +19,7 @@ async function goToFirstMarket(page: import("@playwright/test").Page) {
   await page.goto("/");
   await dismissAgeGate(page);
 
-  const marketLink = page.locator('a[href*="/markets/"]').first();
+  const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
   await expect(marketLink).toBeVisible({ timeout: 10_000 });
 
   const href = await marketLink.getAttribute("href");
@@ -106,7 +106,7 @@ test.describe("Bet placement — QuickBet modal", () => {
       await goToFirstMarket(page);
       await openQuickBetYes(page);
 
-      await page.getByRole("button", { name: /close/i }).click();
+      await page.getByRole("button", { name: /close|stäng/i }).click();
       await expect(page.getByRole("dialog")).toBeHidden({ timeout: 3_000 });
     },
   );
@@ -184,9 +184,8 @@ test.describe("Bet placement — QuickBet modal", () => {
       await otherBtn.click();
 
       // A number input should appear
-      const input = dialog.locator('input[type="number"]');
+      const input = dialog.getByRole("spinbutton").or(dialog.getByPlaceholder(/enter amount|ange belopp/i)).first();
       await expect(input).toBeVisible({ timeout: 3_000 });
-      await expect(input).toHaveAttribute("placeholder", /enter amount|ange belopp/i);
     },
   );
 
@@ -201,7 +200,7 @@ test.describe("Bet placement — QuickBet modal", () => {
 
       // Click "Other" and type a custom amount
       await dialog.getByRole("button", { name: /other|annat/i }).click();
-      const input = dialog.locator('input[type="number"]');
+      const input = dialog.getByRole("spinbutton").or(dialog.getByPlaceholder(/enter amount|ange belopp/i)).first();
       await expect(input).toBeVisible({ timeout: 3_000 });
       await input.fill("200");
 

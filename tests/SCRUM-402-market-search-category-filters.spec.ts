@@ -38,15 +38,15 @@ test.describe("SCRUM-402: Market search and category filters", () => {
     await page.goto("/");
     await dismissAgeGate(page);
     // Category tabs: Trending, All, Live, New, etc.
-    await expect(page.getByRole("button", { name: "Trending" })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: "All" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /trending|trendande/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^all$|^alla$/i })).toBeVisible();
   });
 
   test("clicking a category filter button updates the displayed markets", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
     // Click any available category filter button (Trending, All, Live, etc.)
-    const trendingButton = page.getByRole("button", { name: "Trending" });
+    const trendingButton = page.getByRole("button", { name: /trending|trendande/i });
     await trendingButton.waitFor({ state: "visible", timeout: 10000 });
     await trendingButton.click();
     // After clicking, the page should still show market content
@@ -56,15 +56,15 @@ test.describe("SCRUM-402: Market search and category filters", () => {
   test("multiple category filters are available on the home page", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.getByRole("button", { name: "Trending" })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: "All" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /trending|trendande/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^all$|^alla$/i })).toBeVisible();
   });
 
   test("New category filter button is present", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
     await expect(
-      page.getByRole("button", { name: "New", exact: true })
+      page.getByRole("button", { name: /^new$|^nya$/i })
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -72,7 +72,7 @@ test.describe("SCRUM-402: Market search and category filters", () => {
     await page.goto("/");
     await dismissAgeGate(page);
     await expect(
-      page.getByRole("button", { name: "Live" })
+      page.getByRole("button", { name: /^live$/i })
     ).toBeVisible({ timeout: 10000 });
   });
 

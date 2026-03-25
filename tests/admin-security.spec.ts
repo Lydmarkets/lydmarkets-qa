@@ -17,7 +17,7 @@ import { test, expect } from "../fixtures/base";
 // ---------------------------------------------------------------------------
 
 const ADMIN_URL =
-  process.env.ADMIN_URL || "https://lydmarkets-admin-production.up.railway.app";
+  process.env.ADMIN_URL || "https://lydmarkets-admin-staging.up.railway.app";
 
 // =========================================================================
 // 1. AUTH — Login, credentials, session
