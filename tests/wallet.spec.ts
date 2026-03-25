@@ -9,7 +9,7 @@ test.describe("Wallet and payment flows", () => {
     await page.goto("/wallet");
     await page.waitForURL(/\/login/);
     await dismissAgeGate(page);
-    await expect(page.getByText("Welcome back")).toBeVisible();
+    await expect(page.getByText(/välkommen tillbaka|welcome back/i)).toBeVisible();
   });
 
   test("login redirect includes wallet return path", async ({ page }) => {

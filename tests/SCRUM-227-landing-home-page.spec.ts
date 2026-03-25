@@ -189,11 +189,11 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
     await expect(
-      page.getByRole("link", { name: /sign in/i })
+      page.getByRole("link", { name: /logga in|sign in/i })
     ).toBeVisible({ timeout: 8000 });
 
     await expect(
-      page.getByRole("link", { name: /sign up/i })
+      page.getByRole("link", { name: /registrera|sign up/i })
     ).toBeVisible({ timeout: 8000 });
   });
 

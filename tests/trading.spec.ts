@@ -10,7 +10,7 @@ test.describe("Trading flows", () => {
     await dismissAgeGate(page);
     await expect(page.locator("main").first()).toBeVisible();
     const hasSearch = await page
-      .getByPlaceholder(/search markets/i)
+      .getByPlaceholder(/search markets|sök marknader/i)
       .first()
       .isVisible({ timeout: 3000 })
       .catch(() => false);

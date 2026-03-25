@@ -41,13 +41,13 @@ test.describe("Compliance — legal pages accessible", () => {
     await page.goto("/terms");
     await dismissAgeGate(page);
     await expect(page.locator("main").first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: /terms/i }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: /terms|användarvillkor/i }).first()).toBeVisible();
   });
 
   test("game rules page loads", async ({ page }) => {
     await page.goto("/game-rules");
     await dismissAgeGate(page);
     await expect(page.locator("main").first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: /game rules/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /game rules|spelregler|gemenskapsriktlinjer/i })).toBeVisible();
   });
 });

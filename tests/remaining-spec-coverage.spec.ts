@@ -62,11 +62,11 @@ test.describe("Remaining spec coverage", () => {
 
   // ── Public pages ──────────────────────────────────────────────────
   const publicPages = [
-    { path: "/how-it-works", heading: /how it works/i },
-    { path: "/how-it-works/trading", heading: /how trading works/i },
-    { path: "/how-it-works/regulation", heading: /regulation/i },
-    { path: "/about", heading: /about lydmarkets/i },
-    { path: "/help", heading: /help|faq/i },
+    { path: "/how-it-works", heading: /how it works|så fungerar det|hur det fungerar/i },
+    { path: "/how-it-works/trading", heading: /how trading works|hur handel fungerar/i },
+    { path: "/how-it-works/regulation", heading: /regulation|reglering/i },
+    { path: "/about", heading: /about lydmarkets|om lydmarkets/i },
+    { path: "/help", heading: /help|faq|hjälp/i },
   ];
 
   for (const { path, heading } of publicPages) {
@@ -166,18 +166,18 @@ test.describe("Remaining spec coverage", () => {
         await dismissAgeGate(page);
 
         // The AppearanceSettings component has a theme select with id="theme"
-        const themeSelect = page.getByLabel(/theme/i);
+        const themeSelect = page.getByLabel(/theme|tema/i);
         await expect(themeSelect).toBeVisible({ timeout: 10_000 });
 
         // Click the select to open the dropdown
         await themeSelect.click();
 
-        // Verify all three theme options exist
+        // Verify all three theme options exist (may be Swedish: Ljust, Mörkt, System)
         await expect(
-          page.getByRole("option", { name: /light/i })
+          page.getByRole("option", { name: /light|ljust/i })
         ).toBeVisible();
         await expect(
-          page.getByRole("option", { name: /dark/i })
+          page.getByRole("option", { name: /dark|mörkt/i })
         ).toBeVisible();
         await expect(
           page.getByRole("option", { name: /system/i })

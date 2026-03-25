@@ -28,10 +28,15 @@ setup("authenticate via mock BankID", async ({ page }) => {
   await page.goto("/login");
   await dismissAgeGate(page);
 
-  await page.getByRole("button", { name: /sign in with bankid/i }).click();
+  // Dismiss cookie banner if present
+  const cookieAccept = page.getByRole("button", { name: /acceptera|accept/i });
+  await cookieAccept.click({ timeout: 3_000 }).catch(() => {});
+
+  // Button text depends on locale: "Sign in with BankID" (EN) / "Logga in med BankID" (SV)
+  await page.getByRole("button", { name: /sign in with bankid|logga in med bankid/i }).click();
 
   // Wait for BankID mock to resolve — either redirect or "No account found"
-  const noAccount = page.getByText("No account found");
+  const noAccount = page.getByText(/no account found|inget konto hittat/i);
   const notOnLogin = page.waitForURL(
     (url) => !url.pathname.includes("/login"),
     { timeout: 30_000 },
@@ -52,7 +57,7 @@ setup("authenticate via mock BankID", async ({ page }) => {
   await page.goto("/register");
   await dismissAgeGate(page);
 
-  await page.getByRole("button", { name: /start bankid/i }).click();
+  await page.getByRole("button", { name: /start bankid|starta bankid|mobilt bankid/i }).click();
 
   // Wait for Step 2 form (identity verified)
   await page.getByRole("textbox", { name: /email/i }).waitFor({ timeout: 30_000 });
@@ -61,10 +66,10 @@ setup("authenticate via mock BankID", async ({ page }) => {
   await page.getByRole("textbox", { name: /email/i }).fill("test@lydmarkets.test");
 
   // Check GDPR consent
-  await page.getByRole("checkbox", { name: /terms of service/i }).check();
+  await page.getByRole("checkbox", { name: /terms of service|användarvillkor/i }).check();
 
   // Submit
-  await page.getByRole("button", { name: /create account/i }).click();
+  await page.getByRole("button", { name: /create account|skapa konto/i }).click();
 
   // Wait for redirect after registration
   await page.waitForURL((url) => !url.pathname.includes("/register"), {
@@ -73,7 +78,7 @@ setup("authenticate via mock BankID", async ({ page }) => {
 
   // If redirected to login, log in now
   if (page.url().includes("/login")) {
-    await page.getByRole("button", { name: /sign in with bankid/i }).click();
+    await page.getByRole("button", { name: /sign in with bankid|logga in med bankid/i }).click();
     await page.waitForURL((url) => !url.pathname.includes("/login"), {
       timeout: 30_000,
     });

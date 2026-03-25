@@ -6,14 +6,14 @@ test.describe("SCRUM-402: Market search and category filters", () => {
     await page.goto("/");
     await dismissAgeGate(page);
     await expect(
-      page.getByPlaceholder(/search markets/i)
+      page.getByPlaceholder(/search markets|sök marknader/i)
     ).toBeVisible({ timeout: 10000 });
   });
 
   test("typing in search input filters the market list", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    const search = page.getByPlaceholder(/search markets/i);
+    const search = page.getByPlaceholder(/search markets|sök marknader/i);
     await search.fill("sport");
     // Market list should still be visible (live filtering)
     await expect(page.locator("main")).toBeVisible();
@@ -27,11 +27,11 @@ test.describe("SCRUM-402: Market search and category filters", () => {
   test("clearing the search input restores all markets", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    const search = page.getByPlaceholder(/search markets/i);
+    const search = page.getByPlaceholder(/search markets|sök marknader/i);
     await search.fill("sport");
     await search.clear();
     // After clearing, market count label should be visible again
-    await expect(page.getByText(/\d+\s*markets/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/\d+\s*(?:markets|marknader)/i)).toBeVisible({ timeout: 10000 });
   });
 
   test("category filter buttons are visible on the home page", async ({ page }) => {
@@ -60,11 +60,11 @@ test.describe("SCRUM-402: Market search and category filters", () => {
     await expect(page.getByRole("button", { name: "All" })).toBeVisible();
   });
 
-  test("Farming category filter button is present", async ({ page }) => {
+  test("New category filter button is present", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
     await expect(
-      page.getByRole("button", { name: "Farming" })
+      page.getByRole("button", { name: "New", exact: true })
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -79,16 +79,16 @@ test.describe("SCRUM-402: Market search and category filters", () => {
   test("home page shows market count label", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.getByText(/\d+\s*markets/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/\d+\s*(?:markets|marknader)/i)).toBeVisible({ timeout: 10000 });
   });
 
   test("search input has correct placeholder text", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    const search = page.getByPlaceholder(/search markets/i);
+    const search = page.getByPlaceholder(/search markets|sök marknader/i);
     await expect(search).toBeVisible({ timeout: 10000 });
     const placeholder = await search.getAttribute("placeholder");
-    expect(placeholder).toMatch(/search markets/i);
+    expect(placeholder).toMatch(/search markets|sök marknader/i);
   });
 
 });

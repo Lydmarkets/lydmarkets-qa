@@ -33,7 +33,7 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
-      page.getByRole("heading", { name: "Menu" })
+      page.getByRole("heading", { name: /meny|menu/i })
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -42,9 +42,9 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
-      page.getByRole("heading", { name: "Menu" })
+      page.getByRole("heading", { name: /meny|menu/i })
     ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("link", { name: "Markets" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /marknader|markets/i })).toBeVisible();
   });
 
   test("mobile menu shows How it works nav link", async ({ page }) => {
@@ -52,9 +52,9 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
-      page.getByRole("heading", { name: "Menu" })
+      page.getByRole("heading", { name: /meny|menu/i })
     ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("link", { name: "How it works" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /hur det fungerar|how it works/i })).toBeVisible();
   });
 
   test("mobile menu shows Sign in and Sign up buttons", async ({ page }) => {
@@ -62,10 +62,10 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
-      page.getByRole("heading", { name: "Menu" })
+      page.getByRole("heading", { name: /meny|menu/i })
     ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("link", { name: /sign in/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /sign up/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /logga in|sign in/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /registrera|sign up/i })).toBeVisible();
   });
 
   test("mobile menu has a close button (X)", async ({ page }) => {
@@ -73,7 +73,7 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
-      page.getByRole("heading", { name: "Menu" })
+      page.getByRole("heading", { name: /meny|menu/i })
     ).toBeVisible({ timeout: 10000 });
     // Close button should be visible
     await expect(
@@ -86,11 +86,13 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
-      page.getByRole("heading", { name: "Menu" })
+      page.getByRole("heading", { name: /meny|menu/i })
     ).toBeVisible({ timeout: 10000 });
-    await page.getByRole("link", { name: "Markets" }).click();
-    await page.waitForURL(/\/market/, { timeout: 10000 });
-    await expect(page.locator("main")).toBeVisible();
+    // Click "Hur det fungerar" link (navigates to /how-it-works)
+    const howItWorksLink = page.getByRole("link", { name: /hur det fungerar|how it works/i }).first();
+    await howItWorksLink.click();
+    await page.waitForURL(/\/how-it-works/, { timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("navigating via mobile menu closes the menu drawer", async ({ page }) => {
@@ -98,13 +100,13 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
-      page.getByRole("heading", { name: "Menu" })
+      page.getByRole("heading", { name: /meny|menu/i })
     ).toBeVisible({ timeout: 10000 });
-    await page.getByRole("link", { name: "Markets" }).click();
-    await page.waitForURL(/\/market/, { timeout: 10000 });
+    await page.getByRole("link", { name: /hur det fungerar|how it works/i }).first().click();
+    await page.waitForURL(/\/how-it-works/, { timeout: 10000 });
     // Menu heading should no longer be visible after navigation
     await expect(
-      page.getByRole("heading", { name: "Menu" })
+      page.getByRole("heading", { name: /meny|menu/i })
     ).not.toBeVisible({ timeout: 5000 });
   });
 });

@@ -27,7 +27,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
     await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
     await expect(
-      page.getByRole("button", { name: /sign in with bankid/i })
+      page.getByRole("button", { name: /logga in med bankid|sign in with bankid/i })
     ).toBeVisible({ timeout: 8000 });
   });
 

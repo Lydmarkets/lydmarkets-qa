@@ -23,11 +23,12 @@ test.describe("SCRUM-406: User profile page — view stats and edit display name
 
   test("login page is reachable and shows BankID flow", async ({ page }) => {
     await page.goto("/login");
+    await dismissAgeGate(page);
     await expect(
-      page.getByRole("heading", { name: /welcome back/i })
+      page.getByRole("heading", { name: /welcome back|välkommen tillbaka/i })
     ).toBeVisible({ timeout: 10000 });
     await expect(
-      page.getByRole("button", { name: /sign in with bankid/i })
+      page.getByRole("button", { name: /logga in med bankid|sign in with bankid/i })
     ).toBeVisible();
   });
 });
