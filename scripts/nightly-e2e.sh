@@ -9,6 +9,7 @@ LOG_FILE="$PROJECT_DIR/results/nightly-$(date +%F).log"
 
 # ── Ensure deps ─────────────────────────────────────────────────────
 export PATH="$HOME/.bun/bin:$PATH"
+export CI=1
 cd "$PROJECT_DIR"
 mkdir -p results
 git pull --ff-only origin main 2>/dev/null || true

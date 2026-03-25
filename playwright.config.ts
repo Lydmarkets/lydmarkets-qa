@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
   retries: 1,
-  workers: 2,
+  workers: process.env.CI ? 4 : 2,
   reporter: [
     ["json", { outputFile: "results/report.json" }],
     ["html", { open: "never" }],
