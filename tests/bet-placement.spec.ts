@@ -19,8 +19,11 @@ async function goToFirstMarket(page: import("@playwright/test").Page) {
   await page.goto("/markets");
   await dismissAgeGate(page);
 
+  // Click "All" filter — "Trending" may be empty on staging
+  await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
+
   // Wait for market card links (href contains /markets/ + uuid pattern)
-  const marketLink = page.getByRole("link", { name: /.+/ }).filter({ has: page.locator('[href*="/markets/"]') }).first();
+  const marketLink = page.locator('main a[href*="/markets/"]').first();
   await expect(marketLink).toBeVisible({ timeout: 15_000 });
 
   await marketLink.click();

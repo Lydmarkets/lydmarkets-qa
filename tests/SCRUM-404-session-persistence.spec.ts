@@ -50,6 +50,8 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
     // Navigate to /markets and click the first market to get a real market detail URL
     await page.goto("/markets");
     await dismissAgeGate(page);
+    // Click "All" filter — "Trending" may be empty on staging
+    await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
     const marketLink = page.locator('main a[href*="/markets/"]').first();
     await expect(marketLink).toBeVisible({ timeout: 15_000 });
     await marketLink.click();
@@ -73,6 +75,8 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
     // Navigate to /markets and click the first market to get a real market detail URL
     await page.goto("/markets");
     await dismissAgeGate(page);
+    // Click "All" filter — "Trending" may be empty on staging
+    await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
     const marketLink = page.locator('main a[href*="/markets/"]').first();
     await expect(marketLink).toBeVisible({ timeout: 15_000 });
     await marketLink.click();

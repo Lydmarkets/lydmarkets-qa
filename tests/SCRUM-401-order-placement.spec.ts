@@ -11,6 +11,9 @@ async function goToFirstMarket(page: import("@playwright/test").Page) {
   await page.goto("/markets");
   await dismissAgeGate(page);
 
+  // Click "All" filter — "Trending" may be empty on staging
+  await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
+
   const marketLink = page.locator('main a[href*="/markets/"]').first();
   await expect(marketLink).toBeVisible({ timeout: 15_000 });
 
