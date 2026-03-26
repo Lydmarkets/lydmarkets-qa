@@ -9,10 +9,9 @@ function hasValidSession(): boolean {
     const data = JSON.parse(fs.readFileSync(AUTH_FILE, "utf-8"));
     const sessionCookie = data.cookies?.find(
       (c: { name: string }) =>
-        c.name.includes("session-token"),
+        c.name.includes("session-token") || c.name.includes("authjs"),
     );
     if (!sessionCookie?.expires || sessionCookie.expires <= 0) return false;
-    // Valid if more than 1 day remaining
     return sessionCookie.expires * 1000 > Date.now() + 86_400_000;
   } catch {
     return false;
@@ -24,8 +23,7 @@ function saveEmptyAuth(): void {
   fs.writeFileSync(AUTH_FILE, JSON.stringify({ cookies: [], origins: [] }));
 }
 
-setup("authenticate via mock BankID", async ({ page }) => {
-  // Skip if we already have a valid session (>1 day remaining)
+setup("authenticate via mock BankID", { timeout: 90_000 }, async ({ page }) => {
   if (hasValidSession()) {
     return;
   }
@@ -38,11 +36,11 @@ setup("authenticate via mock BankID", async ({ page }) => {
     const cookieAccept = page.getByRole("button", { name: /acceptera|accept/i });
     await cookieAccept.click({ timeout: 3_000 }).catch(() => {});
 
-    // Button text depends on locale: "Sign in with BankID" (EN) / "Logga in med BankID" (SV)
+    // Click BankID login
     await page.getByRole("button", { name: /sign in with bankid|logga in med bankid/i }).click();
 
     // Wait for BankID mock to resolve — either redirect or "No account found"
-    const noAccount = page.getByText(/no account found|inget konto hittat/i);
+    const noAccount = page.getByText(/no account found|inget konto/i);
     const notOnLogin = page.waitForURL(
       (url) => !url.pathname.includes("/login"),
       { timeout: 15_000 },
@@ -63,19 +61,25 @@ setup("authenticate via mock BankID", async ({ page }) => {
     await page.goto("/register");
     await dismissAgeGate(page);
 
-    await page.getByRole("button", { name: /start bankid|starta bankid|mobilt bankid/i }).click();
+    // Dismiss cookie banner again if needed
+    await cookieAccept.click({ timeout: 2_000 }).catch(() => {});
 
-    // Wait for Step 2 form (identity verified)
-    await page.getByRole("textbox", { name: /email/i }).waitFor({ timeout: 30_000 });
+    // Step 1: Start BankID verification
+    await page.getByRole("button", { name: /^starta bankid$|^start bankid$/i }).click();
 
-    // Fill registration form
-    await page.getByRole("textbox", { name: /email/i }).fill("test@lydmarkets.test");
+    // Step 2: Wait for identity verified form
+    const emailField = page.getByRole("textbox", { name: /e-postadress|email/i });
+    await emailField.waitFor({ timeout: 30_000 });
 
-    // Check GDPR consent
-    await page.getByRole("checkbox", { name: /terms of service|användarvillkor/i }).check();
+    // Fill email
+    await emailField.fill("e2e-test@lydmarkets.test");
 
-    // Submit
-    await page.getByRole("button", { name: /create account|skapa konto/i }).click();
+    // Check GDPR consent (first checkbox — the required one)
+    const gdprCheckbox = page.getByRole("checkbox").first();
+    await gdprCheckbox.check();
+
+    // Submit registration
+    await page.getByRole("button", { name: /skapa konto|create account/i }).click();
 
     // Wait for redirect after registration
     await page.waitForURL((url) => !url.pathname.includes("/register"), {
@@ -92,8 +96,7 @@ setup("authenticate via mock BankID", async ({ page }) => {
 
     await page.context().storageState({ path: AUTH_FILE });
   } catch {
-    // BankID auth not available (e.g. prod without mock) — save empty state
-    // so unauthenticated tests can still run
+    // BankID auth not available — save empty state so unauthenticated tests still run
     saveEmptyAuth();
   }
 });

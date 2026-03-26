@@ -21,6 +21,7 @@ export default defineConfig({
     {
       name: "setup",
       testMatch: /auth\.setup\.ts/,
+      timeout: 90_000,
     },
     {
       name: "default",

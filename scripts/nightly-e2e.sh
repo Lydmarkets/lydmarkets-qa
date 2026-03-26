@@ -4,7 +4,7 @@ set -euo pipefail
 # ── Config ──────────────────────────────────────────────────────────
 PROJECT_DIR="/opt/lydmarkets-qa"
 DISCORD_WEBHOOK="https://discordapp.com/api/webhooks/1486391192517087403/bNr9mIfzS_hJkzN0NofmRcYSvEHkON58m5mLyvsJG8Chd1Y-lhuVupR3jj8HrgYcKnWQ"
-BASE_URL="${BASE_URL:-https://web-staging-71a7.up.railway.app}"
+BASE_URL="${BASE_URL:-https://web-production-bb35.up.railway.app}"
 LOG_FILE="$PROJECT_DIR/results/nightly-$(date +%F).log"
 
 # ── Ensure deps ─────────────────────────────────────────────────────
