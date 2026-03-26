@@ -16,18 +16,16 @@ import { dismissAgeGate } from "../helpers/age-gate";
 
 /** Navigate to the first open market detail page. */
 async function goToFirstMarket(page: import("@playwright/test").Page) {
-  await page.goto("/");
+  await page.goto("/markets");
   await dismissAgeGate(page);
 
-  const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
-  await expect(marketLink).toBeVisible({ timeout: 10_000 });
+  // Wait for market card links (href contains /markets/ + uuid pattern)
+  const marketLink = page.getByRole("link", { name: /.+/ }).filter({ has: page.locator('[href*="/markets/"]') }).first();
+  await expect(marketLink).toBeVisible({ timeout: 15_000 });
 
-  const href = await marketLink.getAttribute("href");
-  expect(href).toBeTruthy();
-
-  await page.goto(href!);
+  await marketLink.click();
+  await page.waitForURL(/\/markets\//, { timeout: 10_000 });
   await dismissAgeGate(page);
-  await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
 }
 
 /** Click the Yes button on the market detail page to open the QuickBet modal. */

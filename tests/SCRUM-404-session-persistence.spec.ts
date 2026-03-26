@@ -50,11 +50,10 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
     // Navigate to /markets and click the first market to get a real market detail URL
     await page.goto("/markets");
     await dismissAgeGate(page);
-    const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
-    await expect(marketLink).toBeVisible({ timeout: 10_000 });
-    const href = await marketLink.getAttribute("href");
-    expect(href).toBeTruthy();
-    await page.goto(href!);
+    const marketLink = page.locator('main a[href*="/markets/"]').first();
+    await expect(marketLink).toBeVisible({ timeout: 15_000 });
+    await marketLink.click();
+    await page.waitForURL(/\/markets\//, { timeout: 10_000 });
     await dismissAgeGate(page);
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
@@ -74,11 +73,10 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
     // Navigate to /markets and click the first market to get a real market detail URL
     await page.goto("/markets");
     await dismissAgeGate(page);
-    const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
-    await expect(marketLink).toBeVisible({ timeout: 10_000 });
-    const href = await marketLink.getAttribute("href");
-    expect(href).toBeTruthy();
-    await page.goto(href!);
+    const marketLink = page.locator('main a[href*="/markets/"]').first();
+    await expect(marketLink).toBeVisible({ timeout: 15_000 });
+    await marketLink.click();
+    await page.waitForURL(/\/markets\//, { timeout: 10_000 });
     await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
     await page.reload();

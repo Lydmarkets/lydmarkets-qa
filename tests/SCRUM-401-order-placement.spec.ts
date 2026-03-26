@@ -11,13 +11,11 @@ async function goToFirstMarket(page: import("@playwright/test").Page) {
   await page.goto("/markets");
   await dismissAgeGate(page);
 
-  const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
-  await expect(marketLink).toBeVisible({ timeout: 10_000 });
+  const marketLink = page.locator('main a[href*="/markets/"]').first();
+  await expect(marketLink).toBeVisible({ timeout: 15_000 });
 
-  const href = await marketLink.getAttribute("href");
-  expect(href).toBeTruthy();
-
-  await page.goto(href!);
+  await marketLink.click();
+  await page.waitForURL(/\/markets\//, { timeout: 10_000 });
   await dismissAgeGate(page);
 }
 

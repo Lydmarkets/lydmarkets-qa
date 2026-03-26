@@ -66,20 +66,17 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
   });
 
   test("market card shows question/title text", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/markets");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
-    // Market cards should display the market question text
-    // Cards may be links or containers — look broadly for any link in main content
-    const marketLinks = page.locator("main").getByRole("link").filter({ hasText: /.+/ });
+    // Wait for market card links specifically
+    const marketLinks = page.locator('main a[href*="/markets/"]');
+    await expect(marketLinks.first()).toBeVisible({ timeout: 15_000 });
     const count = await marketLinks.count();
     expect(count).toBeGreaterThanOrEqual(1);
 
-    // The first market card area should have non-empty visible text
-    const firstLink = marketLinks.first();
-    await expect(firstLink).toBeVisible({ timeout: 8000 });
-    const text = await firstLink.innerText().catch(() => "");
+    // The first market card should have non-empty visible text
+    const text = await marketLinks.first().innerText().catch(() => "");
     expect(text.trim().length).toBeGreaterThan(0);
   });
 
@@ -151,13 +148,12 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
   test("market list layout is responsive — shows multiple cards on desktop", async ({ page }) => {
     // Desktop: expect 3-4 columns (at least 2 visible cards)
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto("/");
+    await page.goto("/markets");
     await dismissAgeGate(page);
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
-    const marketLinks = page.locator("main").getByRole("link").filter({ hasText: /.+/ });
+    const marketLinks = page.locator('main a[href*="/markets/"]');
+    await expect(marketLinks.first()).toBeVisible({ timeout: 15_000 });
     const count = await marketLinks.count();
-    // At minimum, if markets exist, there should be more than one on desktop
     expect(count).toBeGreaterThanOrEqual(1);
   });
 

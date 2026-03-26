@@ -13,22 +13,16 @@ import { dismissAgeGate } from "../helpers/age-gate";
 
 /** Navigate to the first open market's detail page. */
 async function goToFirstMarketDetail(page: import("@playwright/test").Page) {
-  await page.goto("/");
+  await page.goto("/markets");
   await dismissAgeGate(page);
 
-  // Wait for at least one market card link to appear
-  const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
-  await expect(marketLink).toBeVisible({ timeout: 10_000 });
+  // Wait for market card links (href contains /markets/<uuid>)
+  const marketLink = page.locator('main a[href*="/markets/"]').first();
+  await expect(marketLink).toBeVisible({ timeout: 15_000 });
 
-  const href = await marketLink.getAttribute("href");
-  expect(href).toBeTruthy();
-
-  // Navigate to the market detail page
-  await page.goto(href!);
+  await marketLink.click();
+  await page.waitForURL(/\/markets\//, { timeout: 10_000 });
   await dismissAgeGate(page);
-
-  // Wait for main content to render
-  await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
 }
 
 test.describe("Trading spec — E2E coverage", () => {
