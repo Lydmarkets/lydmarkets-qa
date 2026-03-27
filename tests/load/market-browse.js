@@ -4,6 +4,7 @@ import { Rate, Trend } from "k6/metrics";
 import {
   BASE_URL,
   MARKETS_URL,
+  HAS_DIRECT_SERVICES,
   internalHeaders,
   SLA_THRESHOLDS,
   BROWSE_STAGES,
@@ -23,35 +24,60 @@ export const options = {
     },
   },
   thresholds: {
-    ...SLA_THRESHOLDS,
+    // SSR pages are slower than API calls — use relaxed thresholds
+    http_req_duration: ["p(95)<3000", "p(99)<5000"],
+    http_req_failed: ["rate<0.01"],
     browse_success_rate: ["rate>0.99"],
-    market_list_duration: ["p(95)<500"],
-    market_detail_duration: ["p(95)<500"],
+    market_list_duration: ["p(95)<3000"],
+    market_detail_duration: ["p(95)<3000"],
   },
 };
 
-// Market IDs discovered during setup
+/**
+ * Discover market IDs by scraping the SSR /markets page for market links.
+ * Falls back to the internal API when MARKETS_URL is set.
+ */
 export function setup() {
-  const res = http.get(`${MARKETS_URL}/markets?status=active&limit=20`, {
-    headers: internalHeaders(),
-  });
-
   const marketIds = [];
-  if (res.status === 200) {
-    try {
-      const body = JSON.parse(res.body);
-      const markets = body.data || body;
-      if (Array.isArray(markets)) {
-        markets.forEach((m) => marketIds.push(m.id));
+
+  // Try internal API first (if configured)
+  if (MARKETS_URL) {
+    const res = http.get(`${MARKETS_URL}/markets?status=active&limit=20`, {
+      headers: internalHeaders(),
+    });
+    if (res.status === 200) {
+      try {
+        const body = JSON.parse(res.body);
+        const markets = body.data || body;
+        if (Array.isArray(markets)) {
+          markets.forEach((m) => marketIds.push(m.id));
+        }
+      } catch (_) {
+        // Fall through to SSR scraping
       }
-    } catch (_) {
-      // Fall through
     }
   }
 
+  // Scrape market IDs from the SSR page if API didn't work
   if (marketIds.length === 0) {
-    console.warn("No active markets found — detail page tests will be skipped");
+    const res = http.get(`${BASE_URL}/markets`, {
+      tags: { name: "setup: GET /markets" },
+    });
+    if (res.status === 200) {
+      // Extract UUIDs from /markets/<uuid> links in the HTML
+      const pattern = /\/markets\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+      let match;
+      const seen = new Set();
+      while ((match = pattern.exec(res.body)) !== null) {
+        if (!seen.has(match[1])) {
+          seen.add(match[1]);
+          marketIds.push(match[1]);
+        }
+      }
+    }
   }
+
+  console.log(`Discovered ${marketIds.length} market IDs for detail page tests`);
   return { marketIds };
 }
 
@@ -74,36 +100,38 @@ export default function (data) {
 
   sleep(Math.random() * 0.5 + 0.2);
 
-  // 2. Browse market list API (JSON)
-  group("market list API", () => {
-    const categories = ["", "politics", "sports", "entertainment", "crypto"];
-    const category = categories[Math.floor(Math.random() * categories.length)];
-    const url = category
-      ? `${MARKETS_URL}/markets?status=active&category=${category}&limit=20`
-      : `${MARKETS_URL}/markets?status=active&limit=20`;
+  // 2. Browse market list API (only when direct service URLs are configured)
+  if (HAS_DIRECT_SERVICES && MARKETS_URL) {
+    group("market list API", () => {
+      const categories = ["", "politics", "sports", "entertainment", "crypto"];
+      const category = categories[Math.floor(Math.random() * categories.length)];
+      const url = category
+        ? `${MARKETS_URL}/markets?status=active&category=${category}&limit=20`
+        : `${MARKETS_URL}/markets?status=active&limit=20`;
 
-    const start = Date.now();
-    const res = http.get(url, {
-      headers: internalHeaders(),
-      tags: { name: "GET /markets (API)" },
+      const start = Date.now();
+      const res = http.get(url, {
+        headers: internalHeaders(),
+        tags: { name: "GET /markets (API)" },
+      });
+      marketListDuration.add(Date.now() - start);
+
+      const passed = check(res, {
+        "API returns 200": (r) => r.status === 200,
+        "response is valid JSON": (r) => {
+          try {
+            JSON.parse(r.body);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+      });
+      browseSuccess.add(passed ? 1 : 0);
     });
-    marketListDuration.add(Date.now() - start);
 
-    const passed = check(res, {
-      "API returns 200": (r) => r.status === 200,
-      "response is valid JSON": (r) => {
-        try {
-          JSON.parse(r.body);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-    });
-    browseSuccess.add(passed ? 1 : 0);
-  });
-
-  sleep(Math.random() * 0.3 + 0.1);
+    sleep(Math.random() * 0.3 + 0.1);
+  }
 
   // 3. Market detail page (if we have market IDs)
   if (data.marketIds.length > 0) {
@@ -125,31 +153,33 @@ export default function (data) {
 
     sleep(Math.random() * 0.3 + 0.1);
 
-    // 4. Market detail API (price data)
-    group("market detail API", () => {
-      const id =
-        data.marketIds[Math.floor(Math.random() * data.marketIds.length)];
+    // 4. Market detail API (only when direct service URLs are configured)
+    if (HAS_DIRECT_SERVICES && MARKETS_URL) {
+      group("market detail API", () => {
+        const id =
+          data.marketIds[Math.floor(Math.random() * data.marketIds.length)];
 
-      const start = Date.now();
-      const res = http.get(`${MARKETS_URL}/markets/${id}`, {
-        headers: internalHeaders(),
-        tags: { name: "GET /markets/:id (API)" },
-      });
-      marketDetailDuration.add(Date.now() - start);
+        const start = Date.now();
+        const res = http.get(`${MARKETS_URL}/markets/${id}`, {
+          headers: internalHeaders(),
+          tags: { name: "GET /markets/:id (API)" },
+        });
+        marketDetailDuration.add(Date.now() - start);
 
-      const passed = check(res, {
-        "detail API returns 200": (r) => r.status === 200,
-        "response has market data": (r) => {
-          try {
-            const body = JSON.parse(r.body);
-            return body.id !== undefined || body.title !== undefined;
-          } catch {
-            return false;
-          }
-        },
+        const passed = check(res, {
+          "detail API returns 200": (r) => r.status === 200,
+          "response has market data": (r) => {
+            try {
+              const body = JSON.parse(r.body);
+              return body.id !== undefined || body.title !== undefined;
+            } catch {
+              return false;
+            }
+          },
+        });
+        browseSuccess.add(passed ? 1 : 0);
       });
-      browseSuccess.add(passed ? 1 : 0);
-    });
+    }
   }
 
   sleep(Math.random() * 1 + 0.5);

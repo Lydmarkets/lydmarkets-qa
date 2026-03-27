@@ -16,6 +16,7 @@ import {
   TRADING_URL,
   MARKETS_URL,
   COMPLIANCE_URL,
+  HAS_DIRECT_SERVICES,
   TEST_USER_ID,
   TEST_MARKET_ID,
   internalHeaders,
@@ -82,26 +83,50 @@ export const options = {
 export function setup() {
   let marketIds = [];
 
-  const res = http.get(`${MARKETS_URL}/markets?status=active&limit=20`, {
-    headers: internalHeaders(),
-  });
-
-  if (res.status === 200) {
-    try {
-      const body = JSON.parse(res.body);
-      const markets = body.data || body;
-      if (Array.isArray(markets)) {
-        marketIds = markets.map((m) => m.id);
+  // Try internal API (when direct service URLs are configured)
+  if (MARKETS_URL) {
+    const res = http.get(`${MARKETS_URL}/markets?status=active&limit=20`, {
+      headers: internalHeaders(),
+    });
+    if (res.status === 200) {
+      try {
+        const body = JSON.parse(res.body);
+        const markets = body.data || body;
+        if (Array.isArray(markets)) {
+          marketIds = markets.map((m) => m.id);
+        }
+      } catch (_) {
+        // Fall through
       }
-    } catch (_) {
-      // Fall through
+    }
+  }
+
+  // Scrape market IDs from SSR page
+  if (marketIds.length === 0) {
+    const res = http.get(`${BASE_URL}/markets`);
+    if (res.status === 200) {
+      const pattern = /\/markets\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+      let match;
+      const seen = new Set();
+      while ((match = pattern.exec(res.body)) !== null) {
+        if (!seen.has(match[1])) {
+          seen.add(match[1]);
+          marketIds.push(match[1]);
+        }
+      }
     }
   }
 
   const primaryMarket = TEST_MARKET_ID || marketIds[0] || null;
-  if (!primaryMarket) {
-    console.warn(
-      "No market IDs discovered. Set TEST_MARKET_ID for order/compliance tests.",
+  console.log(
+    `Setup: ${marketIds.length} markets discovered, primary=${primaryMarket || "none"}` +
+      (HAS_DIRECT_SERVICES ? " (direct service mode)" : " (frontend-only mode)"),
+  );
+
+  if (!HAS_DIRECT_SERVICES) {
+    console.log(
+      "Order placement and compliance scenarios require TRADING_URL/COMPLIANCE_URL. " +
+        "Only market browsing will run.",
     );
   }
 
@@ -147,7 +172,7 @@ export function browseMarkets(data) {
 
 // --- Scenario: Order placement ---
 export function placeOrders(data) {
-  if (!data.primaryMarket) {
+  if (!data.primaryMarket || !TRADING_URL) {
     sleep(1);
     return;
   }
@@ -176,7 +201,7 @@ export function placeOrders(data) {
 
 // --- Scenario: Compliance gate ---
 export function checkCompliance(data) {
-  if (!data.primaryMarket) {
+  if (!data.primaryMarket || !COMPLIANCE_URL) {
     sleep(1);
     return;
   }

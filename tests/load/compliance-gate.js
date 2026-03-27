@@ -2,6 +2,7 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 import { Rate, Trend } from "k6/metrics";
 import {
+  BASE_URL,
   COMPLIANCE_URL,
   MARKETS_URL,
   TEST_USER_ID,
@@ -34,7 +35,8 @@ export const options = {
 export function setup() {
   let marketId = TEST_MARKET_ID;
 
-  if (!marketId) {
+  // Try internal API (when direct service URLs are configured)
+  if (!marketId && MARKETS_URL) {
     const res = http.get(`${MARKETS_URL}/markets?status=active&limit=5`, {
       headers: internalHeaders(),
     });
@@ -51,6 +53,17 @@ export function setup() {
     }
   }
 
+  // Scrape market IDs from SSR page
+  if (!marketId) {
+    const res = http.get(`${BASE_URL}/markets`);
+    if (res.status === 200) {
+      const match = res.body.match(/\/markets\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      if (match) {
+        marketId = match[1];
+      }
+    }
+  }
+
   if (!marketId) {
     console.warn(
       "No market ID available — set TEST_MARKET_ID env var for reliable testing.",
@@ -63,6 +76,15 @@ export function setup() {
 export default function (data) {
   if (!data.marketId) {
     console.error("No market ID — skipping iteration");
+    sleep(1);
+    return;
+  }
+
+  if (!COMPLIANCE_URL) {
+    console.error(
+      "COMPLIANCE_URL not set — compliance gate requires direct service access. " +
+        "Set COMPLIANCE_URL=http://compliance-service:3007",
+    );
     sleep(1);
     return;
   }

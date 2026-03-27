@@ -2,8 +2,10 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 import { Rate, Trend } from "k6/metrics";
 import {
+  BASE_URL,
   TRADING_URL,
   MARKETS_URL,
+  HAS_DIRECT_SERVICES,
   TEST_USER_ID,
   TEST_MARKET_ID,
   internalHeaders,
@@ -31,33 +33,43 @@ export const options = {
 };
 
 /**
- * Discover a valid market ID from the markets service.
- * Cached per VU via the setup() function.
+ * Discover a valid market ID. Tries internal API first (if configured),
+ * then falls back to scraping UUIDs from the SSR /markets page.
  */
 export function setup() {
   if (TEST_MARKET_ID) {
     return { marketId: TEST_MARKET_ID };
   }
 
-  // Fetch active markets to find a valid target
-  const res = http.get(`${MARKETS_URL}/markets?status=active&limit=5`, {
-    headers: internalHeaders(),
-  });
-
-  if (res.status === 200) {
-    try {
-      const body = JSON.parse(res.body);
-      const markets = body.data || body;
-      if (Array.isArray(markets) && markets.length > 0) {
-        return { marketId: markets[0].id };
+  // Try internal API (when direct service URLs are configured)
+  if (MARKETS_URL) {
+    const res = http.get(`${MARKETS_URL}/markets?status=active&limit=5`, {
+      headers: internalHeaders(),
+    });
+    if (res.status === 200) {
+      try {
+        const body = JSON.parse(res.body);
+        const markets = body.data || body;
+        if (Array.isArray(markets) && markets.length > 0) {
+          return { marketId: markets[0].id };
+        }
+      } catch (_) {
+        // Fall through
       }
-    } catch (_) {
-      // Fall through
+    }
+  }
+
+  // Scrape market IDs from SSR page
+  const res = http.get(`${BASE_URL}/markets`);
+  if (res.status === 200) {
+    const match = res.body.match(/\/markets\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (match) {
+      return { marketId: match[1] };
     }
   }
 
   console.warn(
-    `Could not discover market ID (status=${res.status}). ` +
+    "Could not discover market ID. " +
       "Set TEST_MARKET_ID env var for reliable testing.",
   );
   return { marketId: null };
@@ -66,6 +78,15 @@ export function setup() {
 export default function (data) {
   if (!data.marketId) {
     console.error("No market ID available — skipping iteration");
+    sleep(1);
+    return;
+  }
+
+  if (!TRADING_URL) {
+    console.error(
+      "TRADING_URL not set — order placement requires direct service access. " +
+        "Set TRADING_URL=http://trading-service:3009",
+    );
     sleep(1);
     return;
   }

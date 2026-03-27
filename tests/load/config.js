@@ -15,13 +15,18 @@
 export const BASE_URL =
   __ENV.BASE_URL || "https://web-production-bb35.up.railway.app";
 
-// Direct service URLs (when available) — fall back to frontend proxy routes
-export const TRADING_URL = __ENV.TRADING_URL || `${BASE_URL}/api`;
-export const MARKETS_URL = __ENV.MARKETS_URL || `${BASE_URL}/api`;
-export const COMPLIANCE_URL = __ENV.COMPLIANCE_URL || `${BASE_URL}/api`;
+// Direct service URLs — only set when targeting backend services directly.
+// When unset, scripts use frontend SSR pages instead of internal APIs.
+export const TRADING_URL = __ENV.TRADING_URL || "";
+export const MARKETS_URL = __ENV.MARKETS_URL || "";
+export const COMPLIANCE_URL = __ENV.COMPLIANCE_URL || "";
 
 // Auth
 export const INTERNAL_SECRET = __ENV.INTERNAL_SECRET || "";
+
+// True when direct service URLs are configured (enables internal API tests)
+export const HAS_DIRECT_SERVICES =
+  !!__ENV.TRADING_URL || !!__ENV.MARKETS_URL || !!__ENV.COMPLIANCE_URL;
 
 // Test fixtures
 export const TEST_USER_ID =
