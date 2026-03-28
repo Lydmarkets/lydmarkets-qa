@@ -23,6 +23,8 @@ const AUTHENTICATED_PAGES = [
   { path: "/settings", name: "Settings" },
 ];
 
+test.use({ storageState: "playwright/.auth/user.json" });
+
 test.describe("SCRUM-541: Session timer display", () => {
   test(
     "session timer is visible in the header when logged in",

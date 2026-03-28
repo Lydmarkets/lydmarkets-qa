@@ -20,6 +20,8 @@ const AUTHENTICATED_PAGES = [
   { path: "/settings", name: "Settings" },
 ];
 
+test.use({ storageState: "playwright/.auth/user.json" });
+
 test.describe("SCRUM-542: Account balance visibility", () => {
   test(
     "balance is visible in header linking to wallet",

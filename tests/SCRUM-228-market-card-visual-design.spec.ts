@@ -76,8 +76,8 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     expect(count).toBeGreaterThanOrEqual(1);
 
     // The first market card should have non-empty visible text
-    const text = await marketLinks.first().innerText().catch(() => "");
-    expect(text.trim().length).toBeGreaterThan(0);
+    const text = await marketLinks.first().textContent().catch(() => "");
+    expect(text!.trim().length).toBeGreaterThan(0);
   });
 
   test("market card shows visual content (image, probability bars, or Yes/No buttons)", async ({ page }) => {

@@ -16,6 +16,8 @@ import { dismissAgeGate } from "../helpers/age-gate";
  * is handled on the login page.
  */
 
+test.use({ storageState: "playwright/.auth/user.json" });
+
 test.describe("SCRUM-546: Automatic session logout on time limit", () => {
   test(
     "session timer is present as prerequisite for timeout enforcement",
