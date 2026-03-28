@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { hasAuthSession } from "../helpers/has-auth";
 
 test.describe("Remaining spec coverage", () => {
   // ── SSR category filtering ────────────────────────────────────────
@@ -156,6 +157,10 @@ test.describe("Remaining spec coverage", () => {
   // ── Authenticated tests ───────────────────────────────────────────
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
+
+    test.beforeEach(({ }, testInfo) => {
+      if (!hasAuthSession()) testInfo.skip();
+    });
 
     // ── Appearance toggle ─────────────────────────────────────────
     test(

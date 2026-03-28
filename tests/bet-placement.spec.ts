@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
+import { goToFirstMarket } from "../helpers/go-to-market";
+import { hasAuthSession } from "../helpers/has-auth";
 
 /**
  * Bet placement — QuickBet modal E2E tests
@@ -13,23 +14,6 @@ import { dismissAgeGate } from "../helpers/age-gate";
  *   6. Stake limits display
  *   7. Modal close behaviour
  */
-
-/** Navigate to the first open market detail page. */
-async function goToFirstMarket(page: import("@playwright/test").Page) {
-  await page.goto("/markets");
-  await dismissAgeGate(page);
-
-  // Click "All" filter — "Trending" may be empty on staging
-  await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
-
-  // Wait for market card links (href contains /markets/ + uuid pattern)
-  const marketLink = page.locator('main a[href*="/markets/"]').first();
-  await expect(marketLink).toBeVisible({ timeout: 15_000 });
-
-  await marketLink.click();
-  await page.waitForURL(/\/markets\//, { timeout: 10_000 });
-  await dismissAgeGate(page);
-}
 
 /** Click the Yes button on the market detail page to open the QuickBet modal. */
 async function openQuickBetYes(page: import("@playwright/test").Page) {
@@ -419,6 +403,10 @@ test.describe("Bet placement — QuickBet modal", () => {
 
   test.describe("authenticated — place a bet", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
+
+    test.beforeEach(({ }, testInfo) => {
+      if (!hasAuthSession()) testInfo.skip();
+    });
 
     test(
       "Buy button is visible for authenticated user",

@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { hasAuthSession } from "../helpers/has-auth";
 
 // SCRUM-227: E2E tests for SCRUM-73 — Landing / welcome page (unauthenticated home)
 //
@@ -203,6 +204,10 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
+
+    test.beforeEach(({ }, testInfo) => {
+      if (!hasAuthSession()) testInfo.skip();
+    });
 
     test("authenticated user visiting `/` stays on `/` and sees the markets page", async ({
       page,

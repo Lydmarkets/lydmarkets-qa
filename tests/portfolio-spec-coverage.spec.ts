@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { hasAuthSession } from "../helpers/has-auth";
 
 /**
  * Portfolio spec — E2E coverage
@@ -32,6 +33,10 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
+
+    test.beforeEach(({ }, testInfo) => {
+      if (!hasAuthSession()) testInfo.skip();
+    });
 
     // ── Portfolio page ─────────────────────────────────────────────────
 

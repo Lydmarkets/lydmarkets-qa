@@ -1,20 +1,5 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
-/** Navigate to /markets and click into the first available market detail page. */
-async function goToFirstMarket(page: import("@playwright/test").Page) {
-  await page.goto("/markets");
-  await dismissAgeGate(page);
-
-  await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
-
-  const marketLink = page.locator('main a[href*="/markets/"]').first();
-  await expect(marketLink).toBeVisible({ timeout: 15_000 });
-
-  await marketLink.click();
-  await page.waitForURL(/\/markets\//, { timeout: 10_000 });
-  await dismissAgeGate(page);
-}
+import { goToFirstMarket } from "../helpers/go-to-market";
 
 test.describe("SCRUM-539: Min/max stake display on order panel", () => {
   test(

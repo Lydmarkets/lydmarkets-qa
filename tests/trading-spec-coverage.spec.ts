@@ -1,5 +1,7 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { goToFirstMarket } from "../helpers/go-to-market";
+import { hasAuthSession } from "../helpers/has-auth";
 
 /**
  * Trading spec — E2E coverage
@@ -11,22 +13,8 @@ import { dismissAgeGate } from "../helpers/age-gate";
  * Fee disclosure and payout calculations are now part of the order panel.
  */
 
-/** Navigate to the first open market's detail page. */
-async function goToFirstMarketDetail(page: import("@playwright/test").Page) {
-  await page.goto("/markets");
-  await dismissAgeGate(page);
-
-  // Click "All" filter — "Trending" may be empty on staging
-  await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
-
-  // Wait for market card links (href contains /markets/<uuid>)
-  const marketLink = page.locator('main a[href*="/markets/"]').first();
-  await expect(marketLink).toBeVisible({ timeout: 15_000 });
-
-  await marketLink.click();
-  await page.waitForURL(/\/markets\//, { timeout: 10_000 });
-  await dismissAgeGate(page);
-}
+/** @deprecated Use goToFirstMarket from helpers */
+const goToFirstMarketDetail = goToFirstMarket;
 
 test.describe("Trading spec — E2E coverage", () => {
   // ─── Unauthenticated tests (market detail page) ─────────────────────
@@ -142,6 +130,10 @@ test.describe("Trading spec — E2E coverage", () => {
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
+
+    test.beforeEach(({ }, testInfo) => {
+      if (!hasAuthSession()) testInfo.skip();
+    });
 
     test(
       "place order panel shows YES/NO buttons for authenticated user",

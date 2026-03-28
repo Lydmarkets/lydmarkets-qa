@@ -1,25 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
-
-/** Navigate to /markets and click the first available market link. Returns the market detail URL. */
-async function goToFirstMarket(page: import("@playwright/test").Page) {
-  await page.goto("/markets");
-  await dismissAgeGate(page);
-
-  // Click "All" filter — "Trending" may be empty on staging
-  await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
-
-  const marketLink = page.locator('main a[href*="/markets/"]').first();
-  await expect(marketLink).toBeVisible({ timeout: 15_000 });
-
-  const href = await marketLink.getAttribute("href");
-  expect(href).toBeTruthy();
-
-  await marketLink.click();
-  await page.waitForURL(/\/markets\//, { timeout: 10_000 });
-  await dismissAgeGate(page);
-  return href!;
-}
+import { goToFirstMarket } from "../helpers/go-to-market";
 
 test.describe("SCRUM-400: Market detail page — order form interactions", () => {
   test("market detail page loads with title and category badge", async ({ page }) => {
@@ -60,17 +41,8 @@ test.describe("SCRUM-400: Market detail page — order form interactions", () =>
   });
 
   test("market detail page navigates from home market listing", async ({ page }) => {
-    await page.goto("/");
-    await dismissAgeGate(page);
-    // Get first market link from main content
-    const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
-    await marketLink.waitFor({ state: "visible", timeout: 10000 });
-    const href = await marketLink.getAttribute("href");
-    if (href) {
-      await page.goto(href);
-      await dismissAgeGate(page);
-      await expect(page.locator("main")).toBeVisible();
-      await expect(page.getByText(/place order|lägg order/i).first()).toBeVisible({ timeout: 10000 });
-    }
+    await goToFirstMarket(page);
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.getByText(/place order|lägg order/i).first()).toBeVisible({ timeout: 10000 });
   });
 });

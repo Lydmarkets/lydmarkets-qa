@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { hasAuthSession } from "../helpers/has-auth";
 
 // SCRUM-249: E2E tests for SCRUM-220 — Unauthorized login attempt notification (SIFS 9 kap. 4§)
 //
@@ -57,6 +58,10 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
+
+    test.beforeEach(({ }, testInfo) => {
+      if (!hasAuthSession()) testInfo.skip();
+    });
 
     test("NotificationBell is present in the navigation for authenticated users", async ({
       page,

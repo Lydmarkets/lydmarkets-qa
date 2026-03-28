@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { hasAuthSession } from "../helpers/has-auth";
 
 // SCRUM-250: E2E tests for SCRUM-219 — Display last login time (SIFS 9 kap. 5§)
 //
@@ -31,6 +32,10 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
 
   test.describe("authenticated — last login time display", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
+
+    test.beforeEach(({ }, testInfo) => {
+      if (!hasAuthSession()) testInfo.skip();
+    });
 
     test("authenticated user sees main content after login", async ({ page }) => {
       await page.goto("/");

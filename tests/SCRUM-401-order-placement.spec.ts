@@ -1,26 +1,11 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { goToFirstMarket } from "../helpers/go-to-market";
 
 // SCRUM-401: Order placement — authenticated user buys YES/NO share
 // Requires authenticated storageState — set up via global setup.
 // Tests are structured to run with auth; assertions reflect the expected
 // authenticated-user UI. In CI, set up playwright/.auth/user.json first.
-
-/** Navigate to /markets and click the first available market link. */
-async function goToFirstMarket(page: import("@playwright/test").Page) {
-  await page.goto("/markets");
-  await dismissAgeGate(page);
-
-  // Click "All" filter — "Trending" may be empty on staging
-  await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
-
-  const marketLink = page.locator('main a[href*="/markets/"]').first();
-  await expect(marketLink).toBeVisible({ timeout: 15_000 });
-
-  await marketLink.click();
-  await page.waitForURL(/\/markets\//, { timeout: 10_000 });
-  await dismissAgeGate(page);
-}
 
 test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
   // Requires auth — apply storageState when available
