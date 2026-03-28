@@ -27,6 +27,7 @@ export default defineConfig({
       name: "default",
       testMatch: /\.spec\.ts$/,
       dependencies: ["setup"],
+      use: { storageState: AUTH_FILE },
     },
   ],
 });

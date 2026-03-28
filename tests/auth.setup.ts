@@ -1,4 +1,4 @@
-import { test as setup, expect } from "@playwright/test";
+import { test as setup } from "@playwright/test";
 import { dismissAgeGate } from "../helpers/age-gate";
 import * as fs from "fs";
 
@@ -23,11 +23,76 @@ function saveEmptyAuth(): void {
   fs.writeFileSync(AUTH_FILE, JSON.stringify({ cookies: [], origins: [] }));
 }
 
-setup("authenticate via mock BankID", { timeout: 90_000 }, async ({ page }) => {
-  if (hasValidSession()) {
-    return;
-  }
+/**
+ * Strategy 1: Call the test-only /api/test/create-session endpoint.
+ * Requires E2E_TEST_SECRET to be set on both the web app and the test runner.
+ * Returns true if a valid session was created.
+ */
+async function tryTestEndpoint(
+  page: import("@playwright/test").Page,
+  baseURL: string,
+): Promise<boolean> {
+  const secret = process.env.E2E_TEST_SECRET;
+  if (!secret) return false;
 
+  try {
+    const res = await page.request.post(`${baseURL}/api/test/create-session`, {
+      data: { secret },
+    });
+
+    if (!res.ok()) return false;
+
+    const { token, cookieName } = (await res.json()) as {
+      token: string;
+      cookieName: string;
+    };
+
+    if (!token || !cookieName) return false;
+
+    const domain = new URL(baseURL).hostname;
+    const isSecure = baseURL.startsWith("https");
+
+    await page.context().addCookies([
+      {
+        name: cookieName,
+        value: token,
+        domain,
+        path: "/",
+        httpOnly: true,
+        secure: isSecure,
+        sameSite: "Strict",
+        expires: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+      },
+    ]);
+
+    // Verify the session works by loading a page and checking for auth indicators
+    await page.goto(`${baseURL}/markets`);
+    await dismissAgeGate(page);
+
+    const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
+    const isStillUnauthenticated = await loginLink
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
+
+    if (isStillUnauthenticated) return false;
+
+    await page.context().storageState({ path: AUTH_FILE });
+    console.log("[auth.setup] Authenticated via test endpoint");
+    return true;
+  } catch (err) {
+    console.warn("[auth.setup] Test endpoint failed:", err);
+    return false;
+  }
+}
+
+/**
+ * Strategy 2: Authenticate via mock BankID UI flow.
+ * Works when the target environment has a BankID test/mock service configured.
+ * Returns true if a valid session was created.
+ */
+async function tryBankIdMock(
+  page: import("@playwright/test").Page,
+): Promise<boolean> {
   try {
     await page.goto("/login");
     await dismissAgeGate(page);
@@ -37,7 +102,9 @@ setup("authenticate via mock BankID", { timeout: 90_000 }, async ({ page }) => {
     await cookieAccept.click({ timeout: 3_000 }).catch(() => {});
 
     // Click BankID login
-    await page.getByRole("button", { name: /sign in with bankid|logga in med bankid/i }).click();
+    await page
+      .getByRole("button", { name: /sign in with bankid|logga in med bankid/i })
+      .click();
 
     // Wait for BankID mock to resolve — either redirect or "No account found"
     const noAccount = page.getByText(/no account found|inget konto/i);
@@ -54,49 +121,64 @@ setup("authenticate via mock BankID", { timeout: 90_000 }, async ({ page }) => {
     // If already logged in, save and done
     if (!page.url().includes("/login")) {
       await page.context().storageState({ path: AUTH_FILE });
-      return;
+      console.log("[auth.setup] Authenticated via BankID mock (existing account)");
+      return true;
     }
 
     // No account — need to register
     await page.goto("/register");
     await dismissAgeGate(page);
-
-    // Dismiss cookie banner again if needed
     await cookieAccept.click({ timeout: 2_000 }).catch(() => {});
 
-    // Step 1: Start BankID verification
-    await page.getByRole("button", { name: /^starta bankid$|^start bankid$/i }).click();
+    await page
+      .getByRole("button", { name: /^starta bankid$|^start bankid$/i })
+      .click();
 
-    // Step 2: Wait for identity verified form
     const emailField = page.getByRole("textbox", { name: /e-postadress|email/i });
     await emailField.waitFor({ timeout: 30_000 });
-
-    // Fill email
     await emailField.fill("e2e-test@lydmarkets.test");
 
-    // Check GDPR consent (first checkbox — the required one)
     const gdprCheckbox = page.getByRole("checkbox").first();
     await gdprCheckbox.check();
 
-    // Submit registration
-    await page.getByRole("button", { name: /skapa konto|create account/i }).click();
+    await page
+      .getByRole("button", { name: /skapa konto|create account/i })
+      .click();
 
-    // Wait for redirect after registration
     await page.waitForURL((url) => !url.pathname.includes("/register"), {
       timeout: 30_000,
     });
 
-    // If redirected to login, log in now
     if (page.url().includes("/login")) {
-      await page.getByRole("button", { name: /sign in with bankid|logga in med bankid/i }).click();
+      await page
+        .getByRole("button", { name: /sign in with bankid|logga in med bankid/i })
+        .click();
       await page.waitForURL((url) => !url.pathname.includes("/login"), {
         timeout: 30_000,
       });
     }
 
     await page.context().storageState({ path: AUTH_FILE });
+    console.log("[auth.setup] Authenticated via BankID mock (new registration)");
+    return true;
   } catch {
-    // BankID auth not available — save empty state so unauthenticated tests still run
-    saveEmptyAuth();
+    return false;
   }
+}
+
+setup("authenticate", { timeout: 90_000 }, async ({ page, baseURL }) => {
+  if (hasValidSession()) {
+    console.log("[auth.setup] Reusing cached session");
+    return;
+  }
+
+  const base = baseURL || "https://web-production-bb35.up.railway.app";
+
+  // Try strategies in order of reliability
+  if (await tryTestEndpoint(page, base)) return;
+  if (await tryBankIdMock(page)) return;
+
+  // All strategies failed — save empty auth so tests run unauthenticated
+  console.warn("[auth.setup] All auth strategies failed — running unauthenticated");
+  saveEmptyAuth();
 });
