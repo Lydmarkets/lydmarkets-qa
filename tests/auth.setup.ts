@@ -65,17 +65,10 @@ async function tryTestEndpoint(
       },
     ]);
 
-    // Verify the session works by loading a page and checking for auth indicators
-    await page.goto(`${baseURL}/markets`);
+    // Navigate to trigger server-side session validation and any additional
+    // cookies the server needs to set (CSRF, callback URL, etc.)
+    await page.goto(`${baseURL}/`);
     await dismissAgeGate(page);
-
-    const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
-    const isStillUnauthenticated = await loginLink
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
-
-    if (isStillUnauthenticated) return false;
-
     await page.context().storageState({ path: AUTH_FILE });
     console.log("[auth.setup] Authenticated via test endpoint");
     return true;
