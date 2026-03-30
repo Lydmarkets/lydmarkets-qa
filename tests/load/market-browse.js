@@ -58,14 +58,19 @@ export function setup() {
     }
   }
 
-  // Scrape market IDs from the SSR page if API didn't work
+  // Scrape market IDs from the SSR page if API didn't work.
+  // The homepage embeds market data as escaped JSON ("id":"<uuid>")
+  // in the Next.js hydration payload. /markets may redirect to /.
   if (marketIds.length === 0) {
-    const res = http.get(`${BASE_URL}/markets`, {
-      tags: { name: "setup: GET /markets" },
+    const res = http.get(`${BASE_URL}/`, {
+      tags: { name: "setup: GET /" },
+      redirects: 5,
     });
     if (res.status === 200) {
-      // Extract UUIDs from /markets/<uuid> links in the HTML
-      const pattern = /\/markets\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+      // Match market objects in the Next.js hydration JSON.
+      // Market objects have \"id\":\"<uuid>\",\"title\": — the title field
+      // distinguishes them from other UUIDs (images, outcomes, users).
+      const pattern = /\\"id\\":\\"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\",\\"title\\":/gi;
       let match;
       const seen = new Set();
       while ((match = pattern.exec(res.body)) !== null) {
@@ -82,11 +87,11 @@ export function setup() {
 }
 
 export default function (data) {
-  // 1. Browse market list (SSR page)
+  // 1. Browse market list (homepage — /markets redirects to /)
   group("market list page", () => {
     const start = Date.now();
-    const res = http.get(`${BASE_URL}/markets`, {
-      tags: { name: "GET /markets (page)" },
+    const res = http.get(`${BASE_URL}/`, {
+      tags: { name: "GET / (market list)" },
     });
     marketListDuration.add(Date.now() - start);
 
