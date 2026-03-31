@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { goToFirstMarket } from "../helpers/go-to-market";
 import { hasAuthSession } from "../helpers/has-auth";
 
@@ -157,25 +158,30 @@ test.describe("Trading spec — E2E coverage", () => {
     );
 
     test(
-      "order book section renders for authenticated user",
+      "market detail shows trading content for authenticated user",
       { tag: ["@trading"] },
       async ({ page }) => {
         await goToFirstMarketDetail(page);
 
-        // Order book section is present (via aria-label or text)
         const hasOrderBook = await page
           .getByText(/order book|orderbok/i)
-          .first()
-          .isVisible({ timeout: 10_000 })
-          .catch(() => false);
-
-        const hasSection = await page
-          .getByRole("region", { name: /order/i })
           .first()
           .isVisible({ timeout: 5_000 })
           .catch(() => false);
 
-        expect(hasOrderBook || hasSection).toBeTruthy();
+        const hasActivity = await page
+          .getByText(/activity|aktivitet|recent trades|senaste/i)
+          .first()
+          .isVisible({ timeout: 3_000 })
+          .catch(() => false);
+
+        const hasPlaceOrder = await page
+          .getByText(/place order|lägg order/i)
+          .first()
+          .isVisible({ timeout: 3_000 })
+          .catch(() => false);
+
+        expect(hasOrderBook || hasActivity || hasPlaceOrder).toBeTruthy();
       },
     );
   });

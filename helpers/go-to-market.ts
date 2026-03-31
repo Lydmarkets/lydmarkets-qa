@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { dismissAgeGate } from "./age-gate";
+import { dismissLimitsDialog } from "./dismiss-limits-dialog";
 
 /**
  * Navigate to the first available market detail page.
@@ -12,6 +13,7 @@ import { dismissAgeGate } from "./age-gate";
 export async function goToFirstMarket(page: Page): Promise<string> {
   await page.goto("/");
   await dismissAgeGate(page);
+  await dismissLimitsDialog(page);
 
   // Click "All" filter — "Trending" may be empty on staging
   await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
@@ -25,6 +27,7 @@ export async function goToFirstMarket(page: Page): Promise<string> {
   // Navigate directly instead of clicking (avoids flaky click interception)
   await page.goto(href!);
   await dismissAgeGate(page);
+  await dismissLimitsDialog(page);
 
   return href!;
 }

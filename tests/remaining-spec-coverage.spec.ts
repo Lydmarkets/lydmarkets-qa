@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
 test.describe("Remaining spec coverage", () => {
@@ -169,6 +170,7 @@ test.describe("Remaining spec coverage", () => {
       async ({ page }) => {
         await page.goto("/settings");
         await dismissAgeGate(page);
+        await dismissLimitsDialog(page);
 
         // The AppearanceSettings component has a theme select with id="theme"
         const themeSelect = page.getByLabel(/theme|tema/i);

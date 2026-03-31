@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 
 /**
  * SCRUM-542: Account balance visibility on every screen.
@@ -41,7 +42,7 @@ test.describe("SCRUM-542: Account balance visibility", () => {
       }
 
       // Balance link should be visible in header, pointing to /wallet
-      const balanceLink = page.getByRole("link", { name: /saldo|balance/i });
+      const balanceLink = page.locator('a[href="/wallet"]').first();
       await expect(balanceLink).toBeVisible({ timeout: 5_000 });
       await expect(balanceLink).toHaveAttribute("href", /\/wallet/);
 
@@ -93,7 +94,7 @@ test.describe("SCRUM-542: Account balance visibility", () => {
         return;
       }
 
-      const balanceLink = page.getByRole("link", { name: /saldo|balance/i });
+      const balanceLink = page.locator('a[href="/wallet"]').first();
       await expect(balanceLink).toBeVisible({ timeout: 5_000 });
 
       const text = await balanceLink.textContent();
@@ -109,6 +110,7 @@ test.describe("SCRUM-542: Account balance visibility", () => {
     async ({ page }) => {
       await page.goto("/markets");
       await dismissAgeGate(page);
+      await dismissLimitsDialog(page);
 
       const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
       const isUnauthenticated = await loginLink
@@ -121,16 +123,17 @@ test.describe("SCRUM-542: Account balance visibility", () => {
       }
 
       // Read balance on markets page
-      const balanceLink = page.getByRole("link", { name: /saldo|balance/i });
+      const balanceLink = page.locator('a[href="/wallet"]').first();
       await expect(balanceLink).toBeVisible({ timeout: 5_000 });
       const balanceOnMarkets = await balanceLink.textContent();
 
-      // Navigate to wallet (avoids the compliance limits dialog that blocks /portfolio)
+      // Navigate to wallet
       await page.goto("/wallet");
       await dismissAgeGate(page);
+      await dismissLimitsDialog(page);
 
       // Balance should still be visible with the same amount
-      const balanceLinkAfterNav = page.getByRole("link", { name: /saldo|balance/i });
+      const balanceLinkAfterNav = page.locator('a[href="/wallet"]').first();
       await expect(balanceLinkAfterNav).toBeVisible({ timeout: 5_000 });
       const balanceOnWallet = await balanceLinkAfterNav.textContent();
 
