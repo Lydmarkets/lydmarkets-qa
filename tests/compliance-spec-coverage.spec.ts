@@ -58,20 +58,7 @@ test.describe("Compliance spec — E2E coverage", () => {
     },
   );
 
-  test(
-    "unauthenticated /kyc redirects to login or is not found",
-    { tag: ["@compliance"] },
-    async ({ browser }) => {
-      const context = await browser.newContext();
-      const page = await context.newPage();
-      const response = await page.goto("/kyc");
-      // /kyc should either redirect to login or return 404 (route not yet implemented)
-      const redirectedToLogin = page.url().includes("/login");
-      const notFound = response?.status() === 404 || (await page.getByText(/not found|404/i).isVisible({ timeout: 3_000 }).catch(() => false));
-      expect(redirectedToLogin || notFound).toBeTruthy();
-      await context.close();
-    },
-  );
+  // KYC route removed from the platform
 
   // ── Authenticated tests ─────────────────────────────────────────────
 
@@ -375,51 +362,6 @@ test.describe("Compliance spec — E2E coverage", () => {
 
     // ── KYC ───────────────────────────────────────────────────────────
 
-    test(
-      "KYC page shows verification status",
-      { tag: ["@compliance"] },
-      async ({ page }) => {
-        const response = await page.goto("/kyc");
-        await dismissAgeGate(page);
-        await dismissLimitsDialog(page);
-        if (!response || response.status() === 404 || (await page.getByText(/404|inte hittas|not found/i).isVisible({ timeout: 2_000 }).catch(() => false))) {
-          test.skip(true, "KYC page not deployed");
-          return;
-        }
-
-        await expect(
-          page.getByRole("heading", { name: "Identity Verification", level: 1 }),
-        ).toBeVisible({ timeout: 10_000 });
-
-        await expect(
-          page.getByRole("heading", { name: /KYC Verification Status/i }),
-        ).toBeVisible();
-
-        const statusBadge = page.getByText(/^(Approved|Pending|Rejected|Not Started)$/);
-        await expect(statusBadge.first()).toBeVisible({ timeout: 5_000 });
-      },
-    );
-
-    test(
-      "KYC page mentions Spelinspektionen regulatory requirement",
-      { tag: ["@compliance"] },
-      async ({ page }) => {
-        const response = await page.goto("/kyc");
-        await dismissAgeGate(page);
-        await dismissLimitsDialog(page);
-        if (!response || response.status() === 404 || (await page.getByText(/404|inte hittas|not found/i).isVisible({ timeout: 2_000 }).catch(() => false))) {
-          test.skip(true, "KYC page not deployed");
-          return;
-        }
-
-        await expect(
-          page.getByRole("heading", { name: "Identity Verification", level: 1 }),
-        ).toBeVisible({ timeout: 10_000 });
-
-        await expect(
-          page.getByText(/Spelinspektionen/i),
-        ).toBeVisible();
-      },
-    );
+    // KYC route removed from the platform
   });
 });
