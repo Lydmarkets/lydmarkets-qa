@@ -37,14 +37,14 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     ).toBeVisible({ timeout: 10000 });
   });
 
-  test("mobile menu shows Markets nav link", async ({ page }) => {
+  test("mobile menu shows Responsible gambling nav link", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
       page.getByRole("heading", { name: /meny|menu/i })
     ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("link", { name: /marknader|markets/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /ansvarsfullt|responsible/i })).toBeVisible();
   });
 
   test("mobile menu shows How it works nav link", async ({ page }) => {

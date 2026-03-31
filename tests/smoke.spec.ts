@@ -5,7 +5,7 @@ test.describe("Smoke tests — critical user flows", () => {
   test("homepage loads with key elements", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.locator("nav")).toBeVisible();
+    await expect(page.locator("nav").first()).toBeVisible();
     await expect(page.getByRole("heading").first()).toBeVisible();
   });
 

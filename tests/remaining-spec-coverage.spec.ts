@@ -18,12 +18,12 @@ test.describe("Remaining spec coverage", () => {
       const filterBar = page.getByLabel("Market filters");
       await expect(filterBar).toBeVisible({ timeout: 10_000 });
 
-      // The tab bar should contain at least the built-in view tabs (Trending, All, etc.)
-      await expect(
-        filterBar.getByRole("button", { name: "Trending" })
-      ).toBeVisible();
+      // The tab bar should contain the built-in view tabs (All, Live, New, etc.)
       await expect(
         filterBar.getByRole("button", { name: "All" })
+      ).toBeVisible();
+      await expect(
+        filterBar.getByRole("button", { name: "Live" })
       ).toBeVisible();
     }
   );

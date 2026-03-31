@@ -125,16 +125,16 @@ test.describe("SCRUM-542: Account balance visibility", () => {
       await expect(balanceLink).toBeVisible({ timeout: 5_000 });
       const balanceOnMarkets = await balanceLink.textContent();
 
-      // Navigate to portfolio
-      await page.goto("/portfolio");
+      // Navigate to wallet (avoids the compliance limits dialog that blocks /portfolio)
+      await page.goto("/wallet");
       await dismissAgeGate(page);
 
       // Balance should still be visible with the same amount
       const balanceLinkAfterNav = page.getByRole("link", { name: /saldo|balance/i });
       await expect(balanceLinkAfterNav).toBeVisible({ timeout: 5_000 });
-      const balanceOnPortfolio = await balanceLinkAfterNav.textContent();
+      const balanceOnWallet = await balanceLinkAfterNav.textContent();
 
-      expect(balanceOnMarkets).toEqual(balanceOnPortfolio);
+      expect(balanceOnMarkets?.trim()).toEqual(balanceOnWallet?.trim());
     },
   );
 });

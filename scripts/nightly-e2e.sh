@@ -10,15 +10,18 @@ LOG_FILE="$PROJECT_DIR/results/nightly-$(date +%F).log"
 # ── Ensure deps ─────────────────────────────────────────────────────
 export PATH="$HOME/.bun/bin:$PATH"
 export CI=1
+# Source secrets (E2E_TEST_SECRET for authenticated tests)
+[[ -f "$PROJECT_DIR/.env" ]] && set -a && source "$PROJECT_DIR/.env" && set +a
 cd "$PROJECT_DIR"
 mkdir -p results
 git pull --ff-only origin main 2>/dev/null || true
 bun install --frozen-lockfile 2>/dev/null || true
 
 # ── Run tests ───────────────────────────────────────────────────────
+E2E_TEST_SECRET="${E2E_TEST_SECRET:-}"
 START_TIME=$(date +%s)
 set +e
-BASE_URL="$BASE_URL" bun run test:e2e 2>&1 | tee "$LOG_FILE"
+BASE_URL="$BASE_URL" E2E_TEST_SECRET="$E2E_TEST_SECRET" bun run test:e2e 2>&1 | tee "$LOG_FILE"
 EXIT_CODE=${PIPESTATUS[0]}
 set -e
 END_TIME=$(date +%s)

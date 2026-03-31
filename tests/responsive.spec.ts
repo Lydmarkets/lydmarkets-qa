@@ -24,7 +24,7 @@ test.describe("Responsive design tests", () => {
     await page.goto("/");
     await dismissAgeGate(page);
 
-    await expect(page.locator("nav")).toBeVisible();
+    await expect(page.locator("nav").first()).toBeVisible();
     await expect(page.locator("main")).toBeVisible();
 
     await context.close();
@@ -37,7 +37,7 @@ test.describe("Responsive design tests", () => {
     await page.goto("/");
     await dismissAgeGate(page);
 
-    await expect(page.locator("nav")).toBeVisible();
+    await expect(page.locator("nav").first()).toBeVisible();
     await expect(page.locator("main")).toBeVisible();
 
     await context.close();

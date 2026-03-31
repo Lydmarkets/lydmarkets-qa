@@ -37,18 +37,19 @@ test.describe("SCRUM-402: Market search and category filters", () => {
   test("category filter buttons are visible on the home page", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    // Category tabs: Trending, All, Live, New, etc.
-    await expect(page.getByRole("button", { name: /trending|trendande/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: /^all$|^alla$/i })).toBeVisible();
+    // Category tabs: All, Live, New, Watchlist
+    await expect(page.getByRole("button", { name: /^all$|^alla$/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^live$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^new$|^nya$/i })).toBeVisible();
   });
 
   test("clicking a category filter button updates the displayed markets", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    // Click any available category filter button (Trending, All, Live, etc.)
-    const trendingButton = page.getByRole("button", { name: /trending|trendande/i });
-    await trendingButton.waitFor({ state: "visible", timeout: 10000 });
-    await trendingButton.click();
+    // Click the "New" filter button
+    const newButton = page.getByRole("button", { name: /^new$|^nya$/i });
+    await newButton.waitFor({ state: "visible", timeout: 10000 });
+    await newButton.click();
     // After clicking, the page should still show market content
     await expect(page.locator("main")).toBeVisible();
   });
@@ -56,8 +57,10 @@ test.describe("SCRUM-402: Market search and category filters", () => {
   test("multiple category filters are available on the home page", async ({ page }) => {
     await page.goto("/");
     await dismissAgeGate(page);
-    await expect(page.getByRole("button", { name: /trending|trendande/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: /^all$|^alla$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^all$|^alla$/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^live$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^new$|^nya$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Watchlist", exact: true })).toBeVisible();
   });
 
   test("New category filter button is present", async ({ page }) => {

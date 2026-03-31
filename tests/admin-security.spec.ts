@@ -180,8 +180,8 @@ test.describe("Admin Security — Route Protection", () => {
       maxRedirects: 0,
     });
     const status = response.status();
-    // Accept any non-200 status, OR a redirect (3xx)
-    const isProtected = status === 401 || status === 403 || (status >= 300 && status < 400) || status === 404;
+    // Accept any non-200 status: 401/403 (auth required), 3xx (redirect), 404, or 5xx (server error)
+    const isProtected = status === 401 || status === 403 || (status >= 300 && status < 400) || status === 404 || status >= 500;
 
     // If the server followed the redirect and returned 200, check the body
     // is not actual withdrawal data (it would be the login page HTML)

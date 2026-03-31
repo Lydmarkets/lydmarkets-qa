@@ -11,6 +11,7 @@ test.describe("Compliance — cookie consent", () => {
 
   test("accepting cookies dismisses banner", async ({ page }) => {
     await page.goto("/");
+    await dismissAgeGate(page);
     const acceptButton = page.getByRole("button", { name: /accept|acceptera|godkänn/i }).first();
     if (await acceptButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await acceptButton.click();

@@ -1,5 +1,6 @@
 import { test as setup } from "@playwright/test";
 import { dismissAgeGate } from "../helpers/age-gate";
+import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import * as fs from "fs";
 
 const AUTH_FILE = "playwright/.auth/user.json";
@@ -69,6 +70,7 @@ async function tryTestEndpoint(
     // cookies the server needs to set (CSRF, callback URL, etc.)
     await page.goto(`${baseURL}/`);
     await dismissAgeGate(page);
+    await dismissLimitsDialog(page);
     await page.context().storageState({ path: AUTH_FILE });
     console.log("[auth.setup] Authenticated via test endpoint");
     return true;
@@ -113,6 +115,7 @@ async function tryBankIdMock(
 
     // If already logged in, save and done
     if (!page.url().includes("/login")) {
+      await dismissLimitsDialog(page);
       await page.context().storageState({ path: AUTH_FILE });
       console.log("[auth.setup] Authenticated via BankID mock (existing account)");
       return true;
@@ -151,6 +154,8 @@ async function tryBankIdMock(
       });
     }
 
+    await dismissAgeGate(page);
+    await dismissLimitsDialog(page);
     await page.context().storageState({ path: AUTH_FILE });
     console.log("[auth.setup] Authenticated via BankID mock (new registration)");
     return true;

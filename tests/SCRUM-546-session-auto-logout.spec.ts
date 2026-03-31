@@ -45,7 +45,10 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
   test(
     "login page handles session-expired redirect gracefully",
     { tag: ["@regression", "@compliance"] },
-    async ({ page }) => {
+    async ({ page, context }) => {
+      // Clear auth cookies so we actually land on the login page
+      await context.clearCookies();
+
       // Simulate what happens when a user is redirected after session expiry
       await page.goto("/login?reason=session_expired");
       await dismissAgeGate(page);
@@ -73,7 +76,10 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
   test(
     "login page handles timeout redirect parameter",
     { tag: ["@regression", "@compliance"] },
-    async ({ page }) => {
+    async ({ page, context }) => {
+      // Clear auth cookies so we actually land on the login page
+      await context.clearCookies();
+
       // Navigate to login with a timeout indication
       await page.goto("/login?reason=timeout");
       await dismissAgeGate(page);
