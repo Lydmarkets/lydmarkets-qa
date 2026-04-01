@@ -29,23 +29,12 @@ test.describe("Markets — category filter details", () => {
       const filterBar = page.getByLabel("Market filters");
       await expect(filterBar).toBeVisible({ timeout: 10_000 });
 
-      // Get the market count before filtering
-      const countBefore = await page
-        .getByText(/\d+\s*marknad/i)
-        .first()
-        .textContent()
-        .catch(() => "");
+      // Click "New" filter button (filter items are buttons, not links)
+      const newButton = filterBar.getByRole("button", { name: "New" });
+      await newButton.click();
 
-      // Click a category link (e.g. Sports) to filter
-      const categoryLink = filterBar.getByRole("link").first();
-      const categoryName = await categoryLink.textContent();
-      await categoryLink.click();
-
-      // Wait for the filter to take effect — market count or card content should change
-      // Category-filtered results show market cards tagged with the selected category
-      await expect(page.getByText(categoryName!).first()).toBeVisible({
-        timeout: 5_000,
-      });
+      // URL should update with the filter parameter
+      await expect(page).toHaveURL(/[?&]filter=new/);
     },
   );
 
@@ -59,20 +48,18 @@ test.describe("Markets — category filter details", () => {
       const filterBar = page.getByLabel("Market filters");
       await expect(filterBar).toBeVisible({ timeout: 10_000 });
 
-      // Click a category to filter first
-      const categoryLink = filterBar.getByRole("link").first();
-      await categoryLink.click();
-
-      // Small wait for filter to apply
-      await page.waitForTimeout(1_000);
+      // Click "New" to apply a filter first (filter items are buttons, not links)
+      const newButton = filterBar.getByRole("button", { name: "New" });
+      await newButton.click();
+      await expect(page).toHaveURL(/[?&]filter=new/);
 
       // Click "All" to clear the filter
       const allButton = filterBar.getByRole("button", { name: "All" });
       await allButton.click();
 
-      // "All" button should be visible and the market grid should show results
+      // Market list should show unfiltered results again
       await expect(allButton).toBeVisible();
-      await expect(page.getByText(/marknad/i).first()).toBeVisible({
+      await expect(page.getByText(/\d+\s*marknader/i)).toBeVisible({
         timeout: 5_000,
       });
     },
