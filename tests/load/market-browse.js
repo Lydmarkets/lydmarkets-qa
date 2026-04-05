@@ -58,25 +58,39 @@ export function setup() {
     }
   }
 
-  // Scrape market IDs from the SSR page if API didn't work.
-  // The homepage embeds market data as escaped JSON ("id":"<uuid>")
-  // in the Next.js hydration payload. /markets may redirect to /.
+  // Scrape market IDs from the SSR pages if API didn't work.
+  // Try both / and /markets — Next.js RSC payloads change format between
+  // versions, so we attempt multiple regex patterns per page.
   if (marketIds.length === 0) {
-    const res = http.get(`${BASE_URL}/`, {
-      tags: { name: "setup: GET /" },
-      redirects: 5,
-    });
-    if (res.status === 200) {
-      // Match market objects in the Next.js hydration JSON.
-      // Market objects have \"id\":\"<uuid>\",\"title\": — the title field
-      // distinguishes them from other UUIDs (images, outcomes, users).
-      const pattern = /\\"id\\":\\"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\",\\"title\\":/gi;
-      let match;
-      const seen = new Set();
-      while ((match = pattern.exec(res.body)) !== null) {
-        if (!seen.has(match[1])) {
-          seen.add(match[1]);
-          marketIds.push(match[1]);
+    const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+    const patterns = [
+      // Double-escaped JSON (old hydration): \"id\":\"<uuid>\",\"title\":
+      new RegExp(`\\\\"id\\\\":\\\\"(${UUID})\\\\",\\\\"title\\\\":`, "gi"),
+      // Unescaped JSON (RSC payload): "id":"<uuid>","title":
+      new RegExp(`"id":"(${UUID})","title":`, "gi"),
+      // href links to market detail pages
+      new RegExp(`/markets/(${UUID})`, "gi"),
+    ];
+
+    const seen = new Set();
+    const pages = [
+      { url: `${BASE_URL}/`, tag: "setup: GET /" },
+      { url: `${BASE_URL}/markets`, tag: "setup: GET /markets" },
+    ];
+
+    for (const { url, tag } of pages) {
+      if (seen.size >= 20) break;
+      const res = http.get(url, { tags: { name: tag }, redirects: 5 });
+      if (res.status !== 200) continue;
+
+      for (const pattern of patterns) {
+        pattern.lastIndex = 0;
+        let match;
+        while ((match = pattern.exec(res.body)) !== null) {
+          if (!seen.has(match[1])) {
+            seen.add(match[1]);
+            marketIds.push(match[1]);
+          }
         }
       }
     }
