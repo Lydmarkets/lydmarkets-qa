@@ -1,14 +1,10 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 test.describe("Compliance — game rules page content", () => {
   test(
     "game rules page mentions AMM/LMSR trading mechanism",
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/game-rules");
-      await dismissAgeGate(page);
-
       await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
 
       // Swedish heading: "Handelsmekanik — Automatiserad Marknadsgarant (AMM)"
@@ -24,8 +20,6 @@ test.describe("Compliance — game rules page content", () => {
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/game-rules");
-      await dismissAgeGate(page);
-
       await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
 
       // Swedish: "plattformsavgift på 3,5 %"
@@ -40,8 +34,6 @@ test.describe("Compliance — game rules page content", () => {
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/game-rules");
-      await dismissAgeGate(page);
-
       await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
 
       // Swedish: "72-timmars betänketid"

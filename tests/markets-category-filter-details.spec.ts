@@ -1,14 +1,10 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 test.describe("Markets — category filter details", () => {
   test(
     "'All' button is visible and present in the filter bar",
     { tag: ["@smoke"] },
     async ({ page }) => {
       await page.goto("/markets");
-      await dismissAgeGate(page);
-
       // Filter bar is a generic element with accessible name "Market filters"
       const filterBar = page.getByLabel("Market filters");
       await expect(filterBar).toBeVisible({ timeout: 10_000 });
@@ -24,8 +20,6 @@ test.describe("Markets — category filter details", () => {
     { tag: ["@regression"] },
     async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
-
       const filterBar = page.getByLabel("Market filters");
       await expect(filterBar).toBeVisible({ timeout: 10_000 });
 
@@ -43,8 +37,6 @@ test.describe("Markets — category filter details", () => {
     { tag: ["@regression"] },
     async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
-
       const filterBar = page.getByLabel("Market filters");
       await expect(filterBar).toBeVisible({ timeout: 10_000 });
 

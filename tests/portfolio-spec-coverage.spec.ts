@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
@@ -43,7 +42,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     test("portfolio page renders heading and subtitle", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/portfolio");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       // The page title is rendered via i18n key "portfolio.title" → "Portfolio" (en) or "Portfölj" (sv)
@@ -59,7 +57,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     test("portfolio page shows summary cards or order filters", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/portfolio");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       await expect(
@@ -79,7 +76,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     test("portfolio page shows positions or order content", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/portfolio");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       await expect(
@@ -104,7 +100,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     test("orders page renders heading and subtitle", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/orders");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       // The page title is "Order History" or "Orderhistorik"
@@ -120,7 +115,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     test("orders page shows status filter buttons", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/orders");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       await expect(
@@ -149,7 +143,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     test("orders page shows side filter buttons", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/orders");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       await expect(
@@ -173,7 +166,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     test("orders page shows date range filters", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/orders");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       await expect(
@@ -192,7 +184,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     test("orders page shows Apply button and Export CSV button", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/orders");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       await expect(
@@ -212,7 +203,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     test("orders page shows empty state or orders table", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/orders");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       await expect(
@@ -231,7 +221,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     test("orders page shows pagination controls", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/orders");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       await expect(

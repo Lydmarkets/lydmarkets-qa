@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { goToFirstMarket } from "../helpers/go-to-market";
 
 // SCRUM-401: Order placement — authenticated user buys YES/NO share
@@ -155,8 +154,6 @@ test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
 
   test("orders page shows recent orders after placement", async ({ page }) => {
     await page.goto("/orders");
-    await dismissAgeGate(page);
-
     // Orders page may redirect to auth for unauthenticated users
     const url = page.url();
     const isOnOrders = url.includes("/orders");

@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 // SCRUM-247: E2E tests for SCRUM-215 — 90-day interrupted market auto-close (SIFS 7 kap. 4§)
 //
 // SCRUM-215 implements a daily cron job that auto-closes markets interrupted for 90+ days,
@@ -25,7 +23,6 @@ test.describe("SCRUM-247 — 90-day interrupted market auto-close admin UI (SCRU
 
   test("market detail page renders for an active market", async ({ page }) => {
     await page.goto("/markets");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
   });
 
@@ -63,7 +60,6 @@ test.describe("SCRUM-247 — 90-day interrupted market auto-close admin UI (SCRU
     });
 
     await page.goto("/markets");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
     // With the mocked data, an interrupted/suspended status label should appear

@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { goToFirstMarket } from "../helpers/go-to-market";
 
 test.describe("SCRUM-400: Market detail page — order form interactions", () => {

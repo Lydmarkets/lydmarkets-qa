@@ -1,5 +1,4 @@
 import { test as setup } from "@playwright/test";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import * as fs from "fs";
 
@@ -69,7 +68,6 @@ async function tryTestEndpoint(
     // Navigate to trigger server-side session validation and any additional
     // cookies the server needs to set (CSRF, callback URL, etc.)
     await page.goto(`${baseURL}/`);
-    await dismissAgeGate(page);
     await dismissLimitsDialog(page);
     await page.context().storageState({ path: AUTH_FILE });
     console.log("[auth.setup] Authenticated via test endpoint");
@@ -90,8 +88,6 @@ async function tryBankIdMock(
 ): Promise<boolean> {
   try {
     await page.goto("/login");
-    await dismissAgeGate(page);
-
     // Dismiss cookie banner if present
     const cookieAccept = page.getByRole("button", { name: /acceptera|accept/i });
     await cookieAccept.click({ timeout: 3_000 }).catch(() => {});
@@ -123,7 +119,6 @@ async function tryBankIdMock(
 
     // No account — need to register
     await page.goto("/register");
-    await dismissAgeGate(page);
     await cookieAccept.click({ timeout: 2_000 }).catch(() => {});
 
     await page
@@ -154,7 +149,6 @@ async function tryBankIdMock(
       });
     }
 
-    await dismissAgeGate(page);
     await dismissLimitsDialog(page);
     await page.context().storageState({ path: AUTH_FILE });
     console.log("[auth.setup] Authenticated via BankID mock (new registration)");

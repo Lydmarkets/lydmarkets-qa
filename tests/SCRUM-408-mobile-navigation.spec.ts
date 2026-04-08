@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 // Pixel 5 viewport dimensions
 const MOBILE_VIEWPORT = { width: 393, height: 851 };
 
@@ -9,7 +7,6 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
 
   test("hamburger menu button is visible on mobile", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(
       page.getByRole("button", { name: /open navigation menu/i })
     ).toBeVisible({ timeout: 10000 });
@@ -17,7 +14,6 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
 
   test("desktop nav links are not shown as a horizontal bar on mobile", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     // The desktop nav (Markets, How it works as inline links) should be hidden
     // Only the hamburger trigger should be visible in the header
     await expect(
@@ -30,7 +26,6 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
 
   test("clicking the hamburger opens the mobile menu with Menu heading", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
       page.getByRole("heading", { name: /meny|menu/i })
@@ -39,7 +34,6 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
 
   test("mobile menu shows Responsible gambling nav link", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
       page.getByRole("heading", { name: /meny|menu/i })
@@ -49,7 +43,6 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
 
   test("mobile menu shows How it works nav link", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
       page.getByRole("heading", { name: /meny|menu/i })
@@ -59,7 +52,6 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
 
   test("mobile menu shows Sign in and Sign up buttons", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
       page.getByRole("heading", { name: /meny|menu/i })
@@ -70,7 +62,6 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
 
   test("mobile menu has a close button (X)", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
       page.getByRole("heading", { name: /meny|menu/i })
@@ -83,7 +74,6 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
 
   test("clicking a nav link from mobile menu navigates to the correct page", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
       page.getByRole("heading", { name: /meny|menu/i })
@@ -97,7 +87,6 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
 
   test("navigating via mobile menu closes the menu drawer", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await page.getByRole("button", { name: /open navigation menu/i }).click();
     await expect(
       page.getByRole("heading", { name: /meny|menu/i })

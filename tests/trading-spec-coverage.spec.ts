@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { goToFirstMarket } from "../helpers/go-to-market";
 import { hasAuthSession } from "../helpers/has-auth";

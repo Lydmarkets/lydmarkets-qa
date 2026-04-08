@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 // SCRUM-228: E2E tests for SCRUM-186 — Market card visual design
 // (thumbnail, Yes/No pills, volume, likes, clickable navigation)
 //
@@ -16,13 +14,11 @@ import { dismissAgeGate } from "../helpers/age-gate";
 test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
   test("markets list page loads without error", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
   });
 
   test("at least one market card is visible on the home/markets page", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Market cards — try accessible selectors
@@ -39,7 +35,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
 
   test("market card shows a Yes probability pill", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Yes pill — should show "Yes XX%" or just a percentage in the Yes section
@@ -54,7 +49,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
 
   test("market card shows a No probability pill", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     const hasNoPill =
@@ -67,8 +61,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
 
   test("market card shows question/title text", async ({ page }) => {
     await page.goto("/markets");
-    await dismissAgeGate(page);
-
     // Wait for market card links specifically
     const marketLinks = page.locator('main a[href*="/markets/"]');
     await expect(marketLinks.first()).toBeVisible({ timeout: 15_000 });
@@ -84,7 +76,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
 
   test("market card shows visual content (image, probability bars, or Yes/No buttons)", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Market cards no longer use thumbnails — verify card content renders instead
@@ -99,7 +90,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
 
   test("market card shows a volume indicator", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Volume might appear as "1.2k", "1,234 trades", "Vol: 1.2k", etc.
@@ -114,7 +104,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
 
   test("market card shows a like or bookmark count", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Like/bookmark count — may appear as a heart icon with a number, bookmark icon, etc.
@@ -128,7 +117,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
 
   test("clicking a market card navigates to the market detail page", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Find the first clickable market card/link
@@ -151,8 +139,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     // Desktop: expect 3-4 columns (at least 2 visible cards)
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/markets");
-    await dismissAgeGate(page);
-
     const marketLinks = page.locator('main a[href*="/markets/"]');
     await expect(marketLinks.first()).toBeVisible({ timeout: 15_000 });
     const count = await marketLinks.count();
@@ -162,7 +148,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
   test("market list layout is responsive — shows cards on mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     const marketLinks = page.locator("main").getByRole("link").filter({ hasText: /.+/ });
@@ -175,7 +160,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
 
   test("Yes pill probability percentage is a valid number between 0-100", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Find Yes pill text and validate the percentage
@@ -198,7 +182,6 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
 
   test("Yes % + No % adds up to approximately 100 on a market card", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // Get the first market card and extract Yes/No percentages

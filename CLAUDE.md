@@ -17,7 +17,6 @@ Tests are generated per-ticket by QA workers and accumulate across sprints.
 - **Existing tests**: Never modify or delete existing test files — only add new ones
 - **Assertions**: Test each acceptance criteria point as a separate `test()` within the describe block
 - **Resilience**: Use `page.waitForURL(...)` for navigation assertions; rely on `toBeVisible()` retries for dynamic content — avoid `waitForLoadState('networkidle')` as it stalls on failed requests
-- **Age gate**: Call `dismissAgeGate(page)` after **every** `page.goto()` on user-facing pages
 
 ## Running
 
@@ -33,7 +32,6 @@ bun run test:e2e tests/SCRUM-402-market-search.spec.ts    # Single file
 tests/              # One .spec.ts per ticket
 fixtures/base.ts    # Re-exports { test, expect }
 helpers/
-  age-gate.ts       # dismissAgeGate(page) — call after goto() on any user-facing page
   wait-for-app.ts   # waitForApp(url) — polls until the app is healthy
 results/            # JSON + HTML reports (gitignored)
 ```
@@ -82,7 +80,7 @@ this workflow:
 
 | YAML | Playwright |
 |------|------------|
-| `goto: "/path"` | `await page.goto("/path"); await dismissAgeGate(page);` |
+| `goto: "/path"` | `await page.goto("/path");` |
 | `wait: 'selector'` | `await expect(page.{selector}).toBeVisible();` |
 | `action: "click" + element` | `await page.{element}.click();` |
 | `action: "fill" + element + value` | `await page.{element}.fill("{value}");` |
@@ -92,19 +90,6 @@ this workflow:
 | `assert: { url_matches: 'pattern' }` | `await expect(page).toHaveURL(new RegExp("pattern"));` |
 | `assert_any: [...]` | `const a = await page.{el1}.isVisible({timeout:5000}).catch(()=>false);` ... `expect(a\|\|b).toBeTruthy();` |
 | `store: { variable, from, attribute }` | `const val = await page.{from}.getAttribute("{attribute}");` |
-
-### Important: always add dismissAgeGate
-
-The YAML specs don't include `dismissAgeGate` in every step (the specs describe
-the feature, not the test harness). **You must add it after every `page.goto()`
-on user-facing pages.**
-
-```typescript
-// YAML says: goto: "/markets"
-// You write:
-await page.goto("/markets");
-await dismissAgeGate(page);
-```
 
 ### Tags → test annotations
 
@@ -123,9 +108,6 @@ Many compliance components use Swedish text. Key phrases for selectors:
 
 | Selector text | Component |
 |---------------|-----------|
-| `Åldersbekräftelse` | Age verification modal title |
-| `Jag är 18 år eller äldre` | Age confirm button |
-| `Lämna sidan` | Age reject button |
 | `Verklighetscheck` | Reality check modal |
 | `Fortsätt spela` | Continue playing |
 | `Ta en paus` | Take a break |
@@ -151,12 +133,10 @@ You generate:
 
 ```typescript
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 
 test.describe("Markets — category filters", () => {
   test("'All' pill is checked by default", { tag: ["@smoke"] }, async ({ page }) => {
     await page.goto("/markets");
-    await dismissAgeGate(page);
 
     await expect(
       page.getByRole("radio", { name: "All" })

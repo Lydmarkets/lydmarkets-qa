@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { hasAuthSession } from "../helpers/has-auth";
 
 // SCRUM-249: E2E tests for SCRUM-220 — Unauthorized login attempt notification (SIFS 9 kap. 4§)
@@ -25,7 +24,6 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
 
   test("login page renders with BankID sign-in options", async ({ page }) => {
     await page.goto("/login");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
     await expect(
       page.getByRole("button", { name: /logga in med bankid|sign in with bankid/i })
@@ -36,7 +34,6 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
     page,
   }) => {
     await page.goto("/login");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
     // There should be no pre-existing security alert on a clean visit
@@ -67,7 +64,6 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
       page,
     }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
       // Look for a notification bell button — various aria labels / icons
@@ -89,7 +85,6 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
 
     test("clicking NotificationBell opens the notifications panel", async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
       const bellBtn = page
@@ -113,7 +108,6 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
 
     test("notifications panel renders a list (even if empty)", async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
       const bellBtn = page
@@ -176,7 +170,6 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
       });
 
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
       const bellBtn = page
@@ -225,7 +218,6 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
       });
 
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
       // A badge or numeric count should be visible on/near the bell
@@ -249,8 +241,6 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
 
     test("notifications page/section is accessible via direct URL", async ({ page }) => {
       await page.goto("/notifications");
-      await dismissAgeGate(page);
-
       const isRedirected = page.url().includes("/login") || page.url().includes("/auth");
       if (isRedirected) {
         // Accepted if /notifications is a protected route requiring login

@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
@@ -11,8 +10,6 @@ test.describe("Resolution & Settlement", () => {
     { tag: ["@smoke", "@critical"] },
     async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
-
       // Look for any market card that shows a "Resolved" badge or status
       const resolvedBadge = page
         .getByText(/resolved|avgjord|stängd|closed/i)
@@ -67,8 +64,6 @@ test.describe("Resolution & Settlement", () => {
 
       const href = await resolvedLink.getAttribute("href");
       await page.goto(href!);
-      await dismissAgeGate(page);
-
       // Verify the resolved market page shows the outcome
       await expect(page.locator("main").first()).toBeVisible({
         timeout: 10_000,
@@ -107,7 +102,6 @@ test.describe("Resolution & Settlement", () => {
       { tag: ["@critical"] },
       async ({ page }) => {
         await page.goto("/orders");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         // May redirect to /login if session expired
@@ -148,7 +142,6 @@ test.describe("Resolution & Settlement", () => {
       { tag: ["@regression"] },
       async ({ page }) => {
         await page.goto("/portfolio");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         if (page.url().includes("/login")) {

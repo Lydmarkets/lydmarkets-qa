@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
@@ -13,8 +12,6 @@ test.describe("Remaining spec coverage", () => {
       // the matching category tab. We navigate with a category param and verify
       // the filter tab bar is present and functional.
       await page.goto("/?category=Sports");
-      await dismissAgeGate(page);
-
       // The filter tabs container has aria-label="Market filters"
       const filterBar = page.getByLabel("Market filters");
       await expect(filterBar).toBeVisible({ timeout: 10_000 });
@@ -35,8 +32,6 @@ test.describe("Remaining spec coverage", () => {
     { tag: ["@regression"] },
     async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
-
       // The FeaturedMarket component renders a "Featured" badge with a star.
       // If no market is featured the section is absent — we check if it exists
       // but don't fail the test when the backend has no featured market.
@@ -77,8 +72,6 @@ test.describe("Remaining spec coverage", () => {
       { tag: ["@smoke"] },
       async ({ page }) => {
         const response = await page.goto(path);
-        await dismissAgeGate(page);
-
         expect(response?.status()).toBe(200);
 
         // Every public page has a main element or an h1
@@ -97,8 +90,6 @@ test.describe("Remaining spec coverage", () => {
       // Clear the theme cookie so the anti-FOUC script falls back to default
       await page.context().clearCookies();
       await page.goto("/");
-      await dismissAgeGate(page);
-
       // The root <html> element should have class="dark" by default
       const htmlClass = await page
         .locator("html")
@@ -114,8 +105,6 @@ test.describe("Remaining spec coverage", () => {
     async ({ page }) => {
       // Navigate to home page and find a market card heading to extract its link
       await page.goto("/");
-      await dismissAgeGate(page);
-
       // Market card titles are h3 headings. Their sibling link contains the href.
       const marketHeading = page.getByRole("heading", { level: 3 }).first();
       await expect(marketHeading).toBeVisible({ timeout: 10_000 });
@@ -127,8 +116,6 @@ test.describe("Remaining spec coverage", () => {
       expect(href).toMatch(/^\/markets\//);
 
       await page.goto(href!);
-      await dismissAgeGate(page);
-
       // Market detail should load with an h1 title
       const title = page.getByRole("heading", { level: 1 });
       await expect(title).toBeVisible({ timeout: 10_000 });
@@ -169,7 +156,6 @@ test.describe("Remaining spec coverage", () => {
       { tag: ["@regression"] },
       async ({ page }) => {
         await page.goto("/settings");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         // The AppearanceSettings component has a theme select with id="theme"
@@ -198,8 +184,6 @@ test.describe("Remaining spec coverage", () => {
       { tag: ["@regression"] },
       async ({ page }) => {
         await page.goto("/");
-        await dismissAgeGate(page);
-
         // Wait for market cards with watchlist buttons
         const starButton = page
           .getByRole("button", { name: /add to watchlist|remove from watchlist/i })

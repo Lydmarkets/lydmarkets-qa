@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
@@ -76,7 +75,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         const response = await page.goto("/settings/responsible-gambling");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         // Page may 404 if auth session is invalid or route not deployed yet
@@ -106,7 +104,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         const response = await page.goto("/settings/responsible-gambling");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
         if (!response || response.status() === 404 || page.url().includes("/login")) {
           test.skip(true, "Page not accessible");
@@ -128,7 +125,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         const response = await page.goto("/settings/responsible-gambling");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
         if (!response || response.status() === 404 || page.url().includes("/login")) {
           test.skip(true, "Page not accessible");
@@ -150,7 +146,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         const response = await page.goto("/settings/responsible-gambling");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
         if (!response || response.status() === 404 || page.url().includes("/login")) {
           test.skip(true, "Page not accessible");
@@ -170,7 +165,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         const response = await page.goto("/settings/self-exclusion");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
         if (!response || response.status() === 404 || page.url().includes("/login")) {
           test.skip(true, "Page not accessible");
@@ -202,7 +196,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         const response = await page.goto("/settings/self-exclusion");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
         if (!response || response.status() === 404 || page.url().includes("/login")) {
           test.skip(true, "Page not accessible");
@@ -240,7 +233,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         await page.goto("/disputes");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         await expect(
@@ -258,7 +250,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         await page.goto("/disputes");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         await expect(
@@ -279,7 +270,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         await page.goto("/disputes/new");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         await expect(
@@ -312,7 +302,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         await page.goto("/disputes/new");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         await expect(
@@ -344,7 +333,6 @@ test.describe("Compliance spec — E2E coverage", () => {
       { tag: ["@compliance"] },
       async ({ page }) => {
         await page.goto("/disputes/new");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         await expect(

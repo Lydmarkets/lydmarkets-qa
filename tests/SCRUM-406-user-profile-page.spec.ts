@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 test.describe("SCRUM-406: User profile page — view stats and edit display name", () => {
   // NOTE: The profile page is protected by auth. All tests that navigate to /profile
   // require a storageState fixture with a valid BankID session. Tests marked test.skip()
@@ -23,7 +21,6 @@ test.describe("SCRUM-406: User profile page — view stats and edit display name
 
   test("login page is reachable and shows BankID flow", async ({ page }) => {
     await page.goto("/login");
-    await dismissAgeGate(page);
     await expect(
       page.getByRole("heading", { name: /welcome back|välkommen tillbaka/i })
     ).toBeVisible({ timeout: 10000 });

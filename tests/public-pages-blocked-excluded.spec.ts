@@ -1,14 +1,10 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 test.describe("Public pages — /blocked and /excluded", () => {
   test(
     "geo-blocked page loads with explanatory content",
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/blocked");
-      await dismissAgeGate(page);
-
       await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
 
       const hasHeading = await page
@@ -32,8 +28,6 @@ test.describe("Public pages — /blocked and /excluded", () => {
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/excluded");
-      await dismissAgeGate(page);
-
       await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
 
       const hasHeading = await page
