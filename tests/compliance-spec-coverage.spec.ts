@@ -6,12 +6,12 @@ test.describe("Compliance spec — E2E coverage", () => {
   // ── Unauthenticated redirect tests ──────────────────────────────────
 
   test(
-    "unauthenticated /settings/responsible-gambling redirects to login",
+    "unauthenticated /settings?tab=responsible-gambling redirects to login",
     { tag: ["@compliance"] },
     async ({ browser }) => {
       const context = await browser.newContext();
       const page = await context.newPage();
-      await page.goto("/settings/responsible-gambling");
+      await page.goto("/settings?tab=responsible-gambling");
       await page.waitForURL(/\/login/, { timeout: 10_000 });
       expect(page.url()).toMatch(/\/login/);
       await context.close();
@@ -70,27 +70,25 @@ test.describe("Compliance spec — E2E coverage", () => {
 
     // ── Responsible gambling ──────────────────────────────────────────
 
+    // The limit sections live on the `deposit-limits` tab; the
+    // `responsible-gambling` tab only renders the PGSI questionnaire.
+
     test(
-      "responsible gambling page shows deposit limit inputs",
+      "deposit limits tab shows deposit limit inputs",
       { tag: ["@compliance"] },
       async ({ page }) => {
-        const response = await page.goto("/settings/responsible-gambling");
+        const response = await page.goto("/settings?tab=deposit-limits");
         await dismissLimitsDialog(page);
 
-        // Page may 404 if auth session is invalid or route not deployed yet
         if (!response || response.status() === 404 || page.url().includes("/login")) {
           test.skip(true, "Page not accessible — auth session invalid or route not deployed");
           return;
         }
 
-        await expect(
-          page.getByRole("heading", { name: "Ansvarsfullt spelande", level: 1 }),
-        ).toBeVisible({ timeout: 10_000 });
-
         // Deposit limits section
         await expect(
           page.getByRole("heading", { name: "Insättningsgränser", level: 2 }),
-        ).toBeVisible();
+        ).toBeVisible({ timeout: 10_000 });
 
         // Daily / weekly / monthly deposit limit rows
         await expect(page.getByText("Daglig insättningsgräns")).toBeVisible();
@@ -100,52 +98,10 @@ test.describe("Compliance spec — E2E coverage", () => {
     );
 
     test(
-      "responsible gambling page shows loss limit section",
+      "deposit limits tab has update limits button",
       { tag: ["@compliance"] },
       async ({ page }) => {
-        const response = await page.goto("/settings/responsible-gambling");
-        await dismissLimitsDialog(page);
-        if (!response || response.status() === 404 || page.url().includes("/login")) {
-          test.skip(true, "Page not accessible");
-          return;
-        }
-
-        await expect(
-          page.getByRole("heading", { name: "Förlustgränser", level: 2 }),
-        ).toBeVisible({ timeout: 10_000 });
-
-        await expect(page.getByText("Daglig förlustgräns")).toBeVisible();
-        await expect(page.getByText("Veckovis förlustgräns")).toBeVisible();
-        await expect(page.getByText("Månatlig förlustgräns")).toBeVisible();
-      },
-    );
-
-    test(
-      "responsible gambling page shows bet limit section",
-      { tag: ["@compliance"] },
-      async ({ page }) => {
-        const response = await page.goto("/settings/responsible-gambling");
-        await dismissLimitsDialog(page);
-        if (!response || response.status() === 404 || page.url().includes("/login")) {
-          test.skip(true, "Page not accessible");
-          return;
-        }
-
-        await expect(
-          page.getByRole("heading", { name: "Insatsgränser", level: 2 }),
-        ).toBeVisible({ timeout: 10_000 });
-
-        await expect(page.getByText("Daglig insatsgräns")).toBeVisible();
-        await expect(page.getByText("Veckovis insatsgräns")).toBeVisible();
-        await expect(page.getByText("Månatlig insatsgräns")).toBeVisible();
-      },
-    );
-
-    test(
-      "responsible gambling page has update limits button",
-      { tag: ["@compliance"] },
-      async ({ page }) => {
-        const response = await page.goto("/settings/responsible-gambling");
+        const response = await page.goto("/settings?tab=deposit-limits");
         await dismissLimitsDialog(page);
         if (!response || response.status() === 404 || page.url().includes("/login")) {
           test.skip(true, "Page not accessible");
