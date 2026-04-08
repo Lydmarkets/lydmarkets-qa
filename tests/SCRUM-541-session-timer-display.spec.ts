@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 /**
  * SCRUM-541: Session timer — persistent, non-dismissible on all screens.
  *
@@ -31,8 +29,6 @@ test.describe("SCRUM-541: Session timer display", () => {
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      await dismissAgeGate(page);
-
       // Check if user is authenticated (no "Logga in" link)
       const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
       const isUnauthenticated = await loginLink
@@ -56,8 +52,6 @@ test.describe("SCRUM-541: Session timer display", () => {
       { tag: ["@regression", "@compliance"] },
       async ({ page }) => {
         await page.goto(path);
-        await dismissAgeGate(page);
-
         const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
         const isUnauthenticated = await loginLink
           .isVisible({ timeout: 3_000 })
@@ -79,8 +73,6 @@ test.describe("SCRUM-541: Session timer display", () => {
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      await dismissAgeGate(page);
-
       const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
       const isUnauthenticated = await loginLink
         .isVisible({ timeout: 3_000 })
@@ -110,8 +102,6 @@ test.describe("SCRUM-541: Session timer display", () => {
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      await dismissAgeGate(page);
-
       const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
       const isUnauthenticated = await loginLink
         .isVisible({ timeout: 3_000 })

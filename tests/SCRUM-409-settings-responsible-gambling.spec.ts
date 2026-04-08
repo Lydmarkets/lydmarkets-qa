@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 // SCRUM-409: Settings — responsible gambling limits and account controls
 // Acceptance criteria:
 // 1. Unauthenticated access to /settings redirects to sign-in with return URL
@@ -43,8 +41,6 @@ test.describe("SCRUM-409 — Settings / responsible gambling", () => {
     // Requires authenticated storageState — set up via global setup
     // test.use({ storageState: "playwright/.auth/user.json" });
     await page.goto("/settings");
-    await dismissAgeGate(page);
-
     const isOnSettings = page.url().includes("/settings");
     const isOnAuth = page.url().includes("/login") || page.url().includes("/auth");
 

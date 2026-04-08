@@ -1,10 +1,7 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 test.describe("SCRUM-402: Market search and category filters", () => {
   test("home page shows a search input for markets", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(
       page.getByPlaceholder(/search markets|sök marknader/i)
     ).toBeVisible({ timeout: 10000 });
@@ -12,7 +9,6 @@ test.describe("SCRUM-402: Market search and category filters", () => {
 
   test("typing in search input filters the market list", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     const search = page.getByPlaceholder(/search markets|sök marknader/i);
     await search.fill("sport");
     // Market list should still be visible (live filtering)
@@ -26,7 +22,6 @@ test.describe("SCRUM-402: Market search and category filters", () => {
 
   test("clearing the search input restores all markets", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     const search = page.getByPlaceholder(/search markets|sök marknader/i);
     await search.fill("sport");
     await search.clear();
@@ -36,7 +31,6 @@ test.describe("SCRUM-402: Market search and category filters", () => {
 
   test("category filter buttons are visible on the home page", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     // Category tabs: All, Live, New, Watchlist
     await expect(page.getByRole("button", { name: /^all$|^alla$/i })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("button", { name: /^live$/i })).toBeVisible();
@@ -45,7 +39,6 @@ test.describe("SCRUM-402: Market search and category filters", () => {
 
   test("clicking a category filter button updates the displayed markets", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     // Click the "New" filter button
     const newButton = page.getByRole("button", { name: /^new$|^nya$/i });
     await newButton.waitFor({ state: "visible", timeout: 10000 });
@@ -56,7 +49,6 @@ test.describe("SCRUM-402: Market search and category filters", () => {
 
   test("multiple category filters are available on the home page", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.getByRole("button", { name: /^all$|^alla$/i })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("button", { name: /^live$/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /^new$|^nya$/i })).toBeVisible();
@@ -65,7 +57,6 @@ test.describe("SCRUM-402: Market search and category filters", () => {
 
   test("New category filter button is present", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(
       page.getByRole("button", { name: /^new$|^nya$/i })
     ).toBeVisible({ timeout: 10000 });
@@ -73,7 +64,6 @@ test.describe("SCRUM-402: Market search and category filters", () => {
 
   test("Live category filter button is present", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(
       page.getByRole("button", { name: /^live$/i })
     ).toBeVisible({ timeout: 10000 });
@@ -81,13 +71,11 @@ test.describe("SCRUM-402: Market search and category filters", () => {
 
   test("home page shows market count label", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.getByText(/\d+\s*(?:markets|marknader)/i)).toBeVisible({ timeout: 10000 });
   });
 
   test("search input has correct placeholder text", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     const search = page.getByPlaceholder(/search markets|sök marknader/i);
     await expect(search).toBeVisible({ timeout: 10000 });
     const placeholder = await search.getAttribute("placeholder");

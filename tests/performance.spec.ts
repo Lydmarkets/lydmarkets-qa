@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 test.describe("Performance tests", () => {
   test("homepage loads in reasonable time", async ({ page }) => {
     const startTime = Date.now();
@@ -39,8 +37,6 @@ test.describe("Performance tests", () => {
     });
 
     await page.goto("/");
-    await dismissAgeGate(page);
-
     // Filter known non-critical errors (network, auth, tracking)
     const criticalErrors = errors.filter(
       (e) =>

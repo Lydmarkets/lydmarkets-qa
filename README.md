@@ -50,7 +50,6 @@ tests/                  # One .spec.ts per Jira ticket
 fixtures/
   base.ts               # Re-exports { test, expect } from @playwright/test
 helpers/
-  age-gate.ts           # dismissAgeGate(page) — dismisses the Swedish 18+ modal
   wait-for-app.ts       # waitForApp(url) — polls until the app returns 200
 results/                # Reports (gitignored)
 playwright.config.ts
@@ -73,20 +72,17 @@ playwright.config.ts
 2. Import from the base fixture:
    ```ts
    import { test, expect } from "../fixtures/base";
-   import { dismissAgeGate } from "../helpers/age-gate";
    ```
 3. One `test.describe` per ticket, one `test()` per acceptance-criteria point:
    ```ts
    test.describe("SCRUM-123: Feature name", () => {
      test("renders the foo button", async ({ page }) => {
        await page.goto("/foo");
-       await dismissAgeGate(page);
        await expect(page.getByRole("button", { name: /foo/i })).toBeVisible();
      });
    });
    ```
-4. Call `dismissAgeGate(page)` after every `goto()` on user-facing pages — it gracefully no-ops if the modal is absent.
-5. Never modify or delete existing spec files.
+4. Never modify or delete existing spec files.
 
 ## Selector rules
 
@@ -111,17 +107,6 @@ playwright.config.ts
 | SCRUM-409 | Settings & responsible gambling | `SCRUM-409-settings-responsible-gambling.spec.ts` |
 
 ## Helpers reference
-
-### `dismissAgeGate(page)`
-
-Clicks the "Jag är 18 år eller äldre" confirmation button if it appears, then waits for it to disappear. Times out silently after 3 s if the modal is not present — safe to call unconditionally.
-
-```ts
-import { dismissAgeGate } from "../helpers/age-gate";
-
-await page.goto("/");
-await dismissAgeGate(page);
-```
 
 ### `waitForApp(url?, timeoutMs?, intervalMs?)`
 

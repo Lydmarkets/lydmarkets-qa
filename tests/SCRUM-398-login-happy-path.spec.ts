@@ -1,10 +1,7 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 test.describe("SCRUM-398: Login happy path — successful login redirects to dashboard", () => {
   test("login page renders with BankID sign-in options", async ({ page }) => {
     await page.goto("/login");
-    await dismissAgeGate(page);
     await expect(
       page.getByRole("heading", { name: /welcome back|välkommen tillbaka/i })
     ).toBeVisible({ timeout: 10000 });
@@ -15,7 +12,6 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
 
   test("login page shows subtitle explaining BankID flow", async ({ page }) => {
     await page.goto("/login");
-    await dismissAgeGate(page);
     await expect(
       page.getByText(/logga in på ditt lydmarkets|sign in to your lydmarkets/i)
     ).toBeVisible({ timeout: 10000 });
@@ -23,7 +19,6 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
 
   test("login page has link to create an account", async ({ page }) => {
     await page.goto("/login");
-    await dismissAgeGate(page);
     await expect(
       page.getByRole("link", { name: /skapa ett|create one/i })
     ).toBeVisible({ timeout: 10000 });
@@ -43,7 +38,6 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
 
   test("home page shows Sign in and Sign up buttons for unauthenticated users", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(
       page.getByRole("link", { name: /logga in|sign in/i })
     ).toBeVisible({ timeout: 10000 });
@@ -54,7 +48,6 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
 
   test("clicking Sign in navigates to the login page", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await page.getByRole("link", { name: /logga in|sign in/i }).click();
     await page.waitForURL(/\/login/, { timeout: 10000 });
     await expect(page).toHaveURL(/\/login/);

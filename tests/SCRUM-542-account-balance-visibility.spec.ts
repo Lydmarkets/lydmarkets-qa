@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 
 /**
@@ -29,8 +28,6 @@ test.describe("SCRUM-542: Account balance visibility", () => {
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      await dismissAgeGate(page);
-
       const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
       const isUnauthenticated = await loginLink
         .isVisible({ timeout: 3_000 })
@@ -57,8 +54,6 @@ test.describe("SCRUM-542: Account balance visibility", () => {
       { tag: ["@regression", "@compliance"] },
       async ({ page }) => {
         await page.goto(path);
-        await dismissAgeGate(page);
-
         const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
         const isUnauthenticated = await loginLink
           .isVisible({ timeout: 3_000 })
@@ -82,8 +77,6 @@ test.describe("SCRUM-542: Account balance visibility", () => {
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      await dismissAgeGate(page);
-
       const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
       const isUnauthenticated = await loginLink
         .isVisible({ timeout: 3_000 })
@@ -109,7 +102,6 @@ test.describe("SCRUM-542: Account balance visibility", () => {
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
@@ -129,7 +121,6 @@ test.describe("SCRUM-542: Account balance visibility", () => {
 
       // Navigate to wallet
       await page.goto("/wallet");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       // Balance should still be visible with the same amount

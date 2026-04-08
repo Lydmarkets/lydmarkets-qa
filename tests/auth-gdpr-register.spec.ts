@@ -1,14 +1,10 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 test.describe("Authentication — register page compliance", () => {
   test(
     "register page loads with BankID verification step",
     { tag: ["@smoke"] },
     async ({ page }) => {
       await page.goto("/register");
-      await dismissAgeGate(page);
-
       // Swedish: "Skapa konto" heading, "Starta BankID" button
       await expect(page.locator("main").first()).toBeVisible({
         timeout: 10_000,
@@ -33,8 +29,6 @@ test.describe("Authentication — register page compliance", () => {
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/register");
-      await dismissAgeGate(page);
-
       // Should show step indicator: "Steg 1 av 2 — BankID-verifiering"
       const hasStep = await page
         .getByText(/steg 1|step 1|bankid.*verif/i)

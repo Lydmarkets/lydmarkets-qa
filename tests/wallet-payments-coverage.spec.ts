@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
@@ -17,7 +16,6 @@ test.describe("Wallet & payments — authenticated coverage", () => {
     { tag: ["@smoke", "@critical", "@sifs"] },
     async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -49,7 +47,6 @@ test.describe("Wallet & payments — authenticated coverage", () => {
     { tag: ["@critical", "@sifs"] },
     async ({ page }) => {
       await page.goto("/portfolio");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -82,7 +79,6 @@ test.describe("Wallet & payments — authenticated coverage", () => {
     { tag: ["@smoke", "@critical"] },
     async ({ page }) => {
       await page.goto("/wallet");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -122,7 +118,6 @@ test.describe("Wallet & payments — authenticated coverage", () => {
     { tag: ["@critical"] },
     async ({ page }) => {
       await page.goto("/wallet");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -161,7 +156,6 @@ test.describe("Wallet & payments — authenticated coverage", () => {
     { tag: ["@critical"] },
     async ({ page }) => {
       await page.goto("/wallet");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -226,7 +220,6 @@ test.describe("Wallet & payments — authenticated coverage", () => {
     { tag: ["@smoke"] },
     async ({ page }) => {
       await page.goto("/transactions");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {

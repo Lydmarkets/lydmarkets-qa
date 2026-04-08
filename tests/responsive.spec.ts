@@ -1,15 +1,11 @@
 import { test, expect } from "../fixtures/base";
 import { devices } from "@playwright/test";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 test.describe("Responsive design tests", () => {
   test("homepage is responsive on Mobile (Pixel 5)", async ({ browser }) => {
     const context = await browser.newContext({ ...devices["Pixel 5"] });
     const page = await context.newPage();
 
     await page.goto("/");
-    await dismissAgeGate(page);
-
     // On mobile the desktop nav is hidden — hamburger button is visible instead
     await expect(page.getByRole("button", { name: /open navigation menu/i })).toBeVisible();
     await expect(page.locator("main")).toBeVisible();
@@ -22,8 +18,6 @@ test.describe("Responsive design tests", () => {
     const page = await context.newPage();
 
     await page.goto("/");
-    await dismissAgeGate(page);
-
     await expect(page.locator("nav").first()).toBeVisible();
     await expect(page.locator("main")).toBeVisible();
 
@@ -35,8 +29,6 @@ test.describe("Responsive design tests", () => {
     const page = await context.newPage();
 
     await page.goto("/");
-    await dismissAgeGate(page);
-
     await expect(page.locator("nav").first()).toBeVisible();
     await expect(page.locator("main")).toBeVisible();
 
@@ -48,7 +40,6 @@ test.describe("Responsive design tests", () => {
     const page = await context.newPage();
 
     await page.goto("/markets");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible();
 
     await context.close();
@@ -59,7 +50,6 @@ test.describe("Responsive design tests", () => {
     const page = await context.newPage();
 
     await page.goto("/markets");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible();
 
     await context.close();

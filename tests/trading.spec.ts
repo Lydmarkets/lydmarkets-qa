@@ -1,13 +1,10 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 // Auth-required routes (/orders, /portfolio, /wallet, /watchlist) redirect to /login.
 // Those flows are covered by SCRUM-401 (order placement) and SCRUM-403 (portfolio).
 
 test.describe("Trading flows", () => {
   test("browse markets page loads with market listings", async ({ page }) => {
     await page.goto("/markets");
-    await dismissAgeGate(page);
     await expect(page.locator("main").first()).toBeVisible();
     const hasSearch = await page
       .getByPlaceholder(/search markets|sök marknader/i)
@@ -24,7 +21,6 @@ test.describe("Trading flows", () => {
 
   test("market detail page loads and shows order form", async ({ page }) => {
     await page.goto("/markets");
-    await dismissAgeGate(page);
     // Find first market card link by href pattern
     const marketLink = page.locator('a[href^="/markets/"]').first();
     const href = await marketLink.getAttribute("href", { timeout: 8000 }).catch(() => null);

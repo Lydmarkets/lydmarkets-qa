@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 /**
  * SCRUM-546: Automatic session logout on time limit expiry.
  *
@@ -24,8 +22,6 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      await dismissAgeGate(page);
-
       const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
       const isUnauthenticated = await loginLink
         .isVisible({ timeout: 3_000 })
@@ -51,8 +47,6 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
 
       // Simulate what happens when a user is redirected after session expiry
       await page.goto("/login?reason=session_expired");
-      await dismissAgeGate(page);
-
       // The login page should load without errors
       await expect(page.locator("main")).toBeVisible({ timeout: 8_000 });
 
@@ -82,8 +76,6 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
 
       // Navigate to login with a timeout indication
       await page.goto("/login?reason=timeout");
-      await dismissAgeGate(page);
-
       await expect(page.locator("main")).toBeVisible({ timeout: 8_000 });
 
       // Page should be functional — BankID login form renders
@@ -97,8 +89,6 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
     async ({ page }) => {
       // Access a protected page without a valid session — should redirect to login
       await page.goto("/wallet");
-      await dismissAgeGate(page);
-
       // If redirected to login, that confirms auth protection works
       const onLoginPage = page.url().includes("/login");
       const hasLoginLink = await page

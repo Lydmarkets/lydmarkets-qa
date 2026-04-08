@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { hasAuthSession } from "../helpers/has-auth";
 
 // SCRUM-250: E2E tests for SCRUM-219 — Display last login time (SIFS 9 kap. 5§)
@@ -16,7 +15,6 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
   // Unauthenticated: login page should not show last login (no previous session)
   test("login page does not show a last login banner for unauthenticated users", async ({ page }) => {
     await page.goto("/login");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
     // No last login banner should appear before the user has authenticated
@@ -39,14 +37,12 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
 
     test("authenticated user sees main content after login", async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
     });
 
     test("last login time is displayed after authentication (SIFS 9 kap. 5§)", async ({ page }) => {
       // Navigate to the home/dashboard — this is where last login should appear
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
       // Look for a last login banner, toast, or inline text
@@ -57,7 +53,6 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
       // Also check the profile/settings page as a fallback location
       if (!hasLastLogin) {
         await page.goto("/profile");
-        await dismissAgeGate(page);
         const hasOnProfile = await page
           .getByText(/last login|senast inloggad|last logged in|previous login/i)
           .first()
@@ -66,7 +61,6 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
 
         if (!hasOnProfile) {
           await page.goto("/settings");
-          await dismissAgeGate(page);
           const hasOnSettings = await page
             .getByText(/last login|senast inloggad|last logged in|previous login/i)
             .first()
@@ -88,7 +82,6 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
     test("last login timestamp includes a date and time component", async ({ page }) => {
       // SIFS requires date + time + timezone to be shown
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
       // Look for any text matching a date/time pattern near a 'last login' label
@@ -113,7 +106,6 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
     test("last login display includes timezone or UTC offset", async ({ page }) => {
       // SIFS 9 kap. 5§: timestamp must include UTC offset
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
       const lastLoginEl = page.getByText(/last login|senast inloggad|logged in at/i).first();
@@ -133,7 +125,6 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
 
     test("last login banner or notification is dismissable", async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
       // Look for a close/dismiss button near the last login notification

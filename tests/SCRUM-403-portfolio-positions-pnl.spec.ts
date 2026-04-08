@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 // SCRUM-403: Portfolio page — positions list and P&L display
 // Acceptance criteria:
 // 1. Unauthenticated access to /portfolio redirects to sign-in
@@ -32,8 +30,6 @@ test.describe("SCRUM-403 — Portfolio page positions and P&L", () => {
     // Requires authenticated storageState — set up via global setup
     // test.use({ storageState: "playwright/.auth/user.json" });
     await page.goto("/portfolio");
-    await dismissAgeGate(page);
-
     // If authenticated, the page should render (not redirect)
     // If still redirected, assert the redirect is correct
     const isOnPortfolio = page.url().includes("/portfolio");

@@ -1,14 +1,10 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
-
 test.describe("Compliance — cookie preferences", () => {
   test(
     "cookie banner has analytics/marketing/functional preference checkboxes",
     { tag: ["@compliance", "@regression"] },
     async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
-
       // Look for a "Cookie Preferences" or "Manage" link/button to open prefs
       const prefsButton = page.getByText(/cookie preferences|manage|hantera|inställningar/i).first();
       const hasPrefs = await prefsButton

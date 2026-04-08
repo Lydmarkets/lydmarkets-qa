@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { hasAuthSession } from "../helpers/has-auth";
 
 // SCRUM-227: E2E tests for SCRUM-73 — Landing / welcome page (unauthenticated home)
@@ -24,7 +23,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
     page,
   }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     // Must NOT redirect to /login — stay on /
     expect(page.url()).not.toMatch(/\/login/);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
@@ -36,7 +34,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
 
   test("root `/` renders a market grid or list of markets", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
     // Look for market cards, list items, or market-related headings
@@ -64,7 +61,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
 
   test("root `/` renders market filter tabs or category navigation", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
     // Filter tabs could be "All", "Sports", "Politics", etc.
@@ -86,7 +82,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
 
   test("root `/` renders an activity feed or recent activity section", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
     const hasActivityFeed = await page
@@ -107,7 +102,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
     page,
   }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
     // Wait briefly for any deferred modal that might appear
@@ -125,7 +119,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
 
   test("OnboardingBanner renders as an inline element within the page flow", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
     // Banner may be present for new/unauthenticated users
@@ -152,8 +145,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
 
   test("/markets redirects to root `/`", async ({ page }) => {
     await page.goto("/markets");
-    await dismissAgeGate(page);
-
     // After any redirects, we should be at `/` (or `/markets` if redirect not yet deployed)
     const finalUrl = page.url();
     const isAtRoot =
@@ -171,7 +162,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
     page,
   }) => {
     await page.goto("/markets");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
     // Whether we stay at /markets or are redirected to /, market content should be visible
@@ -186,7 +176,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
 
   test("unauthenticated home page shows Sign In and Sign Up links", async ({ page }) => {
     await page.goto("/");
-    await dismissAgeGate(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
     await expect(
@@ -213,7 +202,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
       page,
     }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
       // Should not be redirected to /login or /onboarding
@@ -223,7 +211,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
 
     test("authenticated user sees markets content at root", async ({ page }) => {
       await page.goto("/");
-      await dismissAgeGate(page);
       await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
 
       const hasMarketContent = await page
@@ -243,7 +230,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
       page,
     }) => {
       await page.goto("/profile");
-      await dismissAgeGate(page);
       // Should render profile, not redirect to login
       const isOnLogin = page.url().includes("/login");
       if (!isOnLogin) {
@@ -258,7 +244,6 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
       page,
     }) => {
       await page.goto("/portfolio");
-      await dismissAgeGate(page);
       const isOnLogin = page.url().includes("/login");
       if (!isOnLogin) {
         await expect(page.locator("main")).toBeVisible({ timeout: 10000 });

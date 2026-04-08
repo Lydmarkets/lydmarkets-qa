@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
@@ -59,7 +58,6 @@ test.describe("Notifications — page loads", () => {
       { tag: ["@smoke"] },
       async ({ page }) => {
         await page.goto("/notifications");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         if (page.url().includes("/login")) {
@@ -98,7 +96,6 @@ test.describe("Notifications — page loads", () => {
       { tag: ["@smoke"] },
       async ({ page }) => {
         await page.goto("/watchlist");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         if (page.url().includes("/login")) {
@@ -137,7 +134,6 @@ test.describe("Notifications — page loads", () => {
       { tag: ["@smoke"] },
       async ({ page }) => {
         await page.goto("/alerts");
-        await dismissAgeGate(page);
         await dismissLimitsDialog(page);
 
         if (page.url().includes("/login")) {

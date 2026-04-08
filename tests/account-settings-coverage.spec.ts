@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { dismissAgeGate } from "../helpers/age-gate";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
@@ -17,7 +16,6 @@ test.describe("Account settings — coverage gaps", () => {
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/settings/privacy");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -58,7 +56,6 @@ test.describe("Account settings — coverage gaps", () => {
     { tag: ["@regression"] },
     async ({ page }) => {
       await page.goto("/settings");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -93,7 +90,6 @@ test.describe("Account settings — coverage gaps", () => {
     { tag: ["@compliance", "@regression"] },
     async ({ page }) => {
       await page.goto("/settings?tab=notifications");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -128,7 +124,6 @@ test.describe("Account settings — coverage gaps", () => {
     { tag: ["@compliance", "@regression"] },
     async ({ page }) => {
       const response = await page.goto("/settings/responsible-gambling");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (
@@ -174,7 +169,6 @@ test.describe("Account settings — coverage gaps", () => {
     { tag: ["@compliance", "@regression"] },
     async ({ page }) => {
       const response = await page.goto("/settings/responsible-gambling");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (
@@ -230,7 +224,6 @@ test.describe("Account settings — coverage gaps", () => {
     { tag: ["@compliance", "@critical"] },
     async ({ page }) => {
       const response = await page.goto("/settings/responsible-gambling");
-      await dismissAgeGate(page);
       await dismissLimitsDialog(page);
 
       if (
