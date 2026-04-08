@@ -123,7 +123,7 @@ test.describe("Account settings — coverage gaps", () => {
     "PGSI questionnaire is visible on responsible gambling tab",
     { tag: ["@compliance", "@regression"] },
     async ({ page }) => {
-      const response = await page.goto("/settings/responsible-gambling");
+      const response = await page.goto("/settings?tab=responsible-gambling");
       await dismissLimitsDialog(page);
 
       if (
@@ -168,7 +168,7 @@ test.describe("Account settings — coverage gaps", () => {
     "PGSI questionnaire shows non-problem result for lowest answers",
     { tag: ["@compliance", "@regression"] },
     async ({ page }) => {
-      const response = await page.goto("/settings/responsible-gambling");
+      const response = await page.goto("/settings?tab=responsible-gambling");
       await dismissLimitsDialog(page);
 
       if (
@@ -223,7 +223,7 @@ test.describe("Account settings — coverage gaps", () => {
     "PGSI high-risk result shows Stodlinjen and Spelpaus links",
     { tag: ["@compliance", "@critical"] },
     async ({ page }) => {
-      const response = await page.goto("/settings/responsible-gambling");
+      const response = await page.goto("/settings?tab=responsible-gambling");
       await dismissLimitsDialog(page);
 
       if (

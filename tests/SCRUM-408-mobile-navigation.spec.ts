@@ -32,22 +32,24 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
     ).toBeVisible({ timeout: 10000 });
   });
 
-  test("mobile menu shows Responsible gambling nav link", async ({ page }) => {
+  // The mobile drawer was simplified to Sign In / Sign Up + theme toggles for
+  // unauthenticated users. The "Responsible gambling" and "How it works" links
+  // now live in the Footer (still visible on mobile), so we assert there.
+
+  test("Responsible gambling nav link is reachable on mobile", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /open navigation menu/i }).click();
+    const footer = page.getByRole("contentinfo");
     await expect(
-      page.getByRole("heading", { name: /meny|menu/i })
+      footer.getByRole("link", { name: /ansvarsfullt|responsible/i }),
     ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("link", { name: /ansvarsfullt|responsible/i })).toBeVisible();
   });
 
-  test("mobile menu shows How it works nav link", async ({ page }) => {
+  test("How it works nav link is reachable on mobile", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /open navigation menu/i }).click();
+    const footer = page.getByRole("contentinfo");
     await expect(
-      page.getByRole("heading", { name: /meny|menu/i })
+      footer.getByRole("link", { name: /hur det fungerar|how it works/i }),
     ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("link", { name: /hur det fungerar|how it works/i })).toBeVisible();
   });
 
   test("mobile menu shows Sign in and Sign up buttons", async ({ page }) => {
@@ -75,27 +77,32 @@ test.describe("SCRUM-408: Mobile navigation — hamburger menu and nav link acce
   test("clicking a nav link from mobile menu navigates to the correct page", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: /open navigation menu/i }).click();
-    await expect(
-      page.getByRole("heading", { name: /meny|menu/i })
-    ).toBeVisible({ timeout: 10000 });
-    // Click "Hur det fungerar" link (navigates to /how-it-works)
-    const howItWorksLink = page.getByRole("link", { name: /hur det fungerar|how it works/i }).first();
-    await howItWorksLink.click();
-    await page.waitForURL(/\/how-it-works/, { timeout: 10000 });
+    const drawerHeading = page.getByRole("heading", { name: /meny|menu/i });
+    await expect(drawerHeading).toBeVisible({ timeout: 10000 });
+    // Click "Logga in" / "Sign in" — only links present in the unauth drawer
+    const signInLink = drawerHeading
+      .locator("..")
+      .locator("..")
+      .getByRole("link", { name: /logga in|sign in/i })
+      .first();
+    await signInLink.click();
+    await page.waitForURL(/\/login/, { timeout: 10000 });
     await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("navigating via mobile menu closes the menu drawer", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: /open navigation menu/i }).click();
-    await expect(
-      page.getByRole("heading", { name: /meny|menu/i })
-    ).toBeVisible({ timeout: 10000 });
-    await page.getByRole("link", { name: /hur det fungerar|how it works/i }).first().click();
-    await page.waitForURL(/\/how-it-works/, { timeout: 10000 });
+    const drawerHeading = page.getByRole("heading", { name: /meny|menu/i });
+    await expect(drawerHeading).toBeVisible({ timeout: 10000 });
+    await drawerHeading
+      .locator("..")
+      .locator("..")
+      .getByRole("link", { name: /logga in|sign in/i })
+      .first()
+      .click();
+    await page.waitForURL(/\/login/, { timeout: 10000 });
     // Menu heading should no longer be visible after navigation
-    await expect(
-      page.getByRole("heading", { name: /meny|menu/i })
-    ).not.toBeVisible({ timeout: 5000 });
+    await expect(drawerHeading).not.toBeVisible({ timeout: 5000 });
   });
 });

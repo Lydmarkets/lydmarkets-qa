@@ -14,6 +14,9 @@ import {
 const browseSuccess = new Rate("browse_success_rate");
 const marketListDuration = new Trend("market_list_duration", true);
 const marketDetailDuration = new Trend("market_detail_duration", true);
+// Gauge-ish counter for setup diagnostics — the threshold below fails the run
+// if setup() discovers zero market IDs (previously this failure was silent).
+const marketsDiscovered = new Trend("markets_discovered");
 
 export const options = {
   scenarios: {
@@ -30,72 +33,72 @@ export const options = {
     browse_success_rate: ["rate>0.99"],
     market_list_duration: ["p(95)<3000"],
     market_detail_duration: ["p(95)<3000"],
+    // Fail fast if setup() couldn't find any markets — otherwise the detail
+    // page scenario silently skips and the run reports green with p95 = 0.
+    markets_discovered: ["min>0"],
   },
 };
 
 /**
- * Discover market IDs by scraping the SSR /markets page for market links.
- * Falls back to the internal API when MARKETS_URL is set.
+ * Discover market IDs from the public `/api/v2/markets` endpoint.
+ *
+ * Previously this scraped the SSR home page HTML, but that HTML is ISR-cached
+ * and regularly serves stale UUIDs belonging to archived/deleted markets,
+ * causing the detail-page section to either skip entirely or hit 404s. The
+ * public API is the source of truth and always returns current markets.
+ *
+ * Falls back to the internal markets-service URL if the public API isn't
+ * reachable (self-hosted runs with direct backend access).
  */
 export function setup() {
   const marketIds = [];
+  const seen = new Set();
 
-  // Try internal API first (if configured)
-  if (MARKETS_URL) {
+  // Primary source: public API — always reflects the current DB state.
+  const publicRes = http.get(
+    `${BASE_URL}/api/v2/markets?status=active&limit=20`,
+    { tags: { name: "setup: GET /api/v2/markets" } },
+  );
+  if (publicRes.status === 200) {
+    try {
+      const body = JSON.parse(publicRes.body);
+      const markets = Array.isArray(body?.data) ? body.data : [];
+      for (const m of markets) {
+        if (m?.id && !seen.has(m.id)) {
+          seen.add(m.id);
+          marketIds.push(m.id);
+        }
+      }
+    } catch (_) {
+      // malformed JSON — continue to fallback
+    }
+  }
+
+  // Fallback: direct internal markets-service (requires INTERNAL_SERVICE_SECRET).
+  if (marketIds.length === 0 && MARKETS_URL) {
     const res = http.get(`${MARKETS_URL}/markets?status=active&limit=20`, {
       headers: internalHeaders(),
+      tags: { name: "setup: GET markets-service /markets" },
     });
     if (res.status === 200) {
       try {
         const body = JSON.parse(res.body);
-        const markets = body.data || body;
+        const markets = Array.isArray(body?.data) ? body.data : body;
         if (Array.isArray(markets)) {
-          markets.forEach((m) => marketIds.push(m.id));
-        }
-      } catch (_) {
-        // Fall through to SSR scraping
-      }
-    }
-  }
-
-  // Scrape market IDs from the SSR pages if API didn't work.
-  // Try both / and /markets — Next.js RSC payloads change format between
-  // versions, so we attempt multiple regex patterns per page.
-  if (marketIds.length === 0) {
-    const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
-    const patterns = [
-      // Double-escaped JSON (old hydration): \"id\":\"<uuid>\",\"title\":
-      new RegExp(`\\\\"id\\\\":\\\\"(${UUID})\\\\",\\\\"title\\\\":`, "gi"),
-      // Unescaped JSON (RSC payload): "id":"<uuid>","title":
-      new RegExp(`"id":"(${UUID})","title":`, "gi"),
-      // href links to market detail pages
-      new RegExp(`/markets/(${UUID})`, "gi"),
-    ];
-
-    const seen = new Set();
-    const pages = [
-      { url: `${BASE_URL}/`, tag: "setup: GET /" },
-      { url: `${BASE_URL}/markets`, tag: "setup: GET /markets" },
-    ];
-
-    for (const { url, tag } of pages) {
-      if (seen.size >= 20) break;
-      const res = http.get(url, { tags: { name: tag }, redirects: 5 });
-      if (res.status !== 200) continue;
-
-      for (const pattern of patterns) {
-        pattern.lastIndex = 0;
-        let match;
-        while ((match = pattern.exec(res.body)) !== null) {
-          if (!seen.has(match[1])) {
-            seen.add(match[1]);
-            marketIds.push(match[1]);
+          for (const m of markets) {
+            if (m?.id && !seen.has(m.id)) {
+              seen.add(m.id);
+              marketIds.push(m.id);
+            }
           }
         }
+      } catch (_) {
+        // malformed JSON — give up, the threshold will fail the run
       }
     }
   }
 
+  marketsDiscovered.add(marketIds.length);
   console.log(`Discovered ${marketIds.length} market IDs for detail page tests`);
   return { marketIds };
 }

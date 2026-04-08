@@ -1,4 +1,6 @@
 import { test, expect } from "../fixtures/base";
+import { goToFirstMarket } from "../helpers/go-to-market";
+
 test.describe("SCRUM-404: Session persistence — auth survives page reload and token refresh", () => {
   // NOTE: Tests that require an authenticated session are marked with a comment explaining
   // they need a storageState fixture. The test structure is complete — a future sprint will
@@ -42,14 +44,10 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   });
 
   test("public market detail page does not redirect unauthenticated users", async ({ page }) => {
-    // Navigate to /markets and click the first market to get a real market detail URL
-    await page.goto("/markets");
-    // Click "All" filter — "Trending" may be empty on staging
-    await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
-    const marketLink = page.locator('main a[href*="/markets/"]').first();
-    await expect(marketLink).toBeVisible({ timeout: 15_000 });
-    await marketLink.click();
-    await page.waitForURL(/\/markets\//, { timeout: 10_000 });
+    // Resolve a live market via the API and navigate directly — avoids the
+    // stale-ISR problem and the locale-sensitive filter button click that
+    // used to hang the test for 30s when "Alla" didn't match /^all$/.
+    await goToFirstMarket(page);
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
   });
@@ -64,14 +62,7 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   });
 
   test("reloading a market detail page keeps user on that page", async ({ page }) => {
-    // Navigate to /markets and click the first market to get a real market detail URL
-    await page.goto("/markets");
-    // Click "All" filter — "Trending" may be empty on staging
-    await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
-    const marketLink = page.locator('main a[href*="/markets/"]').first();
-    await expect(marketLink).toBeVisible({ timeout: 15_000 });
-    await marketLink.click();
-    await page.waitForURL(/\/markets\//, { timeout: 10_000 });
+    await goToFirstMarket(page);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
     await page.reload();
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });

@@ -130,13 +130,13 @@ test.describe("Wallet & payments — authenticated coverage", () => {
       });
 
       const hasDeposit = await page
-        .getByRole("button", { name: /deposit|sätt in/i })
+        .getByRole("button", { name: /deposit|sätt in|insättning/i })
         .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
 
       const hasWithdraw = await page
-        .getByRole("button", { name: /withdraw|ta ut/i })
+        .getByRole("button", { name: /withdraw|ta ut|uttag/i })
         .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
@@ -167,9 +167,9 @@ test.describe("Wallet & payments — authenticated coverage", () => {
         timeout: 10_000,
       });
 
-      // Find and click the deposit button
+      // Find and click the deposit button — Swedish UI labels it "Bankinsättning"
       const depositBtn = page
-        .getByRole("button", { name: /deposit|sätt in/i })
+        .getByRole("button", { name: /deposit|sätt in|insättning/i })
         .first();
       const hasBtn = await depositBtn
         .isVisible({ timeout: 5_000 })
