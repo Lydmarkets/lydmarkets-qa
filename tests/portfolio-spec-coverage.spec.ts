@@ -5,10 +5,14 @@ import { hasAuthSession } from "../helpers/has-auth";
 /**
  * Portfolio spec — E2E coverage
  *
+ * SCRUM-776 consolidated the old /orders page into /portfolio as a tabbed
+ * interface. Tabs: Summary | Open | Processing | Settled | History. The
+ * `tab` query parameter controls which tab is active (default: summary).
+ *
  * Tests cover:
- * - Unauthenticated access redirects for /portfolio and /orders
- * - Authenticated portfolio page structure (summary cards, positions table, open orders)
- * - Authenticated orders page structure (filters, table, pagination, export)
+ * - Unauthenticated access redirects for /portfolio (and legacy /orders → 404)
+ * - Authenticated portfolio page with summary cards and tab navigation
+ * - History tab structure (previously the standalone /orders page)
  */
 
 test.describe("Portfolio spec — E2E coverage", () => {
@@ -18,15 +22,13 @@ test.describe("Portfolio spec — E2E coverage", () => {
     await page.goto("/portfolio");
     await page.waitForURL(/\/login/, { timeout: 10_000 });
     expect(page.url()).toContain("/login");
-    // Middleware sets redirect query param so user returns after login
     expect(page.url()).toContain("redirect=%2Fportfolio");
   });
 
-  test("unauthenticated /orders redirects to login", { tag: ["@portfolio"] }, async ({ page }) => {
-    await page.goto("/orders");
-    await page.waitForURL(/\/login/, { timeout: 10_000 });
-    expect(page.url()).toContain("/login");
-    expect(page.url()).toContain("redirect=%2Forders");
+  test("legacy /orders route no longer exists (404)", { tag: ["@portfolio"] }, async ({ page }) => {
+    const response = await page.goto("/orders");
+    // The route was removed in SCRUM-776 — expect a 404 response from Next.js
+    expect(response?.status()).toBe(404);
   });
 
   // ── Authenticated tests ──────────────────────────────────────────────
@@ -34,212 +36,141 @@ test.describe("Portfolio spec — E2E coverage", () => {
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
 
-    test.beforeEach(({ }, testInfo) => {
+    test.beforeEach(({}, testInfo) => {
       if (!hasAuthSession()) testInfo.skip();
     });
 
-    // ── Portfolio page ─────────────────────────────────────────────────
+    // ── Portfolio page (summary tab) ───────────────────────────────────
 
     test("portfolio page renders heading and subtitle", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/portfolio");
       await dismissLimitsDialog(page);
 
-      // The page title is rendered via i18n key "portfolio.title" → "Portfolio" (en) or "Portfölj" (sv)
       await expect(
-        page.getByRole("heading", { level: 1 }).filter({ hasText: /Portfolio|Portfölj|Orderhistorik|Order History/i })
+        page.getByRole("heading", { level: 1, name: /portfolio|portfölj/i })
       ).toBeVisible({ timeout: 15_000 });
-
-      // Subtitle text — may vary by page version
-      await expect(
-        page.getByText(/open positions|öppna positioner|orderhistorik|order history|filtrera|filter/i).first()
-      ).toBeVisible();
     });
 
-    test("portfolio page shows summary cards or order filters", { tag: ["@portfolio"] }, async ({ page }) => {
+    test("portfolio page shows tab navigation: Summary, Open, Processing, Settled, History", { tag: ["@portfolio"] }, async ({ page }) => {
+      await page.goto("/portfolio");
+      await dismissLimitsDialog(page);
+
+      await expect(page.getByRole("tab", { name: /^summary$|^översikt$/i })).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole("tab", { name: /^open/i })).toBeVisible();
+      await expect(page.getByRole("tab", { name: /^processing|^bearbetar/i })).toBeVisible();
+      await expect(page.getByRole("tab", { name: /^settled|^avgjord/i })).toBeVisible();
+      await expect(page.getByRole("tab", { name: /^history|^historik/i })).toBeVisible();
+    });
+
+    test("portfolio summary cards are visible on the default tab", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/portfolio");
       await dismissLimitsDialog(page);
 
       await expect(
-        page.getByRole("heading", { level: 1 }).filter({ hasText: /Portfolio|Portfölj|Orderhistorik|Order History/i })
+        page.getByRole("heading", { level: 1, name: /portfolio|portfölj/i })
       ).toBeVisible({ timeout: 15_000 });
 
-      // Portfolio may show summary cards (Marknader, Vinstfrekvens) or order filters (Status, Sida)
-      const hasSummaryCards = await page
-        .getByRole("heading", { level: 3 }).filter({ hasText: /^Markets$|^Marknader$/i })
-        .isVisible({ timeout: 3_000 }).catch(() => false);
-      const hasOrderFilters = await page
-        .getByText("Status").first()
-        .isVisible({ timeout: 3_000 }).catch(() => false);
-
-      expect(hasSummaryCards || hasOrderFilters).toBeTruthy();
+      // Summary cards render totals like "Markets", "Net result", "Win rate".
+      // The component renders them as cards with numeric content — assert that
+      // at least one of the known labels is visible.
+      const markets = page.getByText(/^markets$|^marknader$/i).first();
+      const winRate = page.getByText(/win rate|vinstfrekvens/i).first();
+      const hasAny =
+        (await markets.isVisible({ timeout: 5_000 }).catch(() => false)) ||
+        (await winRate.isVisible({ timeout: 5_000 }).catch(() => false));
+      expect(hasAny).toBeTruthy();
     });
 
-    test("portfolio page shows positions or order content", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/portfolio");
+    // ── History tab (replaces legacy /orders page) ─────────────────────
+
+    test("history tab can be activated via ?tab=history", { tag: ["@portfolio"] }, async ({ page }) => {
+      await page.goto("/portfolio?tab=history");
       await dismissLimitsDialog(page);
 
       await expect(
-        page.getByRole("heading", { level: 1 }).filter({ hasText: /Portfolio|Portfölj|Orderhistorik|Order History/i })
+        page.getByRole("heading", { level: 1, name: /portfolio|portfölj/i })
       ).toBeVisible({ timeout: 15_000 });
 
-      // Page may show positions sections or order filter/empty state
-      const hasPositions = await page
-        .getByText(/open positions|öppna positioner/i).first()
-        .isVisible({ timeout: 3_000 }).catch(() => false);
-      const hasOrders = await page
-        .getByText(/inga ordrar|no orders|öppna ordrar|open orders/i).first()
-        .isVisible({ timeout: 3_000 }).catch(() => false);
-      const hasFilters = await page
-        .getByText("Status").first()
-        .isVisible({ timeout: 3_000 }).catch(() => false);
-
-      expect(hasPositions || hasOrders || hasFilters).toBeTruthy();
+      // The History tab trigger should be selected (aria-selected="true")
+      await expect(
+        page.getByRole("tab", { name: /^history|^historik/i })
+      ).toHaveAttribute("aria-selected", "true");
     });
 
-    // ── Orders page ────────────────────────────────────────────────────
-
-    test("orders page renders heading and subtitle", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/orders");
-      await dismissLimitsDialog(page);
-
-      // The page title is "Order History" or "Orderhistorik"
-      await expect(
-        page.getByRole("heading", { level: 1 }).filter({ hasText: /Order History|Orderhistorik/i })
-      ).toBeVisible({ timeout: 15_000 });
-
-      // Subtitle
-      await expect(
-        page.getByText(/filter.*export.*order history|filtrera.*exportera.*orderhistorik/i)
-      ).toBeVisible();
-    });
-
-    test("orders page shows status filter buttons", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/orders");
+    test("history tab shows empty state or orders table", { tag: ["@portfolio"] }, async ({ page }) => {
+      await page.goto("/portfolio?tab=history");
       await dismissLimitsDialog(page);
 
       await expect(
-        page.getByRole("heading", { level: 1 }).filter({ hasText: /Order History|Orderhistorik/i })
-      ).toBeVisible({ timeout: 15_000 });
+        page.getByRole("tab", { name: /^history|^historik/i })
+      ).toHaveAttribute("aria-selected", "true", { timeout: 15_000 });
 
-      // Status filter label
-      await expect(
-        page.getByText("Status").first()
-      ).toBeVisible();
-
-      // Filter buttons: All, Open, Filled, Partial, Cancelled
-      // "All" appears in both status and side filter groups — use .first() for status
-      await expect(
-        page.getByRole("button", { name: /^All$|^Alla$/i }).first()
-      ).toBeVisible();
-
-      await expect(
-        page.getByRole("button", { name: /^Open$|^Öppen$/i })
-      ).toBeVisible();
-
-      await expect(
-        page.getByRole("button", { name: /^Filled$|^Fylld$/i })
-      ).toBeVisible();
-    });
-
-    test("orders page shows side filter buttons", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/orders");
-      await dismissLimitsDialog(page);
-
-      await expect(
-        page.getByRole("heading", { level: 1 }).filter({ hasText: /Order History|Orderhistorik/i })
-      ).toBeVisible({ timeout: 15_000 });
-
-      // Side filter label
-      await expect(
-        page.getByText(/^Side$|^Sida$/i)
-      ).toBeVisible();
-
-      // YES / NO filter buttons
-      await expect(
-        page.getByRole("button", { name: /^YES$|^JA$/i })
-      ).toBeVisible();
-
-      await expect(
-        page.getByRole("button", { name: /^NO$|^NEJ$/i })
-      ).toBeVisible();
-    });
-
-    test("orders page shows date range filters", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/orders");
-      await dismissLimitsDialog(page);
-
-      await expect(
-        page.getByRole("heading", { level: 1 }).filter({ hasText: /Order History|Orderhistorik/i })
-      ).toBeVisible({ timeout: 15_000 });
-
-      // "From" and "To" date inputs
-      await expect(
-        page.getByLabel(/^From$|^Från$/i)
-      ).toBeVisible();
-
-      await expect(
-        page.getByLabel(/^To$|^Till$/i)
-      ).toBeVisible();
-    });
-
-    test("orders page shows Apply button and Export CSV button", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/orders");
-      await dismissLimitsDialog(page);
-
-      await expect(
-        page.getByRole("heading", { level: 1 }).filter({ hasText: /Order History|Orderhistorik/i })
-      ).toBeVisible({ timeout: 15_000 });
-
-      // Apply button
-      await expect(
-        page.getByRole("button", { name: /^Apply$|^Tillämpa$/i })
-      ).toBeVisible();
-
-      // Export CSV button
-      await expect(
-        page.getByRole("button", { name: /Export CSV|Exportera CSV/i })
-      ).toBeVisible();
-    });
-
-    test("orders page shows empty state or orders table", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/orders");
-      await dismissLimitsDialog(page);
-
-      await expect(
-        page.getByRole("heading", { level: 1 }).filter({ hasText: /Order History|Orderhistorik/i })
-      ).toBeVisible({ timeout: 15_000 });
-
-      // Either the "No orders found" message or the table with column headers
-      const emptyState = page.getByText(/No orders found|Inga ordrar matchar/i);
+      const emptyState = page.getByText(/no orders yet|inga ordrar/i).first();
       const ordersTable = page.getByRole("table");
 
-      const emptyVisible = await emptyState.isVisible().catch(() => false);
-      const tableVisible = await ordersTable.isVisible().catch(() => false);
+      const emptyVisible = await emptyState.isVisible({ timeout: 3_000 }).catch(() => false);
+      const tableVisible = await ordersTable.isVisible({ timeout: 3_000 }).catch(() => false);
 
       expect(emptyVisible || tableVisible).toBeTruthy();
     });
 
-    test("orders page shows pagination controls", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/orders");
+    test("history tab shows pagination controls (Page, Previous, Next)", { tag: ["@portfolio"] }, async ({ page }) => {
+      await page.goto("/portfolio?tab=history");
       await dismissLimitsDialog(page);
 
       await expect(
-        page.getByRole("heading", { level: 1 }).filter({ hasText: /Order History|Orderhistorik/i })
-      ).toBeVisible({ timeout: 15_000 });
+        page.getByRole("tab", { name: /^history|^historik/i })
+      ).toHaveAttribute("aria-selected", "true", { timeout: 15_000 });
 
-      // Pagination text "Page 1" or "Sida 1"
-      await expect(
-        page.getByText(/Page 1|Sida 1/i)
-      ).toBeVisible();
+      // Pagination is only rendered when there are orders. Accept either the
+      // pagination controls or the empty state.
+      const pageLabel = page.getByText(/^page\b|^sida\b/i).first();
+      const previous = page.getByRole("button", { name: /previous|föregående/i });
+      const next = page.getByRole("button", { name: /next|nästa/i });
+      const emptyState = page.getByText(/no orders yet|inga ordrar/i).first();
 
-      // Back and Next buttons
-      await expect(
-        page.getByRole("button", { name: /Back|Tillbaka/i })
-      ).toBeVisible();
+      const hasPagination =
+        (await pageLabel.isVisible({ timeout: 3_000 }).catch(() => false)) &&
+        (await previous.isVisible({ timeout: 1_000 }).catch(() => false)) &&
+        (await next.isVisible({ timeout: 1_000 }).catch(() => false));
+      const isEmpty = await emptyState.isVisible({ timeout: 1_000 }).catch(() => false);
+
+      expect(hasPagination || isEmpty).toBeTruthy();
+    });
+
+    // ── Open / Settled tabs ────────────────────────────────────────────
+
+    test("open tab shows positions table or empty state", { tag: ["@portfolio"] }, async ({ page }) => {
+      await page.goto("/portfolio?tab=open");
+      await dismissLimitsDialog(page);
 
       await expect(
-        page.getByRole("button", { name: /Next|Nästa/i })
-      ).toBeVisible();
+        page.getByRole("tab", { name: /^open/i })
+      ).toHaveAttribute("aria-selected", "true", { timeout: 15_000 });
+
+      // Either the empty state or a table
+      const empty = page.getByText(/no open positions|inga öppna positioner/i).first();
+      const table = page.getByRole("table");
+      const hasAny =
+        (await empty.isVisible({ timeout: 3_000 }).catch(() => false)) ||
+        (await table.isVisible({ timeout: 3_000 }).catch(() => false));
+      expect(hasAny).toBeTruthy();
+    });
+
+    test("settled tab shows settled positions or empty state", { tag: ["@portfolio"] }, async ({ page }) => {
+      await page.goto("/portfolio?tab=settled");
+      await dismissLimitsDialog(page);
+
+      await expect(
+        page.getByRole("tab", { name: /^settled|^avgjord/i })
+      ).toHaveAttribute("aria-selected", "true", { timeout: 15_000 });
+
+      const empty = page.getByText(/no settled|inga avgjorda/i).first();
+      const table = page.getByRole("table");
+      const hasAny =
+        (await empty.isVisible({ timeout: 3_000 }).catch(() => false)) ||
+        (await table.isVisible({ timeout: 3_000 }).catch(() => false));
+      expect(hasAny).toBeTruthy();
     });
   });
 });

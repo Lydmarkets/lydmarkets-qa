@@ -13,8 +13,16 @@ export async function goToFirstMarket(page: Page): Promise<string> {
   await page.goto("/");
   await dismissLimitsDialog(page);
 
-  // Click "All" filter — "Trending" may be empty on staging
-  await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
+  // Click "All" filter — "Trending/Live" may be empty on staging.
+  // View tab buttons include a count badge in their accessible name
+  // ("All80", "Live0", "New0"), so match that pattern. Pass a short
+  // explicit timeout so a missing button doesn't consume the entire
+  // 30s test budget.
+  await page
+    .getByRole("button", { name: /^(all|alla)\s*\d*$/i })
+    .first()
+    .click({ timeout: 5_000 })
+    .catch(() => {});
 
   const marketLink = page.locator('main a[href*="/markets/"]').first();
   await expect(marketLink).toBeVisible({ timeout: 15_000 });

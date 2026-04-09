@@ -29,18 +29,22 @@ test.describe("SCRUM-402: Market search and category filters", () => {
     await expect(page.getByText(/\d+\s*(?:markets|marknader)/i)).toBeVisible({ timeout: 10000 });
   });
 
+  // View-tab buttons include a count badge in their accessible name
+  // ("All80", "New0", "Live0", "Watchlist"), so regexes allow an optional
+  // trailing digit group instead of anchoring with a literal $.
+
   test("category filter buttons are visible on the home page", async ({ page }) => {
     await page.goto("/");
     // Category tabs: All, Live, New, Watchlist
-    await expect(page.getByRole("button", { name: /^all$|^alla$/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: /^live$/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /^new$|^nya$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^(all|alla)\s*\d*$/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^live\s*\d*$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^(new|nya)\s*\d*$/i })).toBeVisible();
   });
 
   test("clicking a category filter button updates the displayed markets", async ({ page }) => {
     await page.goto("/");
     // Click the "New" filter button
-    const newButton = page.getByRole("button", { name: /^new$|^nya$/i });
+    const newButton = page.getByRole("button", { name: /^(new|nya)\s*\d*$/i });
     await newButton.waitFor({ state: "visible", timeout: 10000 });
     await newButton.click();
     // After clicking, the page should still show market content
@@ -49,23 +53,23 @@ test.describe("SCRUM-402: Market search and category filters", () => {
 
   test("multiple category filters are available on the home page", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("button", { name: /^all$|^alla$/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: /^live$/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /^new$|^nya$/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Watchlist", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^(all|alla)\s*\d*$/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^live\s*\d*$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^(new|nya)\s*\d*$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^(watchlist|bevakade)\s*\d*$/i })).toBeVisible();
   });
 
   test("New category filter button is present", async ({ page }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("button", { name: /^new$|^nya$/i })
+      page.getByRole("button", { name: /^(new|nya)\s*\d*$/i })
     ).toBeVisible({ timeout: 10000 });
   });
 
   test("Live category filter button is present", async ({ page }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("button", { name: /^live$/i })
+      page.getByRole("button", { name: /^live\s*\d*$/i })
     ).toBeVisible({ timeout: 10000 });
   });
 

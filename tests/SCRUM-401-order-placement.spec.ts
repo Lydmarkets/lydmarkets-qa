@@ -152,18 +152,18 @@ test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
     }
   });
 
-  test("orders page shows recent orders after placement", async ({ page }) => {
-    await page.goto("/orders");
-    // Orders page may redirect to auth for unauthenticated users
+  test("order history tab shows recent orders after placement", async ({ page }) => {
+    // /orders was consolidated into /portfolio?tab=history in SCRUM-776.
+    await page.goto("/portfolio?tab=history");
     const url = page.url();
-    const isOnOrders = url.includes("/orders");
+    const isOnPortfolio = url.includes("/portfolio");
     const isOnAuth = url.includes("/login") || url.includes("/auth");
 
-    if (isOnOrders) {
+    if (isOnPortfolio) {
       await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
     }
 
-    // Should either show orders page or redirect to auth
-    expect(isOnOrders || isOnAuth).toBeTruthy();
+    // Should either show portfolio (history tab) or redirect to auth
+    expect(isOnPortfolio || isOnAuth).toBeTruthy();
   });
 });

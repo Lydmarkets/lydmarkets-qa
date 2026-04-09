@@ -40,20 +40,21 @@ test.describe("Markets — category filter details", () => {
       const filterBar = page.getByLabel("Market filters");
       await expect(filterBar).toBeVisible({ timeout: 10_000 });
 
-      // Click "New" to apply a filter first (filter items are buttons, not links)
-      const newButton = filterBar.getByRole("button", { name: "New" });
+      // View-tab buttons include a count badge baked into the accessible
+      // name ("New0", "All80"), so regexes allow a trailing digit group.
+      const newButton = filterBar.getByRole("button", { name: /^(new|nya)\s*\d*$/i });
       await newButton.click();
       await expect(page).toHaveURL(/[?&]filter=new/);
 
       // Click "All" to clear the filter
-      const allButton = filterBar.getByRole("button", { name: "All" });
+      const allButton = filterBar.getByRole("button", { name: /^(all|alla)\s*\d*$/i });
       await allButton.click();
 
       // Market list should show unfiltered results again
       await expect(allButton).toBeVisible();
-      await expect(page.getByText(/\d+\s*marknader/i)).toBeVisible({
-        timeout: 5_000,
-      });
+      await expect(
+        page.getByText(/\d+\s*(?:markets|marknader)/i),
+      ).toBeVisible({ timeout: 5_000 });
     },
   );
 });

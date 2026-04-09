@@ -5,9 +5,11 @@ test.describe("Compliance — responsible gambling visibility", () => {
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/");
-      // Nav contains "18+ Ansvarsfullt spelande" link to /responsible-gambling
+      // Nav contains "18+ Responsible gambling" (en) or "Ansvarsfullt spelande" (sv)
       await expect(
-        page.getByRole("link", { name: /ansvarsfullt spelande/i }).first(),
+        page
+          .getByRole("link", { name: /ansvarsfullt spelande|responsible gambling/i })
+          .first(),
       ).toBeVisible({ timeout: 5_000 });
     },
   );

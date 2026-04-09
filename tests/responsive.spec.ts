@@ -3,11 +3,23 @@ import { devices } from "@playwright/test";
 test.describe("Responsive design tests", () => {
   test("homepage is responsive on Mobile (Pixel 5)", async ({ browser }) => {
     const context = await browser.newContext({ ...devices["Pixel 5"] });
+    // Middleware defaults to sv; force en so text selectors work.
+    await context.addCookies([
+      {
+        name: "locale",
+        value: "en",
+        domain: new URL(
+          process.env.BASE_URL ?? "https://web-staging-71a7.up.railway.app",
+        ).hostname,
+        path: "/",
+      },
+    ]);
     const page = await context.newPage();
 
     await page.goto("/");
-    // On mobile the desktop nav is hidden — hamburger button is visible instead
-    await expect(page.getByRole("button", { name: /open navigation menu/i })).toBeVisible();
+    // PR-903: unauthenticated mobile users no longer see a hamburger; the
+    // header shows Sign in and Sign up inline instead.
+    await expect(page.getByRole("link", { name: /sign in|logga in/i }).first()).toBeVisible();
     await expect(page.locator("main")).toBeVisible();
 
     await context.close();

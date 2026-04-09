@@ -150,31 +150,21 @@ test.describe("Remaining spec coverage", () => {
       if (!hasAuthSession()) testInfo.skip();
     });
 
-    // ── Appearance toggle ─────────────────────────────────────────
+    // ── Theme toggle (moved to navbar header) ─────────────────────
     test(
-      "settings page has theme selector with light/dark/system options",
+      "navbar exposes a theme toggle button",
       { tag: ["@regression"] },
       async ({ page }) => {
-        await page.goto("/settings");
-        await dismissLimitsDialog(page);
-
-        // The AppearanceSettings component has a theme select with id="theme"
-        const themeSelect = page.getByLabel(/theme|tema/i);
-        await expect(themeSelect).toBeVisible({ timeout: 10_000 });
-
-        // Click the select to open the dropdown
-        await themeSelect.click();
-
-        // Verify all three theme options exist (may be Swedish: Ljust, Mörkt, System)
-        await expect(
-          page.getByRole("option", { name: /light|ljust/i })
-        ).toBeVisible();
-        await expect(
-          page.getByRole("option", { name: /dark|mörkt/i })
-        ).toBeVisible();
-        await expect(
-          page.getByRole("option", { name: /system/i })
-        ).toBeVisible();
+        // PR-900 dropped the dead Appearance tab from /settings — the
+        // light/dark/system toggle now lives as an icon button in the
+        // navbar header. Its aria-label reflects the action the click
+        // would take: "Switch to dark mode" or "Switch to light mode".
+        await page.goto("/");
+        const toggle = page.getByRole("button", {
+          name: /switch to (light|dark) mode|växla till (ljust|mörkt) läge/i,
+        });
+        await expect(toggle.first()).toBeVisible({ timeout: 10_000 });
+        await expect(toggle.first()).toBeEnabled();
       }
     );
 

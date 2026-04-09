@@ -98,10 +98,11 @@ test.describe("Resolution & Settlement", () => {
     });
 
     test(
-      "orders page loads and shows order history or empty state",
+      "order history tab in /portfolio loads and shows order history or empty state",
       { tag: ["@critical"] },
       async ({ page }) => {
-        await page.goto("/orders");
+        // /orders was consolidated into /portfolio?tab=history in SCRUM-776.
+        await page.goto("/portfolio?tab=history");
         await dismissLimitsDialog(page);
 
         // May redirect to /login if session expired

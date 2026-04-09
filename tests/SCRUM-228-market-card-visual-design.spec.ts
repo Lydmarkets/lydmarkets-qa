@@ -119,20 +119,20 @@ test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
     await page.goto("/");
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
-    // Find the first clickable market card/link
-    const marketLink = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
-    const hasLink = await marketLink.isVisible({ timeout: 8000 }).catch(() => false);
+    // MarketCard wraps its content in an overlay <Link> that has no text
+    // content of its own (text lives in sibling elements), so match by href
+    // instead of text.
+    const marketLink = page.locator('main a[href*="/markets/"]').first();
+    await expect(marketLink).toBeVisible({ timeout: 8000 });
 
-    if (hasLink) {
-      const href = await marketLink.getAttribute("href");
-      await marketLink.click();
-      await page.waitForURL(/\/markets\//, { timeout: 10000 });
-      expect(page.url()).toContain("/markets/");
-    } else {
-      // Market cards may be rendered differently
-      const hasMain = await page.locator("main").isVisible();
-      expect(hasMain).toBeTruthy();
-    }
+    const href = await marketLink.getAttribute("href");
+    expect(href).toMatch(/\/markets\//);
+
+    // Navigate directly via the extracted href — clicking the overlay link
+    // can be intercepted by the stacked Yes/No buttons on the card.
+    await page.goto(href!);
+    await page.waitForURL(/\/markets\//, { timeout: 10000 });
+    expect(page.url()).toContain("/markets/");
   });
 
   test("market list layout is responsive — shows multiple cards on desktop", async ({ page }) => {

@@ -166,6 +166,17 @@ setup("authenticate", { timeout: 90_000 }, async ({ page, baseURL }) => {
 
   const base = baseURL || "https://web-production-bb35.up.railway.app";
 
+  // Force English locale on the saved storageState — middleware reads this
+  // cookie to decide which language to serve. Tests use English text selectors.
+  await page.context().addCookies([
+    {
+      name: "locale",
+      value: "en",
+      domain: new URL(base).hostname,
+      path: "/",
+    },
+  ]);
+
   // Try strategies in order of reliability
   if (await tryTestEndpoint(page, base)) return;
   if (await tryBankIdMock(page)) return;

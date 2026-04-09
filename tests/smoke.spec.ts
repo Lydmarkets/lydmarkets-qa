@@ -14,7 +14,7 @@ test.describe("Smoke tests — critical user flows", () => {
 
   test("register page renders BankID account creation", async ({ page }) => {
     await page.goto("/register");
-    await expect(page.getByRole("heading", { name: /skapa konto|create an account/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /skapa konto|create( an)? account/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /starta bankid|start bankid/i })).toBeVisible();
   });
 

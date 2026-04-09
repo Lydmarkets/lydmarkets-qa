@@ -33,11 +33,12 @@ test.describe("SCRUM-400: Market detail page — order form interactions", () =>
 
   test("market detail page shows trading activity or order info", async ({ page }) => {
     await goToFirstMarket(page);
-    // Market detail should show trading-related content: order book, activity, or place order section
-    const hasOrderBook = await page.getByText(/order book|orderbok/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    // Market detail shows trading-related content. The old Order Book section
+    // was replaced by Market State / Cost Estimates / Market Depth in SCRUM-776.
+    const hasMarketState = await page.getByText(/market state|marknadsstatus/i).first().isVisible({ timeout: 5000 }).catch(() => false);
     const hasActivity = await page.getByText(/activity|aktivitet|recent trades|senaste/i).first().isVisible({ timeout: 3000 }).catch(() => false);
     const hasPlaceOrder = await page.getByText(/place order|lägg order/i).first().isVisible({ timeout: 3000 }).catch(() => false);
-    expect(hasOrderBook || hasActivity || hasPlaceOrder).toBeTruthy();
+    expect(hasMarketState || hasActivity || hasPlaceOrder).toBeTruthy();
   });
 
   test("market detail page navigates from home market listing", async ({ page }) => {

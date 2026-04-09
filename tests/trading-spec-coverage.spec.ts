@@ -7,10 +7,12 @@ import { hasAuthSession } from "../helpers/has-auth";
  * Trading spec — E2E coverage
  *
  * Covers: order form (place order panel, Yes/No toggles),
- * order book section, SEK currency formatting, and market detail stats.
+ * market state section, SEK currency formatting, and market detail stats.
  *
- * Note: PayoutCalculator was removed from the market detail page.
- * Fee disclosure and payout calculations are now part of the order panel.
+ * Note: PayoutCalculator was removed from the market detail page. Fee
+ * disclosure and payout calculations are now part of the order panel.
+ * The old Order Book section was replaced by Market State / Cost Estimates
+ * / Market Depth in SCRUM-776.
  */
 
 /** @deprecated Use goToFirstMarket from helpers */
@@ -56,9 +58,10 @@ test.describe("Trading spec — E2E coverage", () => {
     async ({ page }) => {
       await goToFirstMarketDetail(page);
 
-      // Market detail should show trading content: order book, activity, or place order
-      const hasOrderBook = await page
-        .getByText(/order book|orderbok/i)
+      // Market detail shows trading content. The old Order Book was replaced
+      // by Market State / Cost Estimates / Market Depth in SCRUM-776.
+      const hasMarketState = await page
+        .getByText(/market state|marknadsstatus/i)
         .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
@@ -75,7 +78,7 @@ test.describe("Trading spec — E2E coverage", () => {
         .isVisible({ timeout: 3_000 })
         .catch(() => false);
 
-      expect(hasOrderBook || hasActivity || hasPlaceOrder).toBeTruthy();
+      expect(hasMarketState || hasActivity || hasPlaceOrder).toBeTruthy();
     },
   );
 
@@ -162,8 +165,8 @@ test.describe("Trading spec — E2E coverage", () => {
       async ({ page }) => {
         await goToFirstMarketDetail(page);
 
-        const hasOrderBook = await page
-          .getByText(/order book|orderbok/i)
+        const hasMarketState = await page
+          .getByText(/market state|marknadsstatus/i)
           .first()
           .isVisible({ timeout: 5_000 })
           .catch(() => false);
@@ -180,7 +183,7 @@ test.describe("Trading spec — E2E coverage", () => {
           .isVisible({ timeout: 3_000 })
           .catch(() => false);
 
-        expect(hasOrderBook || hasActivity || hasPlaceOrder).toBeTruthy();
+        expect(hasMarketState || hasActivity || hasPlaceOrder).toBeTruthy();
       },
     );
   });
