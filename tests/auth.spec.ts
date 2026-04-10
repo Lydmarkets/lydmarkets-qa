@@ -5,7 +5,7 @@ test.describe("Authentication flows", () => {
   test("login page renders BankID sign-in options", async ({ page }) => {
     await page.goto("/login");
     await expect(page.getByText(/välkommen tillbaka|welcome back/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /logga in med bankid|sign in with bankid/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i }).first()).toBeVisible();
   });
 
   test("login page has link to create account", async ({ page }) => {
