@@ -3,36 +3,50 @@ import { expect } from "@playwright/test";
 import { dismissLimitsDialog } from "./dismiss-limits-dialog";
 
 /**
- * Navigate to the first available market detail page.
+ * Navigate to a tradable market detail page (non-zero probability on both sides).
  *
- * Loads the home page, extracts the first market link's href, then navigates
- * directly via page.goto() instead of clicking — avoids flaky click-based
- * navigation that times out when the browser intercepts the click.
+ * Scans market cards on the home page, skipping any that show a "0%" button
+ * (one side has zero probability, so the QuickBet breakdown can't calculate).
+ * Falls back to the second link if all cards are 0%.
  */
 export async function goToFirstMarket(page: Page): Promise<string> {
   await page.goto("/");
   await dismissLimitsDialog(page);
 
   // Click "All" filter — "Trending/Live" may be empty on staging.
-  // View tab buttons include a count badge in their accessible name
-  // ("All80", "Live0", "New0"), so match that pattern. Pass a short
-  // explicit timeout so a missing button doesn't consume the entire
-  // 30s test budget.
   await page
     .getByRole("button", { name: /^(all|alla)\s*\d*$/i })
     .first()
     .click({ timeout: 5_000 })
     .catch(() => {});
 
-  const marketLink = page.locator('main a[href*="/markets/"]').first();
-  await expect(marketLink).toBeVisible({ timeout: 15_000 });
+  const marketLinks = page.locator('main a[href*="/markets/"]');
+  await marketLinks.first().waitFor({ state: "visible", timeout: 15_000 });
+  const count = await marketLinks.count();
 
-  const href = await marketLink.getAttribute("href");
-  expect(href).toBeTruthy();
+  // Pick the first market whose card doesn't show a "0%" button (dead side)
+  for (let i = 0; i < Math.min(count, 10); i++) {
+    const link = marketLinks.nth(i);
+    const href = await link.getAttribute("href");
+    if (!href) continue;
 
-  // Navigate directly instead of clicking (avoids flaky click interception)
-  await page.goto(href!);
+    const card = link.locator("..");
+    const hasZero = await card
+      .getByRole("button", { name: /\b0%/ })
+      .first()
+      .isVisible({ timeout: 1_000 })
+      .catch(() => false);
+    if (hasZero) continue;
+
+    await page.goto(href);
+    await dismissLimitsDialog(page);
+    return href;
+  }
+
+  // Fallback: skip the Featured hero card (index 0), use index 1
+  const fallback = marketLinks.nth(Math.min(1, count - 1));
+  const href = (await fallback.getAttribute("href"))!;
+  await page.goto(href);
   await dismissLimitsDialog(page);
-
-  return href!;
+  return href;
 }
