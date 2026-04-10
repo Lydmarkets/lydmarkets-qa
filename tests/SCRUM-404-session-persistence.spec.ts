@@ -30,7 +30,7 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   test("login page is accessible at /login", async ({ page }) => {
     await page.goto("/login");
     await expect(
-      page.getByRole("button", { name: /logga in med bankid|sign in with bankid/i })
+      page.getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i }).first()
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -42,14 +42,13 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   });
 
   test("public market detail page does not redirect unauthenticated users", async ({ page }) => {
-    // Navigate to /markets and click the first market to get a real market detail URL
     await page.goto("/markets");
-    // Click "All" filter — "Trending" may be empty on staging
-    await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
+    await page.getByRole("button", { name: /^(all|alla)\s*\d*$/i }).first().click().catch(() => {});
     const marketLink = page.locator('main a[href*="/markets/"]').first();
     await expect(marketLink).toBeVisible({ timeout: 15_000 });
-    await marketLink.click();
-    await page.waitForURL(/\/markets\//, { timeout: 10_000 });
+    // Navigate directly instead of clicking — avoids flaky click interception
+    const href = await marketLink.getAttribute("href");
+    await page.goto(href!);
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
   });
@@ -64,14 +63,13 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   });
 
   test("reloading a market detail page keeps user on that page", async ({ page }) => {
-    // Navigate to /markets and click the first market to get a real market detail URL
     await page.goto("/markets");
-    // Click "All" filter — "Trending" may be empty on staging
-    await page.getByRole("button", { name: /^all$/i }).click().catch(() => {});
+    await page.getByRole("button", { name: /^(all|alla)\s*\d*$/i }).first().click().catch(() => {});
     const marketLink = page.locator('main a[href*="/markets/"]').first();
     await expect(marketLink).toBeVisible({ timeout: 15_000 });
-    await marketLink.click();
-    await page.waitForURL(/\/markets\//, { timeout: 10_000 });
+    // Navigate directly instead of clicking — avoids flaky click interception
+    const href = await marketLink.getAttribute("href");
+    await page.goto(href!);
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
     await page.reload();
     await expect(page.locator("main")).toBeVisible({ timeout: 10000 });

@@ -92,9 +92,11 @@ async function tryBankIdMock(
     const cookieAccept = page.getByRole("button", { name: /acceptera|accept/i });
     await cookieAccept.click({ timeout: 3_000 }).catch(() => {});
 
-    // Click BankID login
+    // Click BankID login — button text changed from "Sign in with BankID"
+    // to "BankID on this computer" / "Mobile BankID" after the auth page refactor
     await page
-      .getByRole("button", { name: /sign in with bankid|logga in med bankid/i })
+      .getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i })
+      .first()
       .click();
 
     // Wait for BankID mock to resolve — either redirect or "No account found"
@@ -142,7 +144,8 @@ async function tryBankIdMock(
 
     if (page.url().includes("/login")) {
       await page
-        .getByRole("button", { name: /sign in with bankid|logga in med bankid/i })
+        .getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i })
+        .first()
         .click();
       await page.waitForURL((url) => !url.pathname.includes("/login"), {
         timeout: 30_000,

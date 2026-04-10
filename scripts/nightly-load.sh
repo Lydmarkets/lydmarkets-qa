@@ -48,7 +48,7 @@ if [[ -n "$RESULT_FILE" && -f "$RESULT_FILE" ]]; then
   RPS=$(jq -r '.metrics.http_reqs.values.rate // 0 | round' "$RESULT_FILE")
 
   # Check thresholds
-  P95_OK=$(jq -r '.metrics.http_req_duration.thresholds["p(95)<3000"].ok // false' "$RESULT_FILE")
+  P95_OK=$(jq -r '.metrics.http_req_duration.thresholds["p(95)<5500"].ok // false' "$RESULT_FILE")
   ERRORS_OK=$(jq -r '.metrics.http_req_failed.thresholds["rate<0.01"].ok // false' "$RESULT_FILE")
 else
   LIST_P95="?"

@@ -111,7 +111,7 @@ Many compliance components use Swedish text. Key phrases for selectors:
 | `Verklighetscheck` | Reality check modal |
 | `Fortsätt spela` | Continue playing |
 | `Ta en paus` | Take a break |
-| `Sign in with BankID` | Login page |
+| `BankID on this computer` / `Mobile BankID` | Login page |
 | `Create an account` | Register page |
 | `Accept All` / `Reject All` | Cookie banner |
 

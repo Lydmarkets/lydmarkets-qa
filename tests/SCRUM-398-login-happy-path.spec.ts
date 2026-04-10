@@ -6,7 +6,7 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
       page.getByRole("heading", { name: /welcome back|välkommen tillbaka/i })
     ).toBeVisible({ timeout: 10000 });
     await expect(
-      page.getByRole("button", { name: /logga in med bankid|sign in with bankid/i })
+      page.getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i }).first()
     ).toBeVisible();
   });
 
