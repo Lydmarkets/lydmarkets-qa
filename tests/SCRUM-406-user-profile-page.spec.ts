@@ -5,17 +5,17 @@ test.describe("SCRUM-406: User profile page — view stats and edit display name
   // have the full assertion structure ready for when that fixture is available.
   // The unauthenticated redirect behaviour is tested here without skip.
 
-  test("unauthenticated visit to /profile redirects to /login", async ({ page }) => {
-    await page.goto("/profile");
+  test("unauthenticated visit to /settings redirects to /login", async ({ page }) => {
+    await page.goto("/settings");
     await page.waitForURL(/\/login/, { timeout: 10000 });
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("redirect to /login from /profile includes redirect query param", async ({ page }) => {
-    await page.goto("/profile");
+  test("redirect to /login from /settings includes redirect query param", async ({ page }) => {
+    await page.goto("/settings");
     await page.waitForURL(/\/login/, { timeout: 10000 });
     const url = page.url();
-    // Should include a redirect parameter pointing back to /profile
+    // Should include a redirect parameter pointing back to /settings
     expect(url.includes("redirect") || url.includes("login")).toBeTruthy();
   });
 

@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base";
+import { isAuthenticated } from "../helpers/is-authenticated";
 /**
  * SCRUM-546: Automatic session logout on time limit expiry.
  *
@@ -22,12 +23,7 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
-      const isUnauthenticated = await loginLink
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-
-      if (isUnauthenticated) {
+      if (!(await isAuthenticated(page))) {
         test.skip(true, "Requires authenticated session — skipping");
         return;
       }

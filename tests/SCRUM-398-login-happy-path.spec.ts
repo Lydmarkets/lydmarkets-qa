@@ -25,7 +25,7 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
   });
 
   test("unauthenticated user visiting protected route is redirected to login", async ({ page }) => {
-    await page.goto("/profile");
+    await page.goto("/settings");
     await page.waitForURL(/\/login/, { timeout: 10000 });
     await expect(page).toHaveURL(/\/login/);
   });

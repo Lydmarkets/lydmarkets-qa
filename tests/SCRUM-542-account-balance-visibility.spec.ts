@@ -1,13 +1,12 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
+import { isAuthenticated } from "../helpers/is-authenticated";
 
 /**
  * SCRUM-542: Account balance visibility on every screen.
  *
  * SIFS requires the player's balance to be always visible. The balance is shown
  * as "Saldo: X,XX kr" in the header nav, linking to /wallet.
- *
- * NOTE: Requires authenticated session. Tests skip gracefully when unauthenticated.
  */
 
 /** Matches Swedish currency format like "0,00 kr" or "1 234,50 kr" */
@@ -28,22 +27,15 @@ test.describe("SCRUM-542: Account balance visibility", () => {
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
-      const isUnauthenticated = await loginLink
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-
-      if (isUnauthenticated) {
+      if (!(await isAuthenticated(page))) {
         test.skip(true, "Requires authenticated session — skipping");
         return;
       }
 
-      // Balance link should be visible in header, pointing to /wallet
       const balanceLink = page.locator('a[href="/wallet"]').first();
       await expect(balanceLink).toBeVisible({ timeout: 5_000 });
       await expect(balanceLink).toHaveAttribute("href", /\/wallet/);
 
-      // Balance should display a kr amount
       await expect(balanceLink).toHaveText(BALANCE_REGEX);
     },
   );
@@ -54,12 +46,7 @@ test.describe("SCRUM-542: Account balance visibility", () => {
       { tag: ["@regression", "@compliance"] },
       async ({ page }) => {
         await page.goto(path);
-        const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
-        const isUnauthenticated = await loginLink
-          .isVisible({ timeout: 3_000 })
-          .catch(() => false);
-
-        if (isUnauthenticated) {
+        if (!(await isAuthenticated(page))) {
           test.skip(true, "Requires authenticated session — skipping");
           return;
         }
@@ -77,12 +64,7 @@ test.describe("SCRUM-542: Account balance visibility", () => {
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
-      const isUnauthenticated = await loginLink
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-
-      if (isUnauthenticated) {
+      if (!(await isAuthenticated(page))) {
         test.skip(true, "Requires authenticated session — skipping");
         return;
       }
@@ -91,7 +73,6 @@ test.describe("SCRUM-542: Account balance visibility", () => {
       await expect(balanceLink).toBeVisible({ timeout: 5_000 });
 
       const text = await balanceLink.textContent();
-      // Should contain a number and "kr", not "Loading..." or a spinner
       expect(text).toMatch(/\d.*kr/);
       expect(text).not.toMatch(/loading|laddar/i);
     },
@@ -104,26 +85,18 @@ test.describe("SCRUM-542: Account balance visibility", () => {
       await page.goto("/markets");
       await dismissLimitsDialog(page);
 
-      const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
-      const isUnauthenticated = await loginLink
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-
-      if (isUnauthenticated) {
+      if (!(await isAuthenticated(page))) {
         test.skip(true, "Requires authenticated session — skipping");
         return;
       }
 
-      // Read balance on markets page
       const balanceLink = page.locator('a[href="/wallet"]').first();
       await expect(balanceLink).toBeVisible({ timeout: 5_000 });
       const balanceOnMarkets = await balanceLink.textContent();
 
-      // Navigate to wallet
       await page.goto("/wallet");
       await dismissLimitsDialog(page);
 
-      // Balance should still be visible with the same amount
       const balanceLinkAfterNav = page.locator('a[href="/wallet"]').first();
       await expect(balanceLinkAfterNav).toBeVisible({ timeout: 5_000 });
       const balanceOnWallet = await balanceLinkAfterNav.textContent();

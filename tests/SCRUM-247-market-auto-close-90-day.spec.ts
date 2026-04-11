@@ -14,8 +14,6 @@ import { test, expect } from "../fixtures/base";
 //
 // The cron job itself (90-day auto-close) cannot be triggered in E2E — those tests skip.
 
-const ADMIN_URL = "https://lydmarkets-admin-production.up.railway.app";
-
 test.describe("SCRUM-247 — 90-day interrupted market auto-close admin UI (SCRUM-215)", () => {
   // ---------------------------------------------------------------------------
   // Public / user-facing — interrupted market display
@@ -73,43 +71,5 @@ test.describe("SCRUM-247 — 90-day interrupted market auto-close admin UI (SCRU
     expect(hasInterruptedLabel || hasPage).toBeTruthy();
   });
 
-  // ---------------------------------------------------------------------------
-  // Admin panel — interrupted markets list
-  // ---------------------------------------------------------------------------
-
-  test.describe("admin panel", () => {
-    test("admin panel is reachable", async ({ page }) => {
-      await page.goto(ADMIN_URL);
-      await expect(page.locator("body")).toBeVisible({ timeout: 10000 });
-    });
-
-    test("admin login page renders", async ({ page }) => {
-      await page.goto(ADMIN_URL + "/login");
-      await expect(page.locator("body")).toBeVisible({ timeout: 10000 });
-      await expect(
-        page.getByText(/login|sign in|admin/i).first()
-      ).toBeVisible({ timeout: 8000 });
-    });
-
-    test("admin markets page is accessible (redirects to login if unauthenticated)", async ({
-      page,
-    }) => {
-      await page.goto(ADMIN_URL + "/markets");
-      // Either the markets list renders or we get redirected to login
-      const isRedirected = page.url().includes("/login") || page.url().includes("/auth");
-      const hasBody = await page.locator("body").isVisible({ timeout: 8000 }).catch(() => false);
-      expect(isRedirected || hasBody).toBeTruthy();
-    });
-
-    test("admin interrupted markets route exists (redirects to login if unauthenticated)", async ({
-      page,
-    }) => {
-      // The spec requires an interrupted markets list in admin
-      await page.goto(ADMIN_URL + "/markets?status=interrupted");
-      const isRedirected = page.url().includes("/login") || page.url().includes("/auth");
-      const hasBody = await page.locator("body").isVisible({ timeout: 8000 }).catch(() => false);
-      expect(isRedirected || hasBody).toBeTruthy();
-    });
-
-  });
+  // Admin panel tests removed — admin panel has its own test suite
 });

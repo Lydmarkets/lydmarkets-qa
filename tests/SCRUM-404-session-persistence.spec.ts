@@ -14,8 +14,8 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
     ).toBeVisible();
   });
 
-  test("protected route /profile redirects to /login when unauthenticated", async ({ page }) => {
-    await page.goto("/profile");
+  test("protected route /settings redirects to /login when unauthenticated", async ({ page }) => {
+    await page.goto("/settings");
     await page.waitForURL(/\/login/, { timeout: 10000 });
     await expect(page).toHaveURL(/\/login/);
   });

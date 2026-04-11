@@ -15,8 +15,6 @@ import { hasAuthSession } from "../helpers/has-auth";
 //
 // Tests that require triggering N real failed logins against BankID are marked skip.
 
-const ADMIN_URL = "https://lydmarkets-admin-production.up.railway.app";
-
 test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)", () => {
   // ---------------------------------------------------------------------------
   // Login page — error feedback
@@ -252,18 +250,5 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Admin — login attempts view
-  // ---------------------------------------------------------------------------
-
-  test.describe("admin — login attempts view", () => {
-    test("admin login page renders", async ({ page }) => {
-      await page.goto(ADMIN_URL + "/login");
-      await expect(page.locator("body")).toBeVisible({ timeout: 10000 });
-      await expect(
-        page.getByText(/login|sign in|admin/i).first()
-      ).toBeVisible({ timeout: 8000 });
-    });
-
-  });
+  // Admin tests removed — admin panel has its own test suite
 });

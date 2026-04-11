@@ -1,13 +1,10 @@
 import { test, expect } from "../fixtures/base";
+import { isAuthenticated } from "../helpers/is-authenticated";
 /**
  * SCRUM-541: Session timer — persistent, non-dismissible on all screens.
  *
  * The session timer (HH:MM:SS format) must be visible on every authenticated page.
  * These tests verify the timer element is present and ticking.
- *
- * NOTE: These tests require an authenticated session. When running without auth
- * setup, unauthenticated users see "Logga in" instead — the test will detect
- * this and skip gracefully.
  */
 
 /** Matches HH:MM:SS or MM:SS timer format */
@@ -29,18 +26,11 @@ test.describe("SCRUM-541: Session timer display", () => {
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      // Check if user is authenticated (no "Logga in" link)
-      const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
-      const isUnauthenticated = await loginLink
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-
-      if (isUnauthenticated) {
+      if (!(await isAuthenticated(page))) {
         test.skip(true, "Requires authenticated session — skipping");
         return;
       }
 
-      // Timer should be visible in the header area
       const header = page.locator("header, [role='banner']").first();
       await expect(header.getByText(TIMER_REGEX)).toBeVisible({ timeout: 5_000 });
     },
@@ -52,12 +42,7 @@ test.describe("SCRUM-541: Session timer display", () => {
       { tag: ["@regression", "@compliance"] },
       async ({ page }) => {
         await page.goto(path);
-        const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
-        const isUnauthenticated = await loginLink
-          .isVisible({ timeout: 3_000 })
-          .catch(() => false);
-
-        if (isUnauthenticated) {
+        if (!(await isAuthenticated(page))) {
           test.skip(true, "Requires authenticated session — skipping");
           return;
         }
@@ -73,12 +58,7 @@ test.describe("SCRUM-541: Session timer display", () => {
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
-      const isUnauthenticated = await loginLink
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-
-      if (isUnauthenticated) {
+      if (!(await isAuthenticated(page))) {
         test.skip(true, "Requires authenticated session — skipping");
         return;
       }
@@ -102,22 +82,15 @@ test.describe("SCRUM-541: Session timer display", () => {
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      const loginLink = page.getByRole("link", { name: /logga in|log in|sign in/i });
-      const isUnauthenticated = await loginLink
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-
-      if (isUnauthenticated) {
+      if (!(await isAuthenticated(page))) {
         test.skip(true, "Requires authenticated session — skipping");
         return;
       }
 
-      // The timer area should not have a close/dismiss button
       const header = page.locator("header, [role='banner']").first();
       const timerEl = header.getByText(TIMER_REGEX);
       await expect(timerEl).toBeVisible({ timeout: 5_000 });
 
-      // No close button near the timer
       const closeBtn = header.getByRole("button", { name: /close|dismiss|stäng|dölj/i });
       await expect(closeBtn).toBeHidden();
     },

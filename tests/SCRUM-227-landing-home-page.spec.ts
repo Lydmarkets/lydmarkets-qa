@@ -226,16 +226,16 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
     // Acceptance criterion 6: no regression on authenticated routes
     // ---------------------------------------------------------------------------
 
-    test("authenticated /profile route is still accessible without regression", async ({
+    test("authenticated /settings route is still accessible without regression", async ({
       page,
     }) => {
-      await page.goto("/profile");
-      // Should render profile, not redirect to login
+      await page.goto("/settings");
+      // Should render settings, not redirect to login
       const isOnLogin = page.url().includes("/login");
       if (!isOnLogin) {
         await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
       } else {
-        // If /profile now redirects, that is a regression — but we soft-assert
+        // If /settings now redirects, that is a regression — but we soft-assert
         expect(isOnLogin).toBeFalsy();
       }
     });

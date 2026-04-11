@@ -31,18 +31,7 @@ test.describe("Notifications — page loads", () => {
     },
   );
 
-  test(
-    "unauthenticated /alerts redirects to login",
-    { tag: ["@smoke"] },
-    async ({ browser }) => {
-      const context = await browser.newContext();
-      const page = await context.newPage();
-      await page.goto("/alerts");
-      await page.waitForURL(/\/login/, { timeout: 10_000 });
-      expect(page.url()).toMatch(/\/login/);
-      await context.close();
-    },
-  );
+  // /alerts route removed — alerts are admin-only
 
   // ── Authenticated page load tests ──────────────────────────────────
 
@@ -129,42 +118,6 @@ test.describe("Notifications — page loads", () => {
       },
     );
 
-    test(
-      "alerts page loads",
-      { tag: ["@smoke"] },
-      async ({ page }) => {
-        await page.goto("/alerts");
-        await dismissLimitsDialog(page);
-
-        if (page.url().includes("/login")) {
-          test.skip(true, "Session expired");
-          return;
-        }
-
-        await expect(page.locator("main").first()).toBeVisible({
-          timeout: 10_000,
-        });
-
-        const hasAlerts = await page
-          .getByText(/alert|prisvarning|price alert/i)
-          .first()
-          .isVisible({ timeout: 5_000 })
-          .catch(() => false);
-
-        const hasEmpty = await page
-          .getByText(/no.*alert|inga.*varning|empty/i)
-          .first()
-          .isVisible({ timeout: 5_000 })
-          .catch(() => false);
-
-        const hasHeading = await page
-          .getByRole("heading")
-          .first()
-          .isVisible({ timeout: 5_000 })
-          .catch(() => false);
-
-        expect(hasAlerts || hasEmpty || hasHeading).toBeTruthy();
-      },
-    );
+    // /alerts route removed — alerts are admin-only
   });
 });
