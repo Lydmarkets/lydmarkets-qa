@@ -123,7 +123,7 @@ test.describe("Account settings — coverage gaps", () => {
     "PGSI questionnaire is visible on responsible gambling tab",
     { tag: ["@compliance", "@regression"] },
     async ({ page }) => {
-      const response = await page.goto("/settings/responsible-gambling");
+      const response = await page.goto("/responsible-gambling");
       await dismissLimitsDialog(page);
 
       if (
@@ -165,147 +165,37 @@ test.describe("Account settings — coverage gaps", () => {
   );
 
   test(
-    "PGSI questionnaire shows non-problem result for lowest answers",
+    "PGSI questionnaire has score interpretation guide",
     { tag: ["@compliance", "@regression"] },
     async ({ page }) => {
-      const response = await page.goto("/settings/responsible-gambling");
+      await page.goto("/responsible-gambling");
       await dismissLimitsDialog(page);
 
-      if (
-        !response ||
-        response.status() === 404 ||
-        page.url().includes("/login")
-      ) {
-        test.skip(true, "Page not accessible");
-        return;
-      }
-
-      // Check PGSI is present
-      const hasPgsi = await page
-        .getByText(/self-assessment|självtest|pgsi/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      if (!hasPgsi) {
-        test.skip(true, "PGSI questionnaire not visible");
-        return;
-      }
-
-      // Answer all 9 questions with "Never" / "Aldrig" (score = 0)
-      const neverOptions = page.getByText(/^never$|^aldrig$/i);
-      const count = await neverOptions.count();
-
-      if (count < 9) {
-        test.skip(true, `Only ${count} 'Never' options found — expected 9`);
-        return;
-      }
-
-      for (let i = 0; i < count; i++) {
-        await neverOptions.nth(i).click();
-      }
-
-      // Click show result button
-      const resultBtn = page.getByRole("button", {
-        name: /show my result|visa mitt resultat|beräkna/i,
-      });
-      await expect(resultBtn).toBeVisible({ timeout: 5_000 });
-      await resultBtn.click();
-
-      // Should show non-problem / low-risk result
-      await expect(
-        page.getByText(/non-problem|inget spelproblem|low.risk|låg risk/i).first(),
-      ).toBeVisible({ timeout: 5_000 });
+      // Score interpretation section is always visible below the radio groups
+      await expect(page.getByText(/0 points|0 poäng/i).first()).toBeVisible({ timeout: 5_000 });
+      await expect(page.getByText(/moderate risk|måttlig risk/i).first()).toBeVisible();
+      await expect(page.getByText(/problem gambl|spelproblem/i).first()).toBeVisible();
     },
   );
 
   test(
-    "PGSI high-risk result shows Stodlinjen and Spelpaus links",
+    "Responsible gambling page shows Stodlinjen and Spelpaus links",
     { tag: ["@compliance", "@critical"] },
     async ({ page }) => {
-      const response = await page.goto("/settings/responsible-gambling");
+      await page.goto("/responsible-gambling");
       await dismissLimitsDialog(page);
 
-      if (
-        !response ||
-        response.status() === 404 ||
-        page.url().includes("/login")
-      ) {
-        test.skip(true, "Page not accessible");
-        return;
-      }
+      await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
 
-      // Check PGSI is present
-      const hasPgsi = await page
-        .getByText(/self-assessment|självtest|pgsi/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      if (!hasPgsi) {
-        test.skip(true, "PGSI questionnaire not visible");
-        return;
-      }
-
-      // Answer all 9 questions with "Almost always" / "Nästan alltid" (score = 27)
-      const highOptions = page.getByText(/^almost always$|^nästan alltid$/i);
-      const count = await highOptions.count();
-
-      if (count < 9) {
-        test.skip(
-          true,
-          `Only ${count} 'Almost always' options found — expected 9`,
-        );
-        return;
-      }
-
-      for (let i = 0; i < count; i++) {
-        await highOptions.nth(i).click();
-      }
-
-      // Click show result button
-      const resultBtn = page.getByRole("button", {
-        name: /show my result|visa mitt resultat|beräkna/i,
-      });
-      await expect(resultBtn).toBeVisible({ timeout: 5_000 });
-      await resultBtn.click();
-
-      // Should show problem gambling result
+      // Stödlinjen helpline
       await expect(
-        page
-          .getByText(/problem.gambling|spelproblem|high.risk|hög risk/i)
-          .first(),
+        page.getByText(/stödlinjen|020.819/i).first(),
       ).toBeVisible({ timeout: 5_000 });
 
-      // Should show Stödlinjen helpline link
-      const hasStodlinjen = await page
-        .getByRole("link", { name: /stödlinjen/i })
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasStodlinjenText = await page
-        .getByText(/stödlinjen|020-819/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      expect(hasStodlinjen || hasStodlinjenText).toBeTruthy();
-
-      // Should show Spelpaus link
-      const hasSpelpaus = await page
-        .getByRole("link", { name: /spelpaus/i })
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasSpelpausText = await page
-        .getByText(/spelpaus/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      expect(hasSpelpaus || hasSpelpausText).toBeTruthy();
+      // Spelpaus self-exclusion
+      await expect(
+        page.getByText(/spelpaus/i).first(),
+      ).toBeVisible({ timeout: 5_000 });
     },
   );
 });

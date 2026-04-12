@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base";
+import { goToFirstMarket } from "../helpers/go-to-market";
 // Auth-required routes (/orders, /portfolio, /wallet, /watchlist) redirect to /login.
 // Those flows are covered by SCRUM-401 (order placement) and SCRUM-403 (portfolio).
 
@@ -20,21 +21,11 @@ test.describe("Trading flows", () => {
   });
 
   test("market detail page loads and shows order form", async ({ page }) => {
-    await page.goto("/markets");
-    // Find first market card link by href pattern
-    const marketLink = page.locator('a[href^="/markets/"]').first();
-    const href = await marketLink.getAttribute("href", { timeout: 8000 }).catch(() => null);
-    if (href) {
-      await page.goto(href);
-      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
-      const hasOrderForm =
-        (await page
-          .getByRole("button", { name: /yes|no/i })
-          .first()
-          .isVisible({ timeout: 8000 })
-          .catch(() => false));
-      expect(hasOrderForm).toBeTruthy();
-    }
+    await goToFirstMarket(page);
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("button", { name: /yes|no/i }).first()
+    ).toBeVisible({ timeout: 8000 });
   });
 
   test("auth-protected pages redirect to login when unauthenticated", async ({ page }) => {

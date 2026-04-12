@@ -6,14 +6,17 @@ test.describe("Compliance spec — E2E coverage", () => {
   // ── Unauthenticated redirect tests ──────────────────────────────────
 
   test(
-    "unauthenticated /settings/responsible-gambling redirects to login",
+    "/responsible-gambling is publicly accessible",
     { tag: ["@compliance"] },
     async ({ browser }) => {
       const context = await browser.newContext();
       const page = await context.newPage();
-      await page.goto("/settings/responsible-gambling");
-      await page.waitForURL(/\/login/, { timeout: 10_000 });
-      expect(page.url()).toMatch(/\/login/);
+      await page.goto("/responsible-gambling");
+      // Public page — should NOT redirect to login
+      await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.getByRole("heading", { name: /responsible gambling|ansvarsfullt spelande/i, level: 1 }),
+      ).toBeVisible();
       await context.close();
     },
   );
@@ -68,92 +71,67 @@ test.describe("Compliance spec — E2E coverage", () => {
       if (!hasAuthSession()) testInfo.skip();
     });
 
-    // ── Responsible gambling ──────────────────────────────────────────
+    // ── Responsible gambling (public page) ─────────────────────────────
 
     test(
-      "responsible gambling page shows deposit limit inputs",
+      "responsible gambling page shows support organisations",
       { tag: ["@compliance"] },
       async ({ page }) => {
-        const response = await page.goto("/settings/responsible-gambling");
+        await page.goto("/responsible-gambling");
         await dismissLimitsDialog(page);
 
-        // Page may 404 if auth session is invalid or route not deployed yet
-        if (!response || response.status() === 404 || page.url().includes("/login")) {
-          test.skip(true, "Page not accessible — auth session invalid or route not deployed");
-          return;
-        }
-
         await expect(
-          page.getByRole("heading", { name: "Ansvarsfullt spelande", level: 1 }),
+          page.getByRole("heading", { name: /responsible gambling|ansvarsfullt spelande/i, level: 1 }),
         ).toBeVisible({ timeout: 10_000 });
 
-        // Deposit limits section
-        await expect(
-          page.getByRole("heading", { name: "Insättningsgränser", level: 2 }),
-        ).toBeVisible();
-
-        // Daily / weekly / monthly deposit limit rows
-        await expect(page.getByText("Daglig insättningsgräns")).toBeVisible();
-        await expect(page.getByText("Veckovis insättningsgräns")).toBeVisible();
-        await expect(page.getByText("Månatlig insättningsgräns")).toBeVisible();
+        // Stödlinjen and Spelpaus must be listed
+        await expect(page.getByText(/stödlinjen|stodlinjen/i).first()).toBeVisible();
+        await expect(page.getByText(/spelpaus/i).first()).toBeVisible();
       },
     );
 
     test(
-      "responsible gambling page shows loss limit section",
+      "responsible gambling page shows PGSI self-assessment",
       { tag: ["@compliance"] },
       async ({ page }) => {
-        const response = await page.goto("/settings/responsible-gambling");
+        await page.goto("/responsible-gambling");
         await dismissLimitsDialog(page);
-        if (!response || response.status() === 404 || page.url().includes("/login")) {
-          test.skip(true, "Page not accessible");
-          return;
-        }
 
-        await expect(
-          page.getByRole("heading", { name: "Förlustgränser", level: 2 }),
-        ).toBeVisible({ timeout: 10_000 });
-
-        await expect(page.getByText("Daglig förlustgräns")).toBeVisible();
-        await expect(page.getByText("Veckovis förlustgräns")).toBeVisible();
-        await expect(page.getByText("Månatlig förlustgräns")).toBeVisible();
+        // PGSI section has 9 questions with radio groups
+        const radios = page.locator('input[type="radio"][name^="pgsi-"]');
+        // 9 questions × 4 options = 36 radio buttons
+        await expect(radios.first()).toBeAttached({ timeout: 10_000 });
+        const count = await radios.count();
+        expect(count).toBeGreaterThanOrEqual(36);
       },
     );
 
     test(
-      "responsible gambling page shows bet limit section",
+      "responsible gambling page shows platform tools with links to settings",
       { tag: ["@compliance"] },
       async ({ page }) => {
-        const response = await page.goto("/settings/responsible-gambling");
+        await page.goto("/responsible-gambling");
         await dismissLimitsDialog(page);
-        if (!response || response.status() === 404 || page.url().includes("/login")) {
-          test.skip(true, "Page not accessible");
-          return;
-        }
 
-        await expect(
-          page.getByRole("heading", { name: "Insatsgränser", level: 2 }),
-        ).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
 
-        await expect(page.getByText("Daglig insatsgräns")).toBeVisible();
-        await expect(page.getByText("Veckovis insatsgräns")).toBeVisible();
-        await expect(page.getByText("Månatlig insatsgräns")).toBeVisible();
+        // Platform tools section links to /settings for limit configuration
+        const settingsLinks = page.locator('a[href="/settings"]');
+        await expect(settingsLinks.first()).toBeVisible({ timeout: 5_000 });
+        const linkCount = await settingsLinks.count();
+        expect(linkCount).toBeGreaterThanOrEqual(1);
       },
     );
 
     test(
-      "responsible gambling page has update limits button",
+      "responsible gambling page has self-exclusion link",
       { tag: ["@compliance"] },
       async ({ page }) => {
-        const response = await page.goto("/settings/responsible-gambling");
+        await page.goto("/responsible-gambling");
         await dismissLimitsDialog(page);
-        if (!response || response.status() === 404 || page.url().includes("/login")) {
-          test.skip(true, "Page not accessible");
-          return;
-        }
 
         await expect(
-          page.getByRole("button", { name: /Uppdatera gränser/i }),
+          page.locator('a[href="/settings/self-exclusion"]').first(),
         ).toBeVisible({ timeout: 10_000 });
       },
     );
