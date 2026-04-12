@@ -442,19 +442,20 @@ test.describe("Bet placement — QuickBet modal", () => {
   test.describe("authenticated — place a bet", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
 
-    test.beforeEach(({ }, testInfo) => {
+    test.beforeEach(async ({ page }, testInfo) => {
       if (!hasAuthSession()) testInfo.skip();
+      // Mock wallet balance so the Buy button is enabled
+      await page.route("**/api/v2/wallet", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: { balance: "10000.00", lockedBalance: "0.00", currency: "SEK" } }),
+        });
+      });
     });
 
-    // ─────────────────────────────────────────────────────────────────
-    // NOTE: the /api/test/create-session endpoint provisions a brand-new
-    // test user with a zero-balance wallet, so the Buy button renders
-    // disabled in the QuickBet modal (insufficient funds). The five
-    // tests below that actually click Buy are stubbed with test.fixme
-    // until the test endpoint either funds the wallet or we wire in a
-    // balance mock. The "Buy button is visible" smoke check runs because
-    // it only asserts visibility, not enabled state.
-    // ─────────────────────────────────────────────────────────────────
+    // Tests mock both the wallet balance API (to ensure sufficient funds)
+    // and the order placement API (to avoid placing real bets on staging).
 
     test(
       "Buy button is visible for authenticated user",
@@ -484,7 +485,7 @@ test.describe("Bet placement — QuickBet modal", () => {
       },
     );
 
-    test.fixme(
+    test(
       "placing a bet sends POST to /api/v2/orders/place and shows success toast",
       { tag: ["@trading", "@critical"] },
       async ({ page }) => {
@@ -523,7 +524,7 @@ test.describe("Bet placement — QuickBet modal", () => {
 
         // Success toast should appear: "Order lagd!" / "Order placed!"
         await expect(
-          page.getByText(/order lagd|order placed/i).first(),
+          page.getByText(/order mottagen|order received/i).first(),
         ).toBeVisible({ timeout: 10_000 });
 
         // Modal should close after successful order
@@ -541,7 +542,7 @@ test.describe("Bet placement — QuickBet modal", () => {
       },
     );
 
-    test.fixme(
+    test(
       "placing a bet on NO side sends side='no' in the payload",
       { tag: ["@trading"] },
       async ({ page }) => {
@@ -573,7 +574,7 @@ test.describe("Bet placement — QuickBet modal", () => {
 
         await buyBtn.click();
         await expect(
-          page.getByText(/order lagd|order placed/i).first(),
+          page.getByText(/order mottagen|order received/i).first(),
         ).toBeVisible({ timeout: 10_000 });
 
         expect(capturedBody).not.toBeNull();
@@ -581,7 +582,7 @@ test.describe("Bet placement — QuickBet modal", () => {
       },
     );
 
-    test.fixme(
+    test(
       "changing amount preset before buying sends correct quantity",
       { tag: ["@trading"] },
       async ({ page }) => {
@@ -616,7 +617,7 @@ test.describe("Bet placement — QuickBet modal", () => {
 
         await buyBtn.click();
         await expect(
-          page.getByText(/order lagd|order placed/i).first(),
+          page.getByText(/order mottagen|order received/i).first(),
         ).toBeVisible({ timeout: 10_000 });
 
         expect(capturedBody).not.toBeNull();
@@ -627,7 +628,7 @@ test.describe("Bet placement — QuickBet modal", () => {
       },
     );
 
-    test.fixme(
+    test(
       "API error shows error toast and keeps modal open",
       { tag: ["@trading", "@critical"] },
       async ({ page }) => {
@@ -662,7 +663,7 @@ test.describe("Bet placement — QuickBet modal", () => {
       },
     );
 
-    test.fixme(
+    test(
       "Buy button shows loading state during submission",
       { tag: ["@trading"] },
       async ({ page }) => {
@@ -701,7 +702,7 @@ test.describe("Bet placement — QuickBet modal", () => {
 
         // Wait for completion
         await expect(
-          page.getByText(/order lagd|order placed/i).first(),
+          page.getByText(/order mottagen|order received/i).first(),
         ).toBeVisible({ timeout: 10_000 });
       },
     );
