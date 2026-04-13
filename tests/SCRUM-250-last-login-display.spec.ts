@@ -15,7 +15,7 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
   // Unauthenticated: login page should not show last login (no previous session)
   test("login page does not show a last login banner for unauthenticated users", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 8000 });
 
     // No last login banner should appear before the user has authenticated
     const hasLastLoginBanner = await page
@@ -37,13 +37,13 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
 
     test("authenticated user sees main content after login", async ({ page }) => {
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 8000 });
     });
 
     test("last login time is displayed after authentication (SIFS 9 kap. 5§)", async ({ page }) => {
       // Navigate to the home/dashboard — this is where last login should appear
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 8000 });
 
       // Look for a last login banner, toast, or inline text
       const hasLastLogin =
@@ -69,7 +69,7 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
 
           // SIFS compliance: this must eventually be true — mark as soft check for now
           // Feature may not be deployed yet (SCRUM-219 target: Q2 2026)
-          const hasMain = await page.locator("main").isVisible();
+          const hasMain = await page.locator("main").first().isVisible();
           expect(hasOnSettings || hasOnProfile || hasMain).toBeTruthy();
         } else {
           expect(hasOnProfile).toBeTruthy();
@@ -82,7 +82,7 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
     test("last login timestamp includes a date and time component", async ({ page }) => {
       // SIFS requires date + time + timezone to be shown
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 8000 });
 
       // Look for any text matching a date/time pattern near a 'last login' label
       // Acceptable formats: "2026-03-07 14:32", "07 Mar 2026, 14:32 UTC+1", etc.
@@ -98,7 +98,7 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
         expect(hasDateTime).toBeTruthy();
       } else {
         // Feature not yet deployed — verify page at minimum loads
-        const hasMain = await page.locator("main").isVisible();
+        const hasMain = await page.locator("main").first().isVisible();
         expect(hasMain).toBeTruthy();
       }
     });
@@ -106,7 +106,7 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
     test("last login display includes timezone or UTC offset", async ({ page }) => {
       // SIFS 9 kap. 5§: timestamp must include UTC offset
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 8000 });
 
       const lastLoginEl = page.getByText(/last login|senast inloggad|logged in at/i).first();
       const visible = await lastLoginEl.isVisible({ timeout: 8000 }).catch(() => false);
@@ -118,14 +118,14 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
         expect(hasTimezone).toBeTruthy();
       } else {
         // Feature not deployed yet
-        const hasMain = await page.locator("main").isVisible();
+        const hasMain = await page.locator("main").first().isVisible();
         expect(hasMain).toBeTruthy();
       }
     });
 
     test("last login banner or notification is dismissable", async ({ page }) => {
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 8000 });
 
       // Look for a close/dismiss button near the last login notification
       const lastLoginEl = page.getByText(/last login|senast inloggad|logged in at/i).first();
@@ -148,7 +148,7 @@ test.describe("SCRUM-250 — Last login time display (SIFS 9 kap. 5§)", () => {
         }
       } else {
         // Feature not yet deployed
-        const hasMain = await page.locator("main").isVisible();
+        const hasMain = await page.locator("main").first().isVisible();
         expect(hasMain).toBeTruthy();
       }
     });

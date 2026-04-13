@@ -3,57 +3,39 @@ import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
 test.describe("Remaining spec coverage", () => {
-  // ── SSR category filtering ────────────────────────────────────────
+  // ── Category nav ──────────────────────────────────────────────────
   test(
-    "home page with ?category param renders filter tabs",
-    { tag: ["@regression"] },
-    async ({ page }) => {
-      // The MarketFilterTabs component reads ?category from the URL and highlights
-      // the matching category tab. We navigate with a category param and verify
-      // the filter tab bar is present and functional.
-      await page.goto("/?category=Sports");
-      // The filter tabs container has aria-label="Market filters"
-      const filterBar = page.getByLabel("Market filters");
-      await expect(filterBar).toBeVisible({ timeout: 10_000 });
-
-      // The tab bar should contain the built-in view tabs (All, Live, New, etc.)
-      await expect(
-        filterBar.getByRole("button", { name: "All" })
-      ).toBeVisible();
-      await expect(
-        filterBar.getByRole("button", { name: "Live" })
-      ).toBeVisible();
-    }
-  );
-
-  // ── Featured market hero section ──────────────────────────────────
-  test(
-    "home page displays featured market section when available",
+    "home page renders the category tab navigation (SCRUM-797 Kalshi redesign)",
     { tag: ["@regression"] },
     async ({ page }) => {
       await page.goto("/");
-      // The FeaturedMarket component renders a "Featured" badge with a star.
-      // If no market is featured the section is absent — we check if it exists
-      // but don't fail the test when the backend has no featured market.
-      const featuredBadge = page.getByText("Featured", { exact: false });
-      const hasFeatured = await featuredBadge
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
+      const nav = page.getByRole("navigation", { name: /kategorier|categories/i });
+      await expect(nav).toBeVisible({ timeout: 10_000 });
+      // HomeCategoryTabs SSRs only "Trending"; other tabs load client-side from
+      // /api/v2/categories. Wait for at least one more tab to appear.
+      await expect(
+        nav.locator('a[href^="/category/"]').first()
+      ).toBeVisible({ timeout: 15_000 });
+    }
+  );
 
-      if (hasFeatured) {
-        // Verify the featured section contains Yes/No betting buttons
-        const yesButton = page.getByRole("button", { name: /Bet Yes/i });
-        const noButton = page.getByRole("button", { name: /Bet No/i });
-        await expect(yesButton.first()).toBeVisible();
-        await expect(noButton.first()).toBeVisible();
-      } else {
-        // No featured market from backend — that is acceptable
-        test.info().annotations.push({
-          type: "note",
-          description: "No featured market available from backend",
-        });
-      }
+  // ── Hero carousel of featured markets ─────────────────────────────
+  test(
+    "home page renders a hero carousel (SCRUM-797)",
+    { tag: ["@regression"] },
+    async ({ page }) => {
+      await page.goto("/");
+      // HeroCarousel has an sr-only h2 "Utvalda marknader" / "Featured prediction markets"
+      await expect(
+        page.getByRole("heading", { name: /utvalda|featured/i })
+      ).toBeAttached({ timeout: 10_000 });
+      // Prev/next controls — English or Swedish
+      await expect(
+        page.getByRole("button", { name: /föregående|previous/i })
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: /nästa|next/i })
+      ).toBeVisible();
     }
   );
 
@@ -168,34 +150,9 @@ test.describe("Remaining spec coverage", () => {
       }
     );
 
-    // ── Watchlist toggle (authenticated) ──────────────────────────
-    test(
-      "clicking watchlist star toggles aria-pressed state",
-      { tag: ["@regression"] },
-      async ({ page }) => {
-        await page.goto("/");
-        // Wait for market cards with watchlist buttons
-        const starButton = page
-          .getByRole("button", { name: /add to watchlist|remove from watchlist/i })
-          .first();
-        await expect(starButton).toBeVisible({ timeout: 10_000 });
-
-        // Read initial aria-pressed state
-        const initialPressed = await starButton.getAttribute("aria-pressed");
-        expect(initialPressed).toBeDefined();
-        expect(["true", "false"]).toContain(initialPressed);
-
-        // Click the star to toggle
-        await starButton.click();
-
-        // Wait for the state to change
-        const expectedNew = initialPressed === "true" ? "false" : "true";
-        await expect(starButton).toHaveAttribute(
-          "aria-pressed",
-          expectedNew,
-          { timeout: 5_000 }
-        );
-      }
-    );
+    // NOTE: The watchlist-star toggle test was removed because the Kalshi
+    // HomeMarketCard (SCRUM-797) no longer renders a watchlist star button.
+    // Watchlist management still exists via the /watchlist page for
+    // authenticated users; see tests/watchlist.spec.ts for coverage there.
   });
 });

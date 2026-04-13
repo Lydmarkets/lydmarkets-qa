@@ -13,7 +13,7 @@ export default defineConfig({
   ],
   use: {
     baseURL:
-      process.env.BASE_URL || "https://web-production-bb35.up.railway.app",
+      process.env.BASE_URL || "https://web-staging-71a7.up.railway.app",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },

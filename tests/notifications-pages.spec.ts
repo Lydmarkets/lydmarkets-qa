@@ -19,14 +19,14 @@ test.describe("Notifications — page loads", () => {
   );
 
   test(
-    "unauthenticated /watchlist redirects to login",
+    "unauthenticated /watchlist loads as a public page (SCRUM-797)",
     { tag: ["@smoke"] },
     async ({ browser }) => {
       const context = await browser.newContext();
       const page = await context.newPage();
       await page.goto("/watchlist");
-      await page.waitForURL(/\/login/, { timeout: 10_000 });
-      expect(page.url()).toMatch(/\/login/);
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
+      expect(page.url()).not.toMatch(/\/login/);
       await context.close();
     },
   );

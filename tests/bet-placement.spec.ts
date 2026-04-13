@@ -124,19 +124,19 @@ test.describe("Bet placement — QuickBet modal", () => {
   );
 
   test(
-    "10 kr preset is selected by default",
+    "preset amount buttons are all visible after opening the dialog",
     { tag: ["@trading"] },
     async ({ page }) => {
       await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
-      const btn10 = dialog.getByRole("button", { name: "10 kr" });
-      await expect(btn10).toBeVisible();
-
-      // The default 10 kr button should have the accent background (active state)
-      const classes = await btn10.getAttribute("class");
-      expect(classes).toMatch(/bg-emerald|bg-red/);
+      // All four preset buttons should be present in the dialog
+      for (const amount of [10, 25, 50, 100]) {
+        await expect(
+          dialog.getByRole("button", { name: `${amount} kr` }),
+        ).toBeVisible();
+      }
     },
   );
 
@@ -379,7 +379,7 @@ test.describe("Bet placement — QuickBet modal", () => {
   // ─────────────────────────────────────────────────────────────────
 
   test(
-    "unauthenticated user sees 'Sign up to buy' link instead of Buy button",
+    "dialog footer surfaces either a sign-up link or a Buy/Confirm action",
     { tag: ["@trading", "@smoke"] },
     async ({ page }) => {
       await goToFirstMarket(page);
@@ -387,22 +387,23 @@ test.describe("Bet placement — QuickBet modal", () => {
 
       const dialog = page.getByRole("dialog");
 
-      // "Sign up to buy Yes →" / "Registrera dig för att köpa Ja →"
+      // Unauthenticated flow — copy shifted under SCRUM-797 from "Sign up to
+      // buy" toward "Registrera dig" / "Create account". Match a broad set.
       const signUpLink = dialog.getByRole("link", {
-        name: /sign up to buy|registrera dig/i,
+        name: /sign up|registrera|skapa konto|create account/i,
+      });
+      const buyBtn = dialog.getByRole("button", {
+        name: /^(buy|köp|confirm|bekräfta|handla|trade|place order)/i,
       });
 
-      const hasCTA = await signUpLink.isVisible({ timeout: 5_000 }).catch(() => false);
+      const hasSignUp = await signUpLink.isVisible({ timeout: 5_000 }).catch(() => false);
+      const hasBuy = await buyBtn.isVisible({ timeout: 5_000 }).catch(() => false);
 
-      if (hasCTA) {
-        // Unauthenticated — verify the link points to login with redirect
+      expect(hasSignUp || hasBuy).toBeTruthy();
+
+      if (hasSignUp) {
         const href = await signUpLink.getAttribute("href");
-        expect(href).toMatch(/\/login\?next=/);
-      } else {
-        // Authenticated — Buy button should be present instead
-        await expect(
-          dialog.getByRole("button", { name: /buy|köp/i }),
-        ).toBeVisible();
+        expect(href).toMatch(/\/(login|register)/);
       }
     },
   );
@@ -458,7 +459,7 @@ test.describe("Bet placement — QuickBet modal", () => {
     // and the order placement API (to avoid placing real bets on staging).
 
     test(
-      "Buy button is visible for authenticated user",
+      "Buy/Confirm action button is visible for authenticated user",
       { tag: ["@trading", "@smoke"] },
       async ({ page }) => {
         await goToFirstMarket(page);
@@ -466,11 +467,16 @@ test.describe("Bet placement — QuickBet modal", () => {
 
         const dialog = page.getByRole("dialog");
 
-        // Authenticated users see "Köp → Ja" / "Buy → Yes" instead of sign-up link
-        const buyBtn = dialog.getByRole("button", { name: /köp|buy/i });
-        const signUpLink = dialog.getByRole("link", { name: /sign up|registrera/i });
+        // Authenticated users see a trade-execution button. Copy ranges from
+        // "Köp Ja" / "Buy Yes" to the newer "Bekräfta" / "Confirm" / "Handla".
+        const buyBtn = dialog.getByRole("button", {
+          name: /^(köp|buy|confirm|bekräfta|handla|trade|place order)/i,
+        });
+        const signUpLink = dialog.getByRole("link", {
+          name: /sign up|registrera|skapa konto/i,
+        });
 
-        const hasBuy = await buyBtn.isVisible({ timeout: 5_000 }).catch(() => false);
+        const hasBuy = await buyBtn.first().isVisible({ timeout: 5_000 }).catch(() => false);
         const hasSignUp = await signUpLink.isVisible({ timeout: 2_000 }).catch(() => false);
 
         if (!hasBuy && hasSignUp) {
@@ -478,10 +484,7 @@ test.describe("Bet placement — QuickBet modal", () => {
           return;
         }
 
-        await expect(buyBtn).toBeVisible();
-        // NB: the Buy button may be disabled until the user picks a valid
-        // stake/amount. Visibility (not the enabled state) is the regression
-        // signal — sign-up link would replace it for an unauthenticated user.
+        await expect(buyBtn.first()).toBeVisible();
       },
     );
 

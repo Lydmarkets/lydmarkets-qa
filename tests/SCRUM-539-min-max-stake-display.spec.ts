@@ -1,43 +1,61 @@
 import { test, expect } from "../fixtures/base";
 import { goToFirstMarket } from "../helpers/go-to-market";
 
+// SCRUM-539: Min/max stake display on order panel.
+// Updated for SCRUM-797 — button copy on market detail is now "Ja XX%" /
+// "Nej XX%" or "Yes XX%" / "No XX%", matching the home-page probability pill
+// naming. The modal label text is also bilingual. Assertions match either.
+
+async function openDialogForYes(page: import("@playwright/test").Page) {
+  await goToFirstMarket(page);
+  const yesBtn = page
+    .getByRole("button", { name: /^(buy yes|yes\s*\d|ja\s*\d)/i })
+    .first();
+  await expect(yesBtn).toBeVisible({ timeout: 10_000 });
+  await yesBtn.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible({ timeout: 5_000 });
+  return dialog;
+}
+
+async function openDialogForNo(page: import("@playwright/test").Page) {
+  await goToFirstMarket(page);
+  const noBtn = page
+    .getByRole("button", { name: /^(buy no|no\s*\d|nej\s*\d)/i })
+    .first();
+  await expect(noBtn).toBeVisible({ timeout: 10_000 });
+  await noBtn.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible({ timeout: 5_000 });
+  return dialog;
+}
+
 test.describe("SCRUM-539: Min/max stake display on order panel", () => {
   test(
-    "order dialog shows min/max stake text when Buy Yes is clicked",
+    "order dialog shows min/max stake text when Yes is clicked",
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
-
-      // Click the first "Buy Yes" button to open the order dialog
-      const buyYesBtn = page.getByRole("button", { name: /buy yes/i }).first();
-      await expect(buyYesBtn).toBeVisible({ timeout: 10_000 });
-      await buyYesBtn.click();
-
-      // Verify the order dialog opens
-      const dialog = page.getByRole("dialog");
-      await expect(dialog).toBeVisible({ timeout: 5_000 });
-
-      // Verify min/max stake text is displayed
-      await expect(dialog.getByText(/min:\s*\d/i)).toBeVisible({ timeout: 5_000 });
-      await expect(dialog.getByText(/max:\s*[\d.,]/i)).toBeVisible();
+      const dialog = await openDialogForYes(page);
+      await expect(
+        dialog.getByText(/min:?\s*\d|minimum.*\d/i).first()
+      ).toBeVisible({ timeout: 5_000 });
+      await expect(
+        dialog.getByText(/max:?\s*[\d.,]|maximum.*\d/i).first()
+      ).toBeVisible();
     },
   );
 
   test(
-    "order dialog shows min/max stake text when Buy No is clicked",
+    "order dialog shows min/max stake text when No is clicked",
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
-
-      const buyNoBtn = page.getByRole("button", { name: /buy no/i }).first();
-      await expect(buyNoBtn).toBeVisible({ timeout: 10_000 });
-      await buyNoBtn.click();
-
-      const dialog = page.getByRole("dialog");
-      await expect(dialog).toBeVisible({ timeout: 5_000 });
-
-      await expect(dialog.getByText(/min:\s*\d/i)).toBeVisible({ timeout: 5_000 });
-      await expect(dialog.getByText(/max:\s*[\d.,]/i)).toBeVisible();
+      const dialog = await openDialogForNo(page);
+      await expect(
+        dialog.getByText(/min:?\s*\d|minimum.*\d/i).first()
+      ).toBeVisible({ timeout: 5_000 });
+      await expect(
+        dialog.getByText(/max:?\s*[\d.,]|maximum.*\d/i).first()
+      ).toBeVisible();
     },
   );
 
@@ -45,16 +63,7 @@ test.describe("SCRUM-539: Min/max stake display on order panel", () => {
     "order dialog shows preset amount buttons",
     { tag: ["@regression"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
-
-      const buyYesBtn = page.getByRole("button", { name: /buy yes/i }).first();
-      await expect(buyYesBtn).toBeVisible({ timeout: 10_000 });
-      await buyYesBtn.click();
-
-      const dialog = page.getByRole("dialog");
-      await expect(dialog).toBeVisible({ timeout: 5_000 });
-
-      // Preset amount buttons should be visible
+      const dialog = await openDialogForYes(page);
       await expect(dialog.getByRole("button", { name: /10 kr/i })).toBeVisible();
       await expect(dialog.getByRole("button", { name: /25 kr/i })).toBeVisible();
       await expect(dialog.getByRole("button", { name: /50 kr/i })).toBeVisible();
@@ -63,32 +72,33 @@ test.describe("SCRUM-539: Min/max stake display on order panel", () => {
   );
 
   test(
-    "order dialog shows cost breakdown and profit estimate",
+    "order dialog shows cost breakdown and profit estimate after selecting an amount",
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
+      const dialog = await openDialogForYes(page);
 
-      const buyYesBtn = page.getByRole("button", { name: /buy yes/i }).first();
-      await expect(buyYesBtn).toBeVisible({ timeout: 10_000 });
-      await buyYesBtn.click();
+      // Select a preset to trigger the breakdown
+      await dialog
+        .getByRole("button", { name: "10 kr" })
+        .click()
+        .catch(() => {});
 
-      const dialog = page.getByRole("dialog");
-      await expect(dialog).toBeVisible({ timeout: 5_000 });
-
-      // Select a preset to trigger the breakdown (dialog now defers until amount selected)
-      await dialog.getByRole("button", { name: "10 kr" }).click().catch(() => {});
-
-      // Skip if market has 0-limit (no breakdown possible)
-      const hasBreakdown = await dialog.getByText(/kostnad|cost/i)
-        .isVisible({ timeout: 3_000 }).catch(() => false);
+      // Skip gracefully if the market has 0-stake limits (no breakdown possible)
+      const hasBreakdown = await dialog
+        .getByText(/kostnad|cost/i)
+        .first()
+        .isVisible({ timeout: 3_000 })
+        .catch(() => false);
       if (!hasBreakdown) {
         test.skip(true, "Market has 0 stake limits — no breakdown available");
         return;
       }
 
-      await expect(dialog.getByText(/kostnad|cost/i)).toBeVisible({ timeout: 5_000 });
-      await expect(dialog.getByText(/vinst|profit/i)).toBeVisible();
-      await expect(dialog.getByText(/max förlust|max loss/i)).toBeVisible();
+      await expect(dialog.getByText(/kostnad|cost/i).first()).toBeVisible({
+        timeout: 5_000,
+      });
+      await expect(dialog.getByText(/vinst|profit/i).first()).toBeVisible();
+      await expect(dialog.getByText(/max förlust|max loss/i).first()).toBeVisible();
     },
   );
 });

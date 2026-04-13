@@ -1,213 +1,105 @@
 import { test, expect } from "../fixtures/base";
-// SCRUM-228: E2E tests for SCRUM-186 — Market card visual design
-// (thumbnail, Yes/No pills, volume, likes, clickable navigation)
-//
-// Acceptance criteria:
-// 1. Market card shows thumbnail image with placeholder fallback
-// 2. Yes pill renders (green, shows probability %)
-// 3. No pill renders (red/pink, shows probability %)
-// 4. Volume is displayed and formatted (e.g. "1.2k")
-// 5. Like/bookmark count is visible
-// 6. Card is clickable and navigates to market detail page
-// 7. Layout is responsive (2 col mobile → 3-4 col desktop)
 
-test.describe("SCRUM-228 — Market card visual design (SCRUM-186)", () => {
-  test("markets list page loads without error", async ({ page }) => {
+// SCRUM-228 updated for SCRUM-797 Kalshi-style redesign:
+// The new HomeMarketCard is "question first, odds second" — a single card
+// renders the market question as an <h3> heading with a Yes probability pill
+// (Ja XX%) and a No pill (Nej XX%). Thumbnails, volume badges, and bookmark
+// counts were intentionally removed in the redesign. Yes% + No% still sums
+// to ~100 via LMSR pricing.
+
+test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-797)", () => {
+  test("home page loads without error", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 8000 });
   });
 
-  test("at least one market card is visible on the home/markets page", async ({ page }) => {
+  test("home page renders at least one market card with a question heading", async ({
+    page,
+  }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    // Market cards — try accessible selectors
-    const cards = page.getByRole("article").first();
-    const hasCards =
-      (await cards.isVisible({ timeout: 8000 }).catch(() => false)) ||
-      // Fallback: look for Yes/No pills which are unique to market cards
-      (await page.getByText(/yes \d+%|no \d+%/i).first().isVisible({ timeout: 8000 }).catch(() => false)) ||
-      // Fallback: clickable card links in main content
-      (await page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first().isVisible({ timeout: 8000 }).catch(() => false));
-
-    expect(hasCards).toBeTruthy();
+    const headings = page.getByRole("heading", { level: 3 });
+    await expect(headings.first()).toBeVisible({ timeout: 10000 });
+    const count = await headings.count();
+    expect(count).toBeGreaterThan(0);
   });
 
-  test("market card shows a Yes probability pill", async ({ page }) => {
+  test("market card shows a Yes probability pill button", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    // Yes pill — should show "Yes XX%" or just a percentage in the Yes section
-    const hasYesPill =
-      (await page.getByText(/^yes\s+\d+%?$/i).first().isVisible({ timeout: 8000 }).catch(() => false)) ||
-      (await page.getByText(/yes.*\d+%/i).first().isVisible({ timeout: 8000 }).catch(() => false)) ||
-      // Generic: any button/span with "yes" text
-      (await page.getByRole("button", { name: /yes/i }).first().isVisible({ timeout: 5000 }).catch(() => false));
-
-    expect(hasYesPill).toBeTruthy();
+    await expect(
+      page.getByRole("button", { name: /^(yes|ja)\s+\d+%/i }).first()
+    ).toBeVisible({ timeout: 10000 });
   });
 
-  test("market card shows a No probability pill", async ({ page }) => {
+  test("market card shows a No probability pill button", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    const hasNoPill =
-      (await page.getByText(/^no\s+\d+%?$/i).first().isVisible({ timeout: 8000 }).catch(() => false)) ||
-      (await page.getByText(/no.*\d+%/i).first().isVisible({ timeout: 8000 }).catch(() => false)) ||
-      (await page.getByRole("button", { name: /^no$/i }).first().isVisible({ timeout: 5000 }).catch(() => false));
-
-    expect(hasNoPill).toBeTruthy();
+    await expect(
+      page.getByRole("button", { name: /^(no|nej)\s+\d+%/i }).first()
+    ).toBeVisible({ timeout: 10000 });
   });
 
-  test("market card shows question/title text", async ({ page }) => {
-    await page.goto("/markets");
-    // Wait for market card links specifically
-    const marketLinks = page.locator('main a[href*="/markets/"]');
-    await expect(marketLinks.first()).toBeVisible({ timeout: 15_000 });
-    const count = await marketLinks.count();
-    expect(count).toBeGreaterThanOrEqual(1);
-
-    // Market cards contain a heading with the question text
-    const heading = page.locator("main").getByRole("heading").first();
-    await expect(heading).toBeVisible({ timeout: 8_000 });
-    const text = await heading.textContent();
-    expect(text!.trim().length).toBeGreaterThan(0);
-  });
-
-  test("market card shows visual content (image, probability bars, or Yes/No buttons)", async ({ page }) => {
+  test("market card is wrapped in a clickable link to the market detail page", async ({
+    page,
+  }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    // Market cards no longer use thumbnails — verify card content renders instead
-    const hasCards = await page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first().isVisible({ timeout: 8000 }).catch(() => false);
-    const hasYesNo = await page.getByRole("button", { name: /yes|no/i }).first().isVisible({ timeout: 5000 }).catch(() => false);
-
-    // Fallback: check for any img element in the markets section (older design)
-    const hasImage = await page.locator("main").getByRole("img").first().isVisible({ timeout: 3000 }).catch(() => false);
-
-    expect(hasCards || hasYesNo || hasImage).toBeTruthy();
-  });
-
-  test("market card shows a volume indicator", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    // Volume might appear as "1.2k", "1,234 trades", "Vol: 1.2k", etc.
-    const hasVolume =
-      (await page.getByText(/vol|volume|\d+\.?\d*k?\s*trades?/i).first().isVisible({ timeout: 8000 }).catch(() => false)) ||
-      (await page.getByText(/\d+[,.\s]\d+k?/).first().isVisible({ timeout: 5000 }).catch(() => false));
-
-    // Volume display may not yet be implemented — page load is the fallback
-    const hasMain = await page.locator("main").isVisible();
-    expect(hasVolume || hasMain).toBeTruthy();
-  });
-
-  test("market card shows a like or bookmark count", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    // Like/bookmark count — may appear as a heart icon with a number, bookmark icon, etc.
-    const hasLikes =
-      (await page.getByRole("button", { name: /like|bookmark|heart|save|gilla|bokmärk|bevaka|watchlist/i }).first().isVisible({ timeout: 8000 }).catch(() => false));
-
-    // Like count may not yet be implemented
-    const hasMain = await page.locator("main").isVisible();
-    expect(hasLikes || hasMain).toBeTruthy();
+    const marketLink = page.locator('a[href*="/markets/"]').first();
+    await expect(marketLink).toBeVisible({ timeout: 10000 });
+    const href = await marketLink.getAttribute("href");
+    expect(href).toMatch(/\/markets\/[a-zA-Z0-9-]+/);
   });
 
   test("clicking a market card navigates to the market detail page", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    // MarketCard wraps its content in an overlay <Link> that has no text
-    // content of its own (text lives in sibling elements), so match by href
-    // instead of text.
-    const marketLink = page.locator('main a[href*="/markets/"]').first();
-    await expect(marketLink).toBeVisible({ timeout: 8000 });
-
+    const marketLink = page.locator('a[href*="/markets/"]').first();
+    await expect(marketLink).toBeVisible({ timeout: 10000 });
     const href = await marketLink.getAttribute("href");
-    expect(href).toMatch(/\/markets\//);
-
-    // Navigate directly via the extracted href — clicking the overlay link
-    // can be intercepted by the stacked Yes/No buttons on the card.
     await page.goto(href!);
-    await page.waitForURL(/\/markets\//, { timeout: 10000 });
-    expect(page.url()).toContain("/markets/");
+    await expect(page).toHaveURL(/\/markets\//);
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
   });
 
-  test("market list layout is responsive — shows multiple cards on desktop", async ({ page }) => {
-    // Desktop: expect 3-4 columns (at least 2 visible cards)
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto("/markets");
-    const marketLinks = page.locator('main a[href*="/markets/"]');
-    await expect(marketLinks.first()).toBeVisible({ timeout: 15_000 });
-    const count = await marketLinks.count();
-    expect(count).toBeGreaterThanOrEqual(1);
-  });
-
-  test("market list layout is responsive — shows cards on mobile viewport", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  test("Yes pill probability percentage is a number between 0-100", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    const marketLinks = page.locator("main").getByRole("link").filter({ hasText: /.+/ });
-    const hasCards = await marketLinks.first().isVisible({ timeout: 8000 }).catch(() => false);
-
-    // Cards should still be visible on mobile (2-col layout)
-    const hasMain = await page.locator("main").isVisible();
-    expect(hasCards || hasMain).toBeTruthy();
+    const yesPill = page.getByRole("button", { name: /^(yes|ja)\s+\d+%/i }).first();
+    await expect(yesPill).toBeVisible({ timeout: 10000 });
+    const label = await yesPill.getAttribute("aria-label");
+    const match = label?.match(/(yes|ja)\s+(\d+)%/i);
+    expect(match).not.toBeNull();
+    const pct = Number(match![2]);
+    expect(pct).toBeGreaterThanOrEqual(0);
+    expect(pct).toBeLessThanOrEqual(100);
   });
 
-  test("Yes pill probability percentage is a valid number between 0-100", async ({ page }) => {
+  test("Yes + No probabilities on a card sum to approximately 100", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
+    // Find a card that has both a Ja and Nej button referencing the same question
+    const yesPill = page.getByRole("button", { name: /^(yes|ja)\s+\d+%/i }).first();
+    await expect(yesPill).toBeVisible({ timeout: 10000 });
+    const yesLabel = await yesPill.getAttribute("aria-label");
+    const question = yesLabel?.split("—")[1]?.trim();
+    expect(question).toBeTruthy();
 
-    // Find Yes pill text and validate the percentage
-    const yesPillEl = page.getByText(/yes\s+\d+%?/i).first();
-    const visible = await yesPillEl.isVisible({ timeout: 8000 }).catch(() => false);
+    const noPill = page
+      .getByRole("button", { name: new RegExp(`^(no|nej)\\s+\\d+%.*${escapeRegExp(question!)}`, "i") })
+      .first();
+    await expect(noPill).toBeVisible({ timeout: 10000 });
+    const noLabel = await noPill.getAttribute("aria-label");
 
-    if (visible) {
-      const text = await yesPillEl.innerText();
-      const match = text.match(/(\d+)/);
-      if (match) {
-        const percent = parseInt(match[1], 10);
-        expect(percent).toBeGreaterThanOrEqual(0);
-        expect(percent).toBeLessThanOrEqual(100);
-      }
-    } else {
-      const hasMain = await page.locator("main").isVisible();
-      expect(hasMain).toBeTruthy();
-    }
+    const yesPct = Number(yesLabel!.match(/(yes|ja)\s+(\d+)%/i)![2]);
+    const noPct = Number(noLabel!.match(/(no|nej)\s+(\d+)%/i)![2]);
+    expect(yesPct + noPct).toBeGreaterThanOrEqual(99);
+    expect(yesPct + noPct).toBeLessThanOrEqual(101);
   });
 
-  test("Yes % + No % adds up to approximately 100 on a market card", async ({ page }) => {
+  test("market list layout renders cards on a mobile viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 851 });
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    // Get the first market card and extract Yes/No percentages
-    const firstCard = page.locator("main").getByRole("link").filter({ hasText: /.+/ }).first();
-    const cardVisible = await firstCard.isVisible({ timeout: 8000 }).catch(() => false);
-
-    if (!cardVisible) {
-      const hasMain = await page.locator("main").isVisible();
-      expect(hasMain).toBeTruthy();
-      return;
-    }
-
-    // Get text from the card's parent container (article or list item)
-    const cardContainer = page.getByRole("article").first().or(firstCard);
-    const cardText = await cardContainer.innerText().catch(() => "");
-    const matches = cardText.match(/(\d+)%/g);
-
-    if (matches && matches.length >= 2) {
-      const percents = matches.map(m => parseInt(m, 10));
-      const sum = percents[0] + percents[1];
-      // Sum should be close to 100 (allowing minor rounding)
-      expect(Math.abs(sum - 100)).toBeLessThanOrEqual(2);
-    } else {
-      // Less than 2 percentages found — feature may not be deployed
-      const hasMain = await page.locator("main").isVisible();
-      expect(hasMain).toBeTruthy();
-    }
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("heading", { level: 3 }).first()
+    ).toBeVisible({ timeout: 10000 });
   });
 });
+
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

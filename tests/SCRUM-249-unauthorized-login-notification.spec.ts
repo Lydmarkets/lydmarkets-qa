@@ -22,7 +22,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
 
   test("login page renders with BankID sign-in options", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     await expect(
       page.getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i }).first()
     ).toBeVisible({ timeout: 8000 });
@@ -32,7 +32,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
     page,
   }) => {
     await page.goto("/login");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
 
     // There should be no pre-existing security alert on a clean visit
     const hasSecurityAlert = await page
@@ -41,7 +41,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
       .isVisible({ timeout: 3000 })
       .catch(() => false);
     // This may or may not be present; just verify the page renders
-    const hasPage = await page.locator("main").isVisible();
+    const hasPage = await page.locator("main").first().isVisible();
     expect(hasPage).toBeTruthy();
     // The alert should only appear post-login, not on the login page itself
     expect(hasSecurityAlert || !hasSecurityAlert).toBeTruthy(); // soft — just document presence
@@ -62,7 +62,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
       page,
     }) => {
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
 
       // Look for a notification bell button — various aria labels / icons
       const hasBell = await page
@@ -77,13 +77,13 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
         .isVisible({ timeout: 5000 })
         .catch(() => false);
 
-      const hasPage = await page.locator("main").isVisible();
+      const hasPage = await page.locator("main").first().isVisible();
       expect(hasBell || hasBellIcon || hasPage).toBeTruthy();
     });
 
     test("clicking NotificationBell opens the notifications panel", async ({ page }) => {
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
 
       const bellBtn = page
         .getByRole("button", { name: /notification|bell|alert/i })
@@ -99,14 +99,14 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
             .first()
         ).toBeVisible({ timeout: 8000 });
       } else {
-        const hasPage = await page.locator("main").isVisible();
+        const hasPage = await page.locator("main").first().isVisible();
         expect(hasPage).toBeTruthy();
       }
     });
 
     test("notifications panel renders a list (even if empty)", async ({ page }) => {
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
 
       const bellBtn = page
         .getByRole("button", { name: /notification|bell|alert/i })
@@ -133,7 +133,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
           .catch(() => false);
         expect(hasList || hasEmpty || hasPanel).toBeTruthy();
       } else {
-        const hasPage = await page.locator("main").isVisible();
+        const hasPage = await page.locator("main").first().isVisible();
         expect(hasPage).toBeTruthy();
       }
     });
@@ -168,7 +168,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
       });
 
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
 
       const bellBtn = page
         .getByRole("button", { name: /notification|bell|alert/i })
@@ -185,7 +185,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
         ).toBeVisible({ timeout: 8000 });
       } else {
         // Notification bell not rendered — feature may be behind a flag
-        const hasPage = await page.locator("main").isVisible();
+        const hasPage = await page.locator("main").first().isVisible();
         expect(hasPage).toBeTruthy();
       }
     });
@@ -216,7 +216,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
       });
 
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
 
       // A badge or numeric count should be visible on/near the bell
       const hasBadge = await page
@@ -233,7 +233,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
         .isVisible({ timeout: 5000 })
         .catch(() => false);
 
-      const hasPage = await page.locator("main").isVisible();
+      const hasPage = await page.locator("main").first().isVisible();
       expect(hasBadge || hasBellCount || hasPage).toBeTruthy();
     });
 
@@ -246,7 +246,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
         return;
       }
 
-      await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     });
   });
 
