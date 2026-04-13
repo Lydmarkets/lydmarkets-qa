@@ -21,7 +21,7 @@ test.describe("SCRUM-247 — 90-day interrupted market auto-close admin UI (SCRU
 
   test("market detail page renders for an active market", async ({ page }) => {
     await page.goto("/markets");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
   });
 
   test("interrupted market shows a status indicator on the public market list", async ({
@@ -58,7 +58,7 @@ test.describe("SCRUM-247 — 90-day interrupted market auto-close admin UI (SCRU
     });
 
     await page.goto("/markets");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
 
     // With the mocked data, an interrupted/suspended status label should appear
     const hasInterruptedLabel = await page
@@ -67,7 +67,7 @@ test.describe("SCRUM-247 — 90-day interrupted market auto-close admin UI (SCRU
       .isVisible({ timeout: 8000 })
       .catch(() => false);
 
-    const hasPage = await page.locator("main").isVisible();
+    const hasPage = await page.locator("main").first().isVisible();
     expect(hasInterruptedLabel || hasPage).toBeTruthy();
   });
 

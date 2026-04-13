@@ -29,7 +29,9 @@ test.describe("Trading flows", () => {
   });
 
   test("auth-protected pages redirect to login when unauthenticated", async ({ page }) => {
-    for (const route of ["/portfolio", "/wallet", "/watchlist"]) {
+    // Post-SCRUM-797 /watchlist is publicly browsable; only /portfolio and
+    // /wallet enforce auth redirects.
+    for (const route of ["/portfolio", "/wallet"]) {
       await page.goto(route);
       await page.waitForURL(/\/login/, { timeout: 8000 });
       expect(page.url()).toMatch(/\/login/);

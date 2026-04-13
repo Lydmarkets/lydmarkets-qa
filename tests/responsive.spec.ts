@@ -23,7 +23,7 @@ test.describe("Responsive design tests", () => {
     // PR-903: unauthenticated mobile users no longer see a hamburger; the
     // header shows Sign in and Sign up inline instead.
     await expect(page.getByRole("link", { name: /sign in|logga in/i }).first()).toBeVisible();
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
 
     await context.close();
   });
@@ -34,7 +34,7 @@ test.describe("Responsive design tests", () => {
 
     await page.goto("/");
     await expect(page.locator("nav").first()).toBeVisible();
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
 
     await context.close();
   });
@@ -45,7 +45,7 @@ test.describe("Responsive design tests", () => {
 
     await page.goto("/");
     await expect(page.locator("nav").first()).toBeVisible();
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
 
     await context.close();
   });
@@ -55,7 +55,7 @@ test.describe("Responsive design tests", () => {
     const page = await context.newPage();
 
     await page.goto("/markets");
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
 
     await context.close();
   });
@@ -65,7 +65,7 @@ test.describe("Responsive design tests", () => {
     const page = await context.newPage();
 
     await page.goto("/markets");
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
 
     await context.close();
   });

@@ -167,7 +167,7 @@ setup("authenticate", { timeout: 90_000 }, async ({ page, baseURL }) => {
     return;
   }
 
-  const base = baseURL || "https://web-production-bb35.up.railway.app";
+  const base = baseURL || "https://web-staging-71a7.up.railway.app";
 
   // Force English locale on the saved storageState — middleware reads this
   // cookie to decide which language to serve. Tests use English text selectors.

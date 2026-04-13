@@ -20,11 +20,12 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("protected route /watchlist redirects unauthenticated users", async ({ page }) => {
+  test("/watchlist is publicly reachable after SCRUM-797", async ({ page }) => {
     await page.goto("/watchlist");
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
     const url = page.url();
-    // Either redirect to login or stays on /watchlist — both are valid app behaviour
-    expect(url.includes("/login") || url.includes("/watchlist")).toBeTruthy();
+    // /watchlist is now a public page — it must not redirect to /login
+    expect(url).not.toMatch(/\/login/);
   });
 
   test("login page is accessible at /login", async ({ page }) => {
@@ -38,41 +39,37 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
     await page.goto("/");
     // Should stay on home, not be pushed to /login
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("public market detail page does not redirect unauthenticated users", async ({ page }) => {
-    await page.goto("/markets");
-    await page.getByRole("button", { name: /^(all|alla)\s*\d*$/i }).first().click().catch(() => {});
-    const marketLink = page.locator('main a[href*="/markets/"]').first();
+    await page.goto("/");
+    const marketLink = page.locator('a[href*="/markets/"]').first();
     await expect(marketLink).toBeVisible({ timeout: 15_000 });
-    // Navigate directly instead of clicking — avoids flaky click interception
     const href = await marketLink.getAttribute("href");
     await page.goto(href!);
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
   });
 
   test("reloading the home page preserves public content without redirect", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     // Reload
     await page.reload();
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     await expect(page).not.toHaveURL(/\/login/);
   });
 
   test("reloading a market detail page keeps user on that page", async ({ page }) => {
-    await page.goto("/markets");
-    await page.getByRole("button", { name: /^(all|alla)\s*\d*$/i }).first().click().catch(() => {});
-    const marketLink = page.locator('main a[href*="/markets/"]').first();
+    await page.goto("/");
+    const marketLink = page.locator('a[href*="/markets/"]').first();
     await expect(marketLink).toBeVisible({ timeout: 15_000 });
-    // Navigate directly instead of clicking — avoids flaky click interception
     const href = await marketLink.getAttribute("href");
     await page.goto(href!);
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     await page.reload();
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     await expect(page).toHaveURL(new RegExp("/markets/"));
   });
 

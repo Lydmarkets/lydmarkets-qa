@@ -5,7 +5,7 @@ test.describe("Public pages — /blocked and /excluded", () => {
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/blocked");
-      await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
 
       const hasHeading = await page
         .getByRole("heading")
@@ -28,7 +28,7 @@ test.describe("Public pages — /blocked and /excluded", () => {
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/excluded");
-      await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
 
       const hasHeading = await page
         .getByRole("heading")

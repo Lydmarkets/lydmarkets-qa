@@ -23,23 +23,14 @@ test.describe("SCRUM-408: Mobile navigation — unauthenticated", () => {
     ).toBeVisible();
   });
 
-  test("bottom nav shows Markets, My Bets, Wallet, More tabs", async ({ page }) => {
+  test("unauthenticated mobile home has category tab nav (no BottomNav)", async ({ page }) => {
+    // SCRUM-797: the Kalshi HomeHeader does NOT render a BottomNav for
+    // unauthenticated visitors on `/`. The category tab nav replaces it.
     await page.goto("/");
     await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
-
-    await expect(page.getByRole("link", { name: /markets|marknader/i }).last()).toBeVisible();
-    await expect(page.getByRole("link", { name: /my bets|mina spel/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /wallet|plånbok/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: "More", exact: true })).toBeVisible();
-  });
-
-  test("My Bets tab navigates to /portfolio", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
-
-    await page.getByRole("link", { name: /my bets|mina spel/i }).click();
-    // Protected route — either navigates to portfolio or redirects to login
-    await page.waitForURL(/\/(portfolio|login)/, { timeout: 10_000 });
+    await expect(
+      page.getByRole("navigation", { name: /kategorier|categories/i })
+    ).toBeVisible({ timeout: 10_000 });
   });
 });
 

@@ -1,200 +1,103 @@
 import { test, expect } from "../fixtures/base";
 import { hasAuthSession } from "../helpers/has-auth";
 
-// SCRUM-227: E2E tests for SCRUM-73 — Landing / welcome page (unauthenticated home)
-//
-// SCRUM-73 moves the markets page to `/`, redirects `/markets` → `/`, and ensures
-// the OnboardingBanner is an inline banner (no modal).
-//
-// Acceptance criteria (from SCRUM-73 "Done When"):
-// 1. `/` renders the full markets page (filter tabs, market grid, activity feed, onboarding banner)
-// 2. `/markets` redirects to `/`
-// 3. Unauthenticated users can access `/` without being redirected to login
-// 4. Authenticated users land on `/` and see the markets page (no extra redirect)
-// 5. OnboardingBanner renders as an inline banner (no modal/popup)
-// 6. No regression on other authenticated routes (portfolio, wallet, etc.)
+// SCRUM-227 updated for SCRUM-797 Kalshi-style redesign:
+// `/` now renders the Kalshi layout via HomeHeader — hero carousel, quick-opinion
+// row, promo banner, category sections, and sidebar (desktop). `/markets` is a
+// server-side 307 redirect to `/`. The legacy activity feed, OnboardingBanner,
+// and inline market filter tabs no longer exist; browsing happens via category
+// tabs in the header and the hero/quick-opinion/category sections.
 
-test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
-  // ---------------------------------------------------------------------------
-  // Acceptance criterion 3: unauthenticated users can access `/` without redirect
-  // ---------------------------------------------------------------------------
-
+test.describe("SCRUM-227 — Landing / home page (Kalshi redesign, SCRUM-797)", () => {
   test("root `/` is accessible to unauthenticated users without redirect to login", async ({
     page,
   }) => {
     await page.goto("/");
-    // Must NOT redirect to /login — stay on /
     expect(page.url()).not.toMatch(/\/login/);
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
   });
 
-  // ---------------------------------------------------------------------------
-  // Acceptance criterion 1: full markets page renders at `/`
-  // ---------------------------------------------------------------------------
-
-  test("root `/` renders a market grid or list of markets", async ({ page }) => {
+  test("root `/` renders a hero carousel of featured markets", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-
-    // Look for market cards, list items, or market-related headings
-    const hasMarketCard = await page
-      .locator('[data-testid*="market"], .market-card, [aria-label*="market" i]')
-      .first()
-      .isVisible({ timeout: 8000 })
-      .catch(() => false);
-
-    const hasMarketLink = await page
-      .getByRole("link")
-      .filter({ hasText: /YES|NO|\d+%|\d+ bets?/i })
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-
-    const hasMarketHeading = await page
-      .getByRole("heading")
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-
-    expect(hasMarketCard || hasMarketLink || hasMarketHeading).toBeTruthy();
+    await expect(
+      page.getByRole("heading", { name: /utvalda|featured/i })
+    ).toBeAttached({ timeout: 10000 });
   });
 
-  test("root `/` renders market filter tabs or category navigation", async ({ page }) => {
+  test("root `/` renders a 'What do you think?' quick-opinion row", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-
-    // Filter tabs could be "All", "Sports", "Politics", etc.
-    const hasFilterTab = await page
-      .locator('[role="tab"], [role="tablist"], nav a')
-      .first()
-      .isVisible({ timeout: 8000 })
-      .catch(() => false);
-
-    const hasCategoryBtn = await page
-      .getByRole("button", { name: /all|sports|politics|finance|crypto|featured/i })
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-
-    const hasPage = await page.locator("main").isVisible();
-    expect(hasFilterTab || hasCategoryBtn || hasPage).toBeTruthy();
+    await expect(
+      page.getByRole("heading", { name: /vad tycker du|what do you think/i })
+    ).toBeVisible({ timeout: 10000 });
   });
 
-  test("root `/` renders an activity feed or recent activity section", async ({ page }) => {
+  test("root `/` renders at least one category section", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-
-    const hasActivityFeed = await page
-      .getByText(/activity|recent|live|feed|trades/i)
+    const hasCategoryHeading = await page
+      .getByRole("heading", {
+        name: /sport|politik|politics|musik|music|finans|finance|krypto|crypto/i,
+      })
       .first()
-      .isVisible({ timeout: 8000 })
+      .isVisible({ timeout: 10000 })
       .catch(() => false);
-
-    const hasPage = await page.locator("main").isVisible();
-    expect(hasActivityFeed || hasPage).toBeTruthy();
+    expect(hasCategoryHeading).toBeTruthy();
   });
 
-  // ---------------------------------------------------------------------------
-  // Acceptance criterion 5: OnboardingBanner is inline (no modal)
-  // ---------------------------------------------------------------------------
+  test("root `/` renders the category tab navigation", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("navigation", { name: /kategorier|categories/i })
+    ).toBeVisible({ timeout: 10000 });
+  });
 
-  test("OnboardingBanner is an inline banner — no modal dialog appears on home page", async ({
+  test("root `/` renders at least one Yes/No probability pill on a market card", async ({
     page,
   }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-
-    // Wait briefly for any deferred modal that might appear
-    await page.waitForTimeout(2000);
-
-    // There should be NO modal dialog blocking the page
-    const hasBlockingModal = await page
-      .locator('[role="dialog"][aria-modal="true"]')
+    const hasPill = await page
+      .getByRole("button", { name: /^(ja|yes|nej|no)\s+\d+%/i })
       .first()
-      .isVisible({ timeout: 2000 })
+      .isVisible({ timeout: 10000 })
       .catch(() => false);
-
-    expect(hasBlockingModal).toBeFalsy();
+    expect(hasPill).toBeTruthy();
   });
 
-  test("OnboardingBanner renders as an inline element within the page flow", async ({ page }) => {
+  test("root `/` renders a search input for markets", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-
-    // Banner may be present for new/unauthenticated users
-    const hasBanner = await page
-      .locator('[data-testid*="banner" i], [data-testid*="onboarding" i], .onboarding-banner')
+    const searchVisible = await page
+      .getByRole("searchbox", { name: /sök marknader|search markets/i })
       .first()
       .isVisible({ timeout: 5000 })
       .catch(() => false);
-
-    const hasBannerText = await page
-      .getByText(/welcome|get started|create account|sign up to|kom igång/i)
+    const placeholderVisible = await page
+      .getByPlaceholder(/sök marknader|search markets/i)
       .first()
       .isVisible({ timeout: 5000 })
       .catch(() => false);
-
-    // Pass regardless — banner is for new users and may not appear after age gate dismissal
-    const hasPage = await page.locator("main").isVisible();
-    expect(hasBanner || hasBannerText || hasPage).toBeTruthy();
+    expect(searchVisible || placeholderVisible).toBeTruthy();
   });
-
-  // ---------------------------------------------------------------------------
-  // Acceptance criterion 2: `/markets` redirects to `/`
-  // ---------------------------------------------------------------------------
 
   test("/markets redirects to root `/`", async ({ page }) => {
     await page.goto("/markets");
-    // After any redirects, we should be at `/` (or `/markets` if redirect not yet deployed)
-    const finalUrl = page.url();
-    const isAtRoot =
-      finalUrl.endsWith("/") ||
-      finalUrl.match(/\/$/) ||
-      !finalUrl.includes("/markets");
-
-    // Soft assertion: if /markets hasn't redirected yet, the page should still render markets
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-    // Just document the URL — the redirect is the expected behaviour
-    expect(isAtRoot || finalUrl.includes("/markets")).toBeTruthy();
+    await page.waitForURL((url) => url.pathname === "/", { timeout: 10000 });
+    expect(new URL(page.url()).pathname).toBe("/");
   });
-
-  test("/markets renders the markets content (either at /markets or after redirect to /)", async ({
-    page,
-  }) => {
-    await page.goto("/markets");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-
-    // Whether we stay at /markets or are redirected to /, market content should be visible
-    const hasHeading = await page.getByRole("heading").first().isVisible({ timeout: 8000 }).catch(() => false);
-    const hasPage = await page.locator("main").isVisible();
-    expect(hasHeading || hasPage).toBeTruthy();
-  });
-
-  // ---------------------------------------------------------------------------
-  // Acceptance criterion 3: unauthenticated users see Sign In / Sign Up
-  // ---------------------------------------------------------------------------
 
   test("unauthenticated home page shows Sign In and Sign Up links", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-
     await expect(
-      page.getByRole("link", { name: /logga in|sign in/i })
+      page.getByRole("link", { name: /logga in|sign in/i }).first()
     ).toBeVisible({ timeout: 8000 });
 
     await expect(
-      page.getByRole("link", { name: /registrera|sign up/i })
+      page.getByRole("link", { name: /registrera|sign up/i }).first()
     ).toBeVisible({ timeout: 8000 });
   });
-
-  // ---------------------------------------------------------------------------
-  // Acceptance criterion 4: authenticated users land on `/` without extra redirect
-  // ---------------------------------------------------------------------------
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
 
-    test.beforeEach(({ }, testInfo) => {
+    test.beforeEach(({}, testInfo) => {
       if (!hasAuthSession()) testInfo.skip();
     });
 
@@ -202,54 +105,21 @@ test.describe("SCRUM-227 — Landing / home page (SCRUM-73)", () => {
       page,
     }) => {
       await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-
-      // Should not be redirected to /login or /onboarding
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
       expect(page.url()).not.toMatch(/\/login/);
       expect(page.url()).not.toMatch(/\/onboarding/);
     });
 
-    test("authenticated user sees markets content at root", async ({ page }) => {
-      await page.goto("/");
-      await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-
-      const hasMarketContent = await page
-        .getByRole("heading")
-        .first()
-        .isVisible({ timeout: 8000 })
-        .catch(() => false);
-
-      expect(hasMarketContent).toBeTruthy();
-    });
-
-    // ---------------------------------------------------------------------------
-    // Acceptance criterion 6: no regression on authenticated routes
-    // ---------------------------------------------------------------------------
-
-    test("authenticated /settings route is still accessible without regression", async ({
-      page,
-    }) => {
+    test("authenticated /settings route is accessible without regression", async ({ page }) => {
       await page.goto("/settings");
-      // Should render settings, not redirect to login
-      const isOnLogin = page.url().includes("/login");
-      if (!isOnLogin) {
-        await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-      } else {
-        // If /settings now redirects, that is a regression — but we soft-assert
-        expect(isOnLogin).toBeFalsy();
-      }
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+      expect(page.url()).not.toMatch(/\/login/);
     });
 
-    test("authenticated /portfolio route is still accessible without regression", async ({
-      page,
-    }) => {
+    test("authenticated /portfolio route is accessible without regression", async ({ page }) => {
       await page.goto("/portfolio");
-      const isOnLogin = page.url().includes("/login");
-      if (!isOnLogin) {
-        await expect(page.locator("main")).toBeVisible({ timeout: 10000 });
-      } else {
-        expect(isOnLogin).toBeFalsy();
-      }
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+      expect(page.url()).not.toMatch(/\/login/);
     });
   });
 });
