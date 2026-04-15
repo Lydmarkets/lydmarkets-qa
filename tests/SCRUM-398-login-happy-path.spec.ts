@@ -38,17 +38,18 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
 
   test("home page shows Sign in and Sign up buttons for unauthenticated users", async ({ page }) => {
     await page.goto("/");
+    const nav = page.getByRole("banner");
     await expect(
-      page.getByRole("link", { name: /logga in|sign in/i })
+      nav.getByRole("link", { name: /logga in|sign in/i })
     ).toBeVisible({ timeout: 10000 });
     await expect(
-      page.getByRole("link", { name: /registrera|sign up/i })
+      nav.getByRole("link", { name: /registrera|sign up/i })
     ).toBeVisible();
   });
 
   test("clicking Sign in navigates to the login page", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: /logga in|sign in/i }).click();
+    await page.getByRole("banner").getByRole("link", { name: /logga in|sign in/i }).click();
     await page.waitForURL(/\/login/, { timeout: 10000 });
     await expect(page).toHaveURL(/\/login/);
   });
