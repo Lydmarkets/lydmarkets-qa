@@ -6,11 +6,12 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
 
   test("unauthenticated user sees Sign In and Sign Up in the nav", async ({ page }) => {
     await page.goto("/");
+    const nav = page.getByRole("banner");
     await expect(
-      page.getByRole("link", { name: /logga in|sign in/i })
+      nav.getByRole("link", { name: /logga in|sign in/i })
     ).toBeVisible({ timeout: 10000 });
     await expect(
-      page.getByRole("link", { name: /registrera|sign up/i })
+      nav.getByRole("link", { name: /registrera|sign up/i })
     ).toBeVisible();
   });
 
