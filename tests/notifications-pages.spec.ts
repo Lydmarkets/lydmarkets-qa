@@ -19,14 +19,13 @@ test.describe("Notifications — page loads", () => {
   );
 
   test(
-    "unauthenticated /watchlist loads as a public page (SCRUM-797)",
+    "unauthenticated /watchlist returns 404 (route removed)",
     { tag: ["@smoke"] },
     async ({ browser }) => {
       const context = await browser.newContext();
       const page = await context.newPage();
-      await page.goto("/watchlist");
-      await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
-      expect(page.url()).not.toMatch(/\/login/);
+      const response = await page.goto("/watchlist");
+      expect(response?.status()).toBe(404);
       await context.close();
     },
   );
@@ -80,44 +79,6 @@ test.describe("Notifications — page loads", () => {
       },
     );
 
-    test(
-      "watchlist page loads with content or empty state",
-      { tag: ["@smoke"] },
-      async ({ page }) => {
-        await page.goto("/watchlist");
-        await dismissLimitsDialog(page);
-
-        if (page.url().includes("/login")) {
-          test.skip(true, "Session expired");
-          return;
-        }
-
-        await expect(page.locator("main").first()).toBeVisible({
-          timeout: 10_000,
-        });
-
-        const hasWatchlist = await page
-          .getByText(/watchlist|bevakningslista/i)
-          .first()
-          .isVisible({ timeout: 5_000 })
-          .catch(() => false);
-
-        const hasEmpty = await page
-          .getByText(/no.*watched|empty|inga.*bevakade/i)
-          .first()
-          .isVisible({ timeout: 5_000 })
-          .catch(() => false);
-
-        const hasMarketCards = await page
-          .locator('a[href*="/markets/"]')
-          .first()
-          .isVisible({ timeout: 5_000 })
-          .catch(() => false);
-
-        expect(hasWatchlist || hasEmpty || hasMarketCards).toBeTruthy();
-      },
-    );
-
-    // /alerts route removed — alerts are admin-only
+    // /watchlist and /alerts routes have been removed from the user-facing app.
   });
 });

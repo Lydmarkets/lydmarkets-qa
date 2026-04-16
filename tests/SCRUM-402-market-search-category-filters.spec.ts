@@ -1,36 +1,34 @@
 import { test, expect } from "../fixtures/base";
 
-// SCRUM-402 updated for SCRUM-797 Kalshi-style redesign:
-// The old All / Live / New / Watchlist view-tab buttons and the "N markets"
-// count label were removed from the home page. The new header exposes a
-// HomeHeaderSearch input (aria-label "Sök marknader") and a HomeCategoryTabs
-// navigation (aria-label "Kategorier") whose non-trending tabs link to
-// /category/<slug>. Live search filtering is not part of the new home page.
-
-test.describe("SCRUM-402: Home page search and category tabs (Kalshi redesign)", () => {
+// SCRUM-402 — Home page search + MarketFilterTabs.
+// The header exposes a Sök marknader / Search markets combobox and a
+// MarketFilterTabs bar (a div with aria-label="Market filters") containing:
+//   - view buttons: Alla / Live / Nya with live counts
+//   - one link per DB category linking to /category/<slug>
+// The old per-category section headings on the home page were removed, and
+// category links are now server-rendered so there is no hydration delay.
+test.describe("SCRUM-402: Home page search and Market filters bar", () => {
   test("home page shows a search input for markets", async ({ page }) => {
     await page.goto("/");
     await expect(
       page
-        .getByRole("searchbox", { name: /sök marknader|search markets/i })
+        .getByRole("combobox", { name: /sök marknader|search markets/i })
         .or(page.getByPlaceholder(/sök marknader|search markets/i))
         .first()
-    ).toBeVisible({ timeout: 10000 });
+    ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("search input has the expected placeholder text", async ({ page }) => {
+  test("search combobox has the expected accessible name", async ({ page }) => {
     await page.goto("/");
-    const searchInput = page.locator('input[type="search"]').first();
-    await expect(searchInput).toBeVisible({ timeout: 10000 });
-    const placeholder = await searchInput.getAttribute("placeholder");
-    expect(placeholder).toMatch(/search markets|sök marknader/i);
+    await expect(
+      page.getByRole("combobox", { name: /sök marknader|search markets/i })
+    ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("typing in search input routes to the search results page", async ({ page }) => {
+  test("typing in search input keeps the user on a markets-related view", async ({ page }) => {
     await page.goto("/");
     const search = page
-      .getByRole("searchbox", { name: /sök marknader|search markets/i })
-      .or(page.getByPlaceholder(/sök marknader|search markets/i))
+      .getByRole("combobox", { name: /sök marknader|search markets/i })
       .first();
     await search.fill("sport");
     await search.press("Enter");
@@ -40,52 +38,48 @@ test.describe("SCRUM-402: Home page search and category tabs (Kalshi redesign)",
       .then(() => true)
       .catch(() => false);
     if (!urlOk) {
-      // Fallback: the home page simply remains visible
       await expect(page.locator("main").first()).toBeVisible();
     }
   });
 
-  test("home page renders the category tab navigation", async ({ page }) => {
+  test("home page renders the Market filters bar", async ({ page }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("navigation", { name: /kategorier|categories/i })
-    ).toBeVisible({ timeout: 10000 });
+      page.locator('[aria-label="Market filters"]').first()
+    ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("category tabs include multiple entries after client-side hydration", async ({ page }) => {
+  test("Market filters include the Alla / Live / Nya view buttons", async ({ page }) => {
     await page.goto("/");
-    const nav = page.getByRole("navigation", { name: /kategorier|categories/i });
-    await expect(nav).toBeVisible({ timeout: 10000 });
-    // SSR renders only "Trending"; other tabs hydrate from /api/v2/categories
-    await expect(nav.locator('a[href^="/category/"]').first()).toBeVisible({ timeout: 15_000 });
-    const linkCount = await nav.getByRole("link").count();
-    expect(linkCount).toBeGreaterThan(1);
+    const filters = page.locator('[aria-label="Market filters"]').first();
+    await expect(filters).toBeVisible({ timeout: 10_000 });
+    await expect(filters.getByRole("button", { name: /^alla\b|^all\b/i })).toBeVisible();
+    await expect(filters.getByRole("button", { name: /^live\b/i })).toBeVisible();
+    await expect(filters.getByRole("button", { name: /^nya\b|^new\b/i })).toBeVisible();
   });
 
-  test("clicking a non-Trending category tab navigates to /category/<slug>", async ({
+  test("Market filters include one link per category pointing at /category/<slug>", async ({
     page,
   }) => {
     await page.goto("/");
-    const nav = page.getByRole("navigation", { name: /kategorier|categories/i });
-    await expect(nav).toBeVisible({ timeout: 10000 });
-    // Grab the first category link that has an href matching /category/
-    const categoryLink = nav.locator('a[href^="/category/"]').first();
-    await expect(categoryLink).toBeVisible({ timeout: 10000 });
+    const filters = page.locator('[aria-label="Market filters"]').first();
+    await expect(filters).toBeVisible({ timeout: 10_000 });
+    const categoryLinks = filters.locator('a[href^="/category/"]');
+    await expect(categoryLinks.first()).toBeVisible({ timeout: 10_000 });
+    expect(await categoryLinks.count()).toBeGreaterThan(1);
+  });
+
+  test("clicking a category link navigates to /category/<slug> and renders markets", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const filters = page.locator('[aria-label="Market filters"]').first();
+    const categoryLink = filters.locator('a[href^="/category/"]').first();
+    await expect(categoryLink).toBeVisible({ timeout: 10_000 });
     const href = await categoryLink.getAttribute("href");
     expect(href).toMatch(/^\/category\/[a-z0-9-]+/i);
     await page.goto(href!);
-    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
-  });
-
-  test("home page renders at least one category section heading", async ({ page }) => {
-    await page.goto("/");
-    const hasCategoryHeading = await page
-      .getByRole("heading", {
-        name: /sport|politik|politics|musik|music|finans|finance|krypto|crypto/i,
-      })
-      .first()
-      .isVisible({ timeout: 10000 })
-      .catch(() => false);
-    expect(hasCategoryHeading).toBeTruthy();
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
+    expect(new URL(page.url()).pathname).toMatch(/^\/category\//);
   });
 });

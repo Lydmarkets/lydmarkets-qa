@@ -21,12 +21,10 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("/watchlist is publicly reachable after SCRUM-797", async ({ page }) => {
-    await page.goto("/watchlist");
-    await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
-    const url = page.url();
-    // /watchlist is now a public page — it must not redirect to /login
-    expect(url).not.toMatch(/\/login/);
+  test("/watchlist route is removed and returns 404", async ({ page }) => {
+    // /watchlist has been removed from the user-facing app and now returns 404.
+    const response = await page.goto("/watchlist");
+    expect(response?.status()).toBe(404);
   });
 
   test("login page is accessible at /login", async ({ page }) => {
