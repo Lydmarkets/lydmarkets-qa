@@ -3,18 +3,18 @@ import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
 test.describe("Remaining spec coverage", () => {
-  // ── Category nav ──────────────────────────────────────────────────
+  // ── Market filters bar ────────────────────────────────────────────
   test(
-    "home page renders the category tab navigation (SCRUM-797 Kalshi redesign)",
+    "home page renders the Market filters bar with category links",
     { tag: ["@regression"] },
     async ({ page }) => {
       await page.goto("/");
-      const nav = page.getByRole("navigation", { name: /kategorier|categories/i });
-      await expect(nav).toBeVisible({ timeout: 10_000 });
-      // HomeCategoryTabs SSRs only "Trending"; other tabs load client-side from
-      // /api/v2/categories. Wait for at least one more tab to appear.
+      const filters = page.locator('[aria-label="Market filters"]').first();
+      await expect(filters).toBeVisible({ timeout: 10_000 });
+      // Categories are server-rendered into the filter bar — one link per
+      // active DB category.
       await expect(
-        nav.locator('a[href^="/category/"]').first()
+        filters.locator('a[href^="/category/"]').first()
       ).toBeVisible({ timeout: 15_000 });
     }
   );
