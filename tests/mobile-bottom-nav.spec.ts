@@ -1,8 +1,8 @@
 import { test, expect } from "../fixtures/base";
 
 // The mobile BottomNav is no longer gated on authentication — it renders for
-// everyone below the lg breakpoint with four entries: Markets, My Bets,
-// Wallet, and More (which opens the sheet drawer).
+// everyone below the lg breakpoint with four entries: Markets (link), Search
+// (button), My Positions (link), and More (button — opens the sheet drawer).
 const MOBILE_VIEWPORT = { width: 393, height: 851 };
 
 test.describe("Mobile BottomNav — unauthenticated", () => {
@@ -16,10 +16,12 @@ test.describe("Mobile BottomNav — unauthenticated", () => {
       const bottomNav = page.locator("nav.fixed.inset-x-0.bottom-0").first();
       await expect(bottomNav).toBeVisible({ timeout: 10_000 });
       // Link labels vary by locale (Markets/Marknader, My Positions/Mina
-      // positioner, etc.), so assert by href which is stable.
+      // positioner, etc.), so assert link tabs by href which is stable.
       await expect(bottomNav.locator('a[href="/markets"]')).toBeVisible();
       await expect(bottomNav.locator('a[href="/portfolio"]')).toBeVisible();
-      await expect(bottomNav.locator('a[href="/wallet"]')).toBeVisible();
+      await expect(
+        bottomNav.getByRole("button", { name: /^sök$|^search$/i })
+      ).toBeVisible();
       await expect(
         bottomNav.getByRole("button", { name: /^mer$|^more$/i })
       ).toBeVisible();
