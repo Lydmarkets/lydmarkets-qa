@@ -6,8 +6,8 @@ const MOBILE_VIEWPORT = { width: 393, height: 851 };
 // Mobile navigation uses a BottomNav (below lg breakpoint) that renders for
 // both anonymous and authenticated visitors. It has 4 entries:
 //   - Marknader / Markets -> /markets
-//   - Mina positioner / My Bets -> /portfolio
-//   - Plånbok / Wallet -> /wallet
+//   - Sök / Search -> opens search overlay
+//   - Mina positioner / My Positions -> /portfolio
 //   - Mer / More -> opens the right-side sheet drawer
 //
 // Drawer content (anonymous): Settings link, theme toggle, language toggle,
