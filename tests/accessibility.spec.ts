@@ -44,14 +44,34 @@ test.describe("Accessibility (a11y) tests", () => {
 
   test("text has readable font sizes", async ({ page }) => {
     await page.goto("/");
+    // Wait for the home content to render so computed styles are stable.
+    // Without this, the first call sometimes raced React hydration on a
+    // not-yet-styled element and returned a sub-10px size, causing flakes.
+    await expect(
+      page.getByRole("heading", { name: /utvalda|featured|vad tycker du|what do you think/i }).first()
+    ).toBeAttached({ timeout: 10_000 });
+
     // Restrict to paragraphs and headings — decorative spans/links (badges,
     // count pills, tag chips) intentionally use smaller type. 10px is the
     // absolute floor for body/heading copy per the in-house a11y checklist.
-    const textElements = await page.locator("p, h2, h3").all();
-    for (const el of textElements.slice(0, 10)) {
-      const fontSize = await el.evaluate((e) => window.getComputedStyle(e).fontSize);
-      expect(parseInt(fontSize || "0")).toBeGreaterThanOrEqual(10);
-    }
+    // Skip visually-hidden helpers (sr-only h2 in the carousel etc.) since
+    // they're for assistive tech and intentionally collapsed in layout.
+    const offenders = await page.locator("p, h2, h3").evaluateAll((els) =>
+      els
+        .filter((e) => {
+          const r = (e as HTMLElement).getBoundingClientRect();
+          // Visually-hidden / not-rendered elements are exempt.
+          return r.width > 0 && r.height > 0;
+        })
+        .slice(0, 10)
+        .map((e) => ({
+          tag: e.tagName,
+          text: e.textContent?.trim().slice(0, 60) ?? "",
+          fontSize: parseFloat(window.getComputedStyle(e).fontSize),
+        }))
+        .filter((info) => info.fontSize < 10),
+    );
+    expect(offenders, `Found text elements below 10px: ${JSON.stringify(offenders)}`).toEqual([]);
   });
 
   test("form labels are associated with inputs on login page", async ({ page }) => {
