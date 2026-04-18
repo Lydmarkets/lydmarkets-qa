@@ -43,6 +43,10 @@ export const options = {
 /**
  * Discover market IDs by scraping the SSR /markets page for market links.
  * Falls back to the internal API when MARKETS_URL is set.
+ *
+ * Retries transient non-200 responses: Railway containers cold-start on
+ * the first request after idle periods, and the nightly has twice observed
+ * detail_p95 == 0 because setup silently returned [] on a single 5xx.
  */
 export function setup() {
   const marketIds = [];
@@ -51,6 +55,7 @@ export function setup() {
   if (MARKETS_URL) {
     const res = http.get(`${MARKETS_URL}/markets?status=active&limit=20`, {
       headers: internalHeaders(),
+      timeout: "45s",
     });
     if (res.status === 200) {
       try {
@@ -66,8 +71,9 @@ export function setup() {
   }
 
   // Scrape market IDs from the SSR pages if API didn't work.
-  // Try both / and /markets — Next.js RSC payloads change format between
-  // versions, so we attempt multiple regex patterns per page.
+  // /markets first — after the Kalshi redesign the landing page (/) no
+  // longer embeds market IDs, so it only serves as a fallback if /markets
+  // is temporarily unreachable.
   if (marketIds.length === 0) {
     const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
     const patterns = [
@@ -81,14 +87,31 @@ export function setup() {
 
     const seen = new Set();
     const pages = [
-      { url: `${BASE_URL}/`, tag: "setup: GET /" },
       { url: `${BASE_URL}/markets`, tag: "setup: GET /markets" },
+      { url: `${BASE_URL}/`, tag: "setup: GET /" },
     ];
+
+    const fetchWithRetry = (url, tag) => {
+      const maxAttempts = 3;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const res = http.get(url, {
+          tags: { name: tag },
+          redirects: 5,
+          timeout: "45s",
+        });
+        if (res.status === 200) return res;
+        console.warn(
+          `setup: ${tag} attempt ${attempt}/${maxAttempts} → HTTP ${res.status}`,
+        );
+        if (attempt < maxAttempts) sleep(3);
+      }
+      return null;
+    };
 
     for (const { url, tag } of pages) {
       if (seen.size >= 20) break;
-      const res = http.get(url, { tags: { name: tag }, redirects: 5 });
-      if (res.status !== 200) continue;
+      const res = fetchWithRetry(url, tag);
+      if (!res) continue;
 
       for (const pattern of patterns) {
         pattern.lastIndex = 0;
@@ -103,7 +126,14 @@ export function setup() {
     }
   }
 
-  console.log(`Discovered ${marketIds.length} market IDs for detail page tests`);
+  if (marketIds.length === 0) {
+    console.error(
+      `setup: DISCOVERED 0 MARKET IDs — detail page scenarios will be skipped. ` +
+        `Check BASE_URL=${BASE_URL} is reachable and /markets renders market links.`,
+    );
+  } else {
+    console.log(`Discovered ${marketIds.length} market IDs for detail page tests`);
+  }
   return { marketIds };
 }
 
