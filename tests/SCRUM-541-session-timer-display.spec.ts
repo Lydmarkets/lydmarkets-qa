@@ -1,16 +1,16 @@
 import { test, expect } from "../fixtures/base";
 import { isAuthenticated } from "../helpers/is-authenticated";
+
 /**
- * SCRUM-541: Session timer — persistent, non-dismissible on all screens.
- *
- * The session timer (HH:MM:SS format) must be visible on every authenticated page.
- * These tests verify the timer element is present and ticking.
+ * SCRUM-541: Session timer — persistent, non-dismissible on every authenticated
+ * page. SCRUM-1090 moved the timer from the banner into the unified UserMenu
+ * drawer (icon-only trigger in the top NavBar). The timer renders as a
+ * mono-tabular `HH:MM:SS` string next to a Clock icon and is updated by the
+ * shared `useSessionTimer` hook on every page.
  */
 
-/** Matches HH:MM:SS or MM:SS timer format */
 const TIMER_REGEX = /\d{1,2}:\d{2}(:\d{2})?/;
 
-/** Pages to verify timer presence across the app */
 const AUTHENTICATED_PAGES = [
   { path: "/markets", name: "Markets" },
   { path: "/portfolio", name: "Portfolio" },
@@ -18,11 +18,34 @@ const AUTHENTICATED_PAGES = [
   { path: "/settings", name: "Settings" },
 ];
 
+async function openUserMenu(page: import("@playwright/test").Page) {
+  await page
+    .getByRole("banner")
+    .getByRole("button", {
+      name: /open.*menu|öppna.*meny|user menu|användarmeny/i,
+    })
+    .first()
+    .click();
+  const drawer = page.getByRole("complementary").last();
+  // The drawer initially renders the anonymous shell; the session resolves
+  // client-side via NextAuth and re-renders the authenticated rows (Sign
+  // out + identity + clock + balance). Wait for that re-render before
+  // returning so subsequent timer assertions don't race the hydration.
+  await drawer
+    .getByRole("button", { name: /sign out|logga ut|log ?out/i })
+    .first()
+    .waitFor({ state: "visible", timeout: 10_000 })
+    .catch(() => {
+      // Fall through — caller may still want the closed/anon drawer.
+    });
+  return drawer;
+}
+
 test.use({ storageState: "playwright/.auth/user.json" });
 
-test.describe("SCRUM-541: Session timer display", () => {
+test.describe("SCRUM-541: Session timer display (UserMenu drawer)", () => {
   test(
-    "session timer is visible in the header when logged in",
+    "session timer is visible in the user menu drawer when logged in",
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
@@ -31,8 +54,10 @@ test.describe("SCRUM-541: Session timer display", () => {
         return;
       }
 
-      const header = page.locator("header, [role='banner']").first();
-      await expect(header.getByText(TIMER_REGEX)).toBeVisible({ timeout: 5_000 });
+      const drawer = await openUserMenu(page);
+      await expect(
+        drawer.getByText(TIMER_REGEX).first(),
+      ).toBeVisible({ timeout: 5_000 });
     },
   );
 
@@ -47,8 +72,10 @@ test.describe("SCRUM-541: Session timer display", () => {
           return;
         }
 
-        const header = page.locator("header, [role='banner']").first();
-        await expect(header.getByText(TIMER_REGEX)).toBeVisible({ timeout: 5_000 });
+        const drawer = await openUserMenu(page);
+        await expect(
+          drawer.getByText(TIMER_REGEX).first(),
+        ).toBeVisible({ timeout: 5_000 });
       },
     );
   }
@@ -63,14 +90,14 @@ test.describe("SCRUM-541: Session timer display", () => {
         return;
       }
 
-      const header = page.locator("header, [role='banner']").first();
-      const timerEl = header.getByText(TIMER_REGEX);
+      const drawer = await openUserMenu(page);
+      const timerEl = drawer.getByText(TIMER_REGEX).first();
       await expect(timerEl).toBeVisible({ timeout: 5_000 });
 
       const firstReading = await timerEl.textContent();
-
-      // Wait 3 seconds and verify the timer has changed
-      await page.waitForTimeout(3_000);
+      // Wait at least a full second past the next tick so the formatted
+      // value mutates. The hook ticks on a 1s interval.
+      await page.waitForTimeout(2_000);
       const secondReading = await timerEl.textContent();
 
       expect(firstReading).not.toEqual(secondReading);
@@ -78,7 +105,7 @@ test.describe("SCRUM-541: Session timer display", () => {
   );
 
   test(
-    "session timer has no close/dismiss button",
+    "session timer cannot be dismissed from the drawer",
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
@@ -87,12 +114,17 @@ test.describe("SCRUM-541: Session timer display", () => {
         return;
       }
 
-      const header = page.locator("header, [role='banner']").first();
-      const timerEl = header.getByText(TIMER_REGEX);
-      await expect(timerEl).toBeVisible({ timeout: 5_000 });
+      const drawer = await openUserMenu(page);
+      await expect(
+        drawer.getByText(TIMER_REGEX).first(),
+      ).toBeVisible({ timeout: 5_000 });
 
-      const closeBtn = header.getByRole("button", { name: /close|dismiss|stäng|dölj/i });
-      await expect(closeBtn).toBeHidden();
+      // The clock row has no close/dismiss control adjacent to it — only
+      // the drawer itself can be closed via the top-right Close button.
+      const dismissNearTimer = drawer.locator(
+        "div:has(> span:has-text(/\\d{1,2}:\\d{2}/)) >> button:has-text(/close|dismiss|stäng|dölj/i)",
+      );
+      await expect(dismissNearTimer).toHaveCount(0);
     },
   );
 });

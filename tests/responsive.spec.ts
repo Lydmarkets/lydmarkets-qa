@@ -20,9 +20,21 @@ test.describe("Responsive design tests", () => {
     const page = await context.newPage();
 
     await page.goto("/");
-    // PR-903: unauthenticated mobile users no longer see a hamburger; the
-    // header shows Sign in and Sign up inline instead.
-    await expect(page.getByRole("link", { name: /sign in|logga in/i }).first()).toBeVisible();
+    // SCRUM-1090: header is icon-only — the Sign in / Sign up rows live
+    // inside the UserMenu drawer. Open it before asserting on auth links.
+    await page
+      .getByRole("banner")
+      .getByRole("button", {
+        name: /open.*menu|öppna.*meny|user menu|användarmeny/i,
+      })
+      .first()
+      .click();
+    await expect(
+      page
+        .getByRole("complementary")
+        .last()
+        .getByRole("link", { name: /sign in|logga in/i }),
+    ).toBeVisible({ timeout: 10_000 });
     await expect(page.locator("main").first()).toBeVisible();
 
     await context.close();

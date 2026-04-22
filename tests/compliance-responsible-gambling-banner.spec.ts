@@ -1,16 +1,19 @@
 import { test, expect } from "../fixtures/base";
 test.describe("Compliance — responsible gambling visibility", () => {
   test(
-    "nav bar has 18+ responsible gambling link",
+    "responsible-gambling controls are reachable from every page (SCRUM-885 ansvarsspel-bar)",
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/");
-      // Nav contains "18+ Responsible gambling" (en) or "Ansvarsfullt spelande" (sv)
-      await expect(
-        page
-          .getByRole("link", { name: /ansvarsfullt spelande|responsible gambling/i })
-          .first(),
-      ).toBeVisible({ timeout: 5_000 });
+      // SCRUM-885 puts the mandated controls in a top-of-page strip rendered
+      // as <aside aria-label="Spelansvarsverktyg|Responsible gambling tools">.
+      // SCRUM-1090 also surfaces a "18+ Responsible gambling" section header
+      // inside the UserMenu drawer.
+      const bar = page.getByRole("complementary", {
+        name: /spelansvarsverktyg|responsible gambling tools/i,
+      });
+      await expect(bar).toBeVisible({ timeout: 5_000 });
+      await expect(bar.getByRole("link", { name: /spelpaus/i })).toBeVisible();
     },
   );
 

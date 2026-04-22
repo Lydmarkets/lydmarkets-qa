@@ -2,6 +2,14 @@ import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
+// Wallet & payments — authenticated coverage. Updated for SCRUM-1091:
+//   /wallet           → redirects to /wallet/deposit
+//   /wallet/deposit   → Trustly deposit form (no separate "Deposit" CTA)
+//   /wallet/withdraw  → withdrawal form
+//   /wallet/transactions → ledger view
+// All three sub-routes share a `WalletTabs` row exposing tab links to the
+// other two sections.
+
 test.describe("Wallet & payments — authenticated coverage", () => {
   test.use({ storageState: "playwright/.auth/user.json" });
 
@@ -12,9 +20,12 @@ test.describe("Wallet & payments — authenticated coverage", () => {
   // ── SIFS: Header balance display ───────────────────────────────────
 
   test(
-    "header balance is visible on markets page (SIFS requirement)",
+    "header surface exposes the wallet balance from the home page",
     { tag: ["@smoke", "@critical", "@sifs"] },
     async ({ page }) => {
+      // SCRUM-1090: balance is shown inside the UserMenu drawer (icon-only
+      // trigger in the top NavBar) — open the drawer and look for a kr
+      // amount or a link to /wallet.
       await page.goto("/");
       await dismissLimitsDialog(page);
 
@@ -23,27 +34,32 @@ test.describe("Wallet & payments — authenticated coverage", () => {
         return;
       }
 
-      // BalanceDisplay component uses aria-label with "Saldo" or shows "kr"
-      const balanceByLabel = page.getByLabel(/saldo/i).first();
-      const balanceByText = page.getByText(/\d+[,.]?\d*\s*kr/i).first();
-      const balanceLink = page.locator('a[href="/wallet"]').first();
+      await page
+        .getByRole("banner")
+        .getByRole("button", {
+          name: /open.*menu|öppna.*meny|user menu|användarmeny/i,
+        })
+        .first()
+        .click();
 
-      const hasLabel = await balanceByLabel
+      const drawer = page.getByRole("complementary").last();
+      const hasKr = await drawer
+        .getByText(/\d+[,.]?\d*\s*kr/i)
+        .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
-      const hasText = await balanceByText
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-      const hasLink = await balanceLink
+      const hasWalletLink = await drawer
+        .locator('a[href*="/wallet"]')
+        .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
 
-      expect(hasLabel || hasText || hasLink).toBeTruthy();
+      expect(hasKr || hasWalletLink).toBeTruthy();
     },
   );
 
   test(
-    "header balance is visible on portfolio page (SIFS requirement)",
+    "header balance is visible after navigating to /portfolio",
     { tag: ["@critical", "@sifs"] },
     async ({ page }) => {
       await page.goto("/portfolio");
@@ -54,28 +70,33 @@ test.describe("Wallet & payments — authenticated coverage", () => {
         return;
       }
 
-      const balanceByLabel = page.getByLabel(/saldo/i).first();
-      const balanceByText = page.getByText(/\d+[,.]?\d*\s*kr/i).first();
-      const balanceLink = page.locator('a[href="/wallet"]').first();
+      await page
+        .getByRole("banner")
+        .getByRole("button", {
+          name: /open.*menu|öppna.*meny|user menu|användarmeny/i,
+        })
+        .first()
+        .click();
 
-      const hasLabel = await balanceByLabel
+      const drawer = page.getByRole("complementary").last();
+      const hasWalletLink = await drawer
+        .locator('a[href*="/wallet"]')
+        .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
-      const hasText = await balanceByText
+      const hasKr = await drawer
+        .getByText(/\d+[,.]?\d*\s*kr/i)
+        .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
-      const hasLink = await balanceLink
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      expect(hasLabel || hasText || hasLink).toBeTruthy();
+      expect(hasWalletLink || hasKr).toBeTruthy();
     },
   );
 
-  // ── Wallet page content ────────────────────────────────────────────
+  // ── /wallet redirects to /wallet/deposit ──────────────────────────
 
   test(
-    "wallet page displays balance information",
+    "/wallet redirects to /wallet/deposit",
     { tag: ["@smoke", "@critical"] },
     async ({ page }) => {
       await page.goto("/wallet");
@@ -86,38 +107,45 @@ test.describe("Wallet & payments — authenticated coverage", () => {
         return;
       }
 
-      await expect(page.locator("main").first()).toBeVisible({
-        timeout: 10_000,
-      });
-
-      // Wallet page should show balance info
-      const hasBalance = await page
-        .getByText(/available balance|locked in orders|total value|tillgängligt saldo|låst i ordrar/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasWalletHeading = await page
-        .getByText(/wallet|plånbok|saldo/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasKrAmount = await page
-        .getByText(/\d+[,.]?\d*\s*kr/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      expect(hasBalance || hasWalletHeading || hasKrAmount).toBeTruthy();
+      await expect(page).toHaveURL(/\/wallet\/deposit$/, { timeout: 10_000 });
     },
   );
 
+  // ── Wallet split layout — tabs ────────────────────────────────────
+
   test(
-    "wallet page shows deposit and withdraw buttons",
+    "wallet pages share a tab row linking to deposit / withdraw / transactions",
     { tag: ["@critical"] },
     async ({ page }) => {
-      await page.goto("/wallet");
+      await page.goto("/wallet/deposit");
+      await dismissLimitsDialog(page);
+
+      if (page.url().includes("/login")) {
+        test.skip(true, "Session expired");
+        return;
+      }
+
+      // Scope to the WalletTabs nav by aria-label — the closed UserMenu
+      // drawer also contains /wallet/* links and would otherwise trip the
+      // .first() locator with off-screen elements.
+      const tabs = page.locator('nav[aria-label="Plånbok"], nav[aria-label="Wallet"]').first();
+      await expect(tabs.locator('a[href="/wallet/deposit"]')).toBeVisible({
+        timeout: 10_000,
+      });
+      await expect(tabs.locator('a[href="/wallet/withdraw"]')).toBeVisible();
+      await expect(
+        tabs.locator('a[href="/wallet/transactions"]'),
+      ).toBeVisible();
+    },
+  );
+
+  // ── /wallet/deposit ───────────────────────────────────────────────
+
+  test(
+    "deposit page renders the Trustly deposit form",
+    { tag: ["@smoke", "@critical"] },
+    async ({ page }) => {
+      await page.goto("/wallet/deposit");
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -129,33 +157,39 @@ test.describe("Wallet & payments — authenticated coverage", () => {
         timeout: 10_000,
       });
 
-      const hasDeposit = await page
-        .getByRole("button", { name: /deposit|sätt in/i })
+      // The form leads with an amount input and a submit CTA — copy varies
+      // (amount/belopp; Sätt in/Deposit), so check both text and either
+      // numeric input or button.
+      const hasAmountInput = await page
+        .getByRole("spinbutton")
+        .or(page.getByRole("textbox", { name: /amount|belopp/i }))
         .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
 
-      const hasWithdraw = await page
-        .getByRole("button", { name: /withdraw|ta ut/i })
+      const hasDepositCta = await page
+        .getByRole("button", { name: /deposit|sätt in|trustly/i })
         .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
 
       const hasDepositText = await page
-        .getByText(/deposit|insättning/i)
+        .getByText(/deposit|insättning|trustly/i)
         .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
 
-      expect(hasDeposit || hasWithdraw || hasDepositText).toBeTruthy();
+      expect(hasAmountInput || hasDepositCta || hasDepositText).toBeTruthy();
     },
   );
 
+  // ── /wallet/withdraw ──────────────────────────────────────────────
+
   test(
-    "clicking deposit opens deposit sheet or form",
+    "withdraw page renders the withdrawal form",
     { tag: ["@critical"] },
     async ({ page }) => {
-      await page.goto("/wallet");
+      await page.goto("/wallet/withdraw");
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -167,59 +201,30 @@ test.describe("Wallet & payments — authenticated coverage", () => {
         timeout: 10_000,
       });
 
-      // Find and click the deposit button
-      const depositBtn = page
-        .getByRole("button", { name: /deposit|sätt in/i })
-        .first();
-      const hasBtn = await depositBtn
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      if (!hasBtn) {
-        test.skip(true, "Deposit button not visible on wallet page");
-        return;
-      }
-
-      await depositBtn.click();
-
-      // Should open a sheet/dialog/form with Trustly or amount input
-      const hasTrustly = await page
-        .getByText(/trustly|bank transfer|banköverföring/i)
+      const hasWithdrawText = await page
+        .getByText(/withdraw|ta ut|uttag/i)
         .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
 
       const hasAmountInput = await page
-        .getByRole("spinbutton", { name: /amount|belopp/i })
+        .getByRole("spinbutton")
+        .or(page.getByRole("textbox", { name: /amount|belopp/i }))
         .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
 
-      const hasDepositForm = await page
-        .getByText(/deposit|insättning/i)
-        .nth(1)
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasDialog = await page
-        .getByRole("dialog")
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      expect(
-        hasTrustly || hasAmountInput || hasDepositForm || hasDialog,
-      ).toBeTruthy();
+      expect(hasWithdrawText || hasAmountInput).toBeTruthy();
     },
   );
 
-  // ── Transactions page ──────────────────────────────────────────────
+  // ── /wallet/transactions and /transactions ────────────────────────
 
   test(
-    "transactions page loads with content",
+    "wallet/transactions page loads with content",
     { tag: ["@smoke"] },
     async ({ page }) => {
-      await page.goto("/transactions");
+      await page.goto("/wallet/transactions");
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {
@@ -249,6 +254,32 @@ test.describe("Wallet & payments — authenticated coverage", () => {
         .catch(() => false);
 
       expect(hasTransactions || hasFilterGroup || hasEmpty).toBeTruthy();
+    },
+  );
+
+  test(
+    "/transactions still serves the standalone ledger view",
+    { tag: ["@regression"] },
+    async ({ page }) => {
+      await page.goto("/transactions");
+      await dismissLimitsDialog(page);
+
+      if (page.url().includes("/login")) {
+        test.skip(true, "Session expired");
+        return;
+      }
+
+      await expect(page.locator("main").first()).toBeVisible({
+        timeout: 10_000,
+      });
+
+      const hasContent = await page
+        .getByText(/transaction|historik|inga|empty/i)
+        .first()
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false);
+
+      expect(hasContent).toBeTruthy();
     },
   );
 });

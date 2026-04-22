@@ -1,14 +1,16 @@
 import { test, expect } from "../fixtures/base";
 import { hasAuthSession } from "../helpers/has-auth";
 
-// SCRUM-227 — Kalshi-style redesign (SCRUM-797) home page:
-// `/` renders a hero carousel of featured markets, a "Vad tycker du?" /
-// "What do you think?" quick-opinion row, and a right-rail Trendande sidebar
-// on desktop. The shared header includes a search combobox, theme/language
-// toggles, Sign in / Sign up, and a MarketFilterTabs bar (aria-label
-// "Market filters") with Alla / Live / Nya pills and one link per category.
-// Per-category section headings on the home page have been removed.
-// `/markets` is now its own listing page, not a redirect to `/`.
+// SCRUM-227 — Editorial-redesign (SCRUM-1039) home page:
+// `/` renders an editorial Masthead, the HomeHero featured market panel,
+// a flat FeaturedMarketsGrid, the MoversTable, and a TopTradersRail.
+// (The legacy hero carousel + "Vad tycker du?" / "What do you think?"
+// quick-opinion row + Trendande right-rail were removed.)
+// The shared header still includes a search combobox, MarketFilterTabs
+// (aria-label "Market filters") with Alla / Live / Nya pills, and one
+// category link per active DB category pointing at /markets?cat=<slug>.
+// /markets is its own listing page; Sign in / Sign up moved into the
+// SCRUM-1090 UserMenu drawer (icon-only trigger in the top NavBar).
 
 test.describe("SCRUM-227 — Landing / home page (Kalshi redesign, SCRUM-797)", () => {
   test("root `/` is accessible to unauthenticated users without redirect to login", async ({
@@ -19,29 +21,48 @@ test.describe("SCRUM-227 — Landing / home page (Kalshi redesign, SCRUM-797)", 
     await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
   });
 
-  test("root `/` renders a hero carousel of featured markets", async ({ page }) => {
+  test("root `/` renders the featured-markets grid", async ({ page }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { name: /utvalda|featured/i })
-    ).toBeAttached({ timeout: 10000 });
-  });
-
-  test("root `/` renders a 'What do you think?' quick-opinion row", async ({ page }) => {
-    await page.goto("/");
+      page.getByRole("heading", { name: /utvalda marknader|featured markets/i }),
+    ).toBeVisible({ timeout: 10000 });
     await expect(
-      page.getByRole("heading", { name: /vad tycker du|what do you think/i })
+      page.getByTestId("featured-markets-grid"),
     ).toBeVisible({ timeout: 10000 });
   });
 
-  test("root `/` renders the Market filters bar with view tabs", async ({ page }) => {
-    // Post-redesign the header exposes a Market filters bar containing
-    // Alla / Live / Nya view pills and one link per category. The old
-    // per-category section headings on the home page were removed.
+  test("root `/` renders the editorial home hero panel", async ({ page }) => {
+    // SCRUM-1039 replaced the carousel + "What do you think?" row with a
+    // single editorial hero block that pairs the lead market with a
+    // 640×120 sparkline and Yes/No buy CTAs. The hero ships in two
+    // variants — `home-hero-desktop` (>=md) and `home-hero-mobile` (<md).
     await page.goto("/");
-    const filters = page.locator('[aria-label="Market filters"]').first();
+    const desktopHero = page.getByTestId("home-hero-desktop");
+    const mobileHero = page.getByTestId("home-hero-mobile");
+    const desktopVisible = await desktopHero
+      .first()
+      .isVisible({ timeout: 10000 })
+      .catch(() => false);
+    const mobileVisible = await mobileHero
+      .first()
+      .isVisible({ timeout: 1000 })
+      .catch(() => false);
+    expect(desktopVisible || mobileVisible).toBeTruthy();
+  });
+
+  test("root `/` renders the Market filters bar with category links", async ({ page }) => {
+    // Post-redesign the header exposes a category filter bar. The Alla /
+    // Live / Nya view pills were removed — MarketFilterTabs is a flat list
+    // of category links only.
+    await page.goto("/");
+    const filters = page
+      .locator(
+        '[aria-label="Filter by category"], [aria-label="Filtrera efter kategori"]',
+      )
+      .first();
     await expect(filters).toBeVisible({ timeout: 10_000 });
     await expect(
-      filters.getByRole("button", { name: /^alla\b|^all\b/i })
+      filters.locator('a[href*="/markets?cat="]').first(),
     ).toBeVisible();
   });
 
@@ -75,14 +96,23 @@ test.describe("SCRUM-227 — Landing / home page (Kalshi redesign, SCRUM-797)", 
     });
   });
 
-  test("unauthenticated home page shows Sign In and Sign Up links", async ({ page }) => {
+  test("unauthenticated home page exposes Sign In / Sign Up via the user menu drawer", async ({ page }) => {
+    // SCRUM-1090: auth links moved out of the banner into the unified
+    // UserMenu drawer (torso-icon trigger).
     await page.goto("/");
+    await page
+      .getByRole("banner")
+      .getByRole("button", {
+        name: /open.*menu|öppna.*meny|user menu|användarmeny/i,
+      })
+      .first()
+      .click();
+    const drawer = page.getByRole("complementary").last();
     await expect(
-      page.getByRole("link", { name: /logga in|sign in/i }).first()
+      drawer.getByRole("link", { name: /logga in|sign in/i }),
     ).toBeVisible({ timeout: 8000 });
-
     await expect(
-      page.getByRole("link", { name: /registrera|sign up/i }).first()
+      drawer.getByRole("link", { name: /registrera|sign up|skapa konto/i }),
     ).toBeVisible({ timeout: 8000 });
   });
 

@@ -22,7 +22,7 @@ test.describe("Markets listing page (/markets)", () => {
     async ({ page }) => {
       await page.goto("/markets");
       await expect(
-        page.locator('[aria-label="Market filters"]').first()
+        page.locator('[aria-label="Filter by category"], [aria-label="Filtrera efter kategori"]').first()
       ).toBeVisible({ timeout: 10_000 });
     }
   );

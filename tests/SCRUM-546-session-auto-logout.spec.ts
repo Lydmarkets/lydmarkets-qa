@@ -28,9 +28,18 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
         return;
       }
 
-      // Session timer must exist for timeout enforcement to work
-      const header = page.locator("header, [role='banner']").first();
-      await expect(header.getByText(/\d{1,2}:\d{2}/)).toBeVisible({ timeout: 5_000 });
+      // SCRUM-1090: session timer moved into the UserMenu drawer.
+      await page
+        .getByRole("banner")
+        .getByRole("button", {
+          name: /open.*menu|öppna.*meny|user menu|användarmeny/i,
+        })
+        .first()
+        .click();
+      const drawer = page.getByRole("complementary").last();
+      await expect(
+        drawer.getByText(/\d{1,2}:\d{2}/).first(),
+      ).toBeVisible({ timeout: 5_000 });
     },
   );
 

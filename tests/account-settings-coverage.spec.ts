@@ -2,6 +2,20 @@ import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
+// Account settings — coverage gaps. Updated for the editorial-redesign
+// settings refactor (SCRUM-1071) and the responsible-gambling rewrite.
+//
+// What changed:
+//   - The /settings page no longer has tabs or a notification-preferences
+//     section; it shows the deposit-limits card and a related-settings grid
+//     (Privacy / Self-exclusion).
+//   - Marketing consent moved to the cookie banner — no in-app toggle exists.
+//   - The inline PGSI questionnaire was removed; /responsible-gambling now
+//     links out to the Stödlinjen-hosted PGSI test, the only LIFS 2018:2 § 10
+//     blessed self-assessment.
+//   - The ansvarsspel-bar (SCRUM-885) provides a global Spelgränser /
+//     Självtest / 24h short-break entrypoint from every page.
+
 test.describe("Account settings — coverage gaps", () => {
   test.use({ storageState: "playwright/.auth/user.json" });
 
@@ -49,10 +63,14 @@ test.describe("Account settings — coverage gaps", () => {
     },
   );
 
-  // ── Notification preferences ───────────────────────────────────────
+  // ── Settings page — editorial redesign ────────────────────────────
+  //
+  // The redesigned /settings shell only surfaces deposit limits + links to
+  // privacy and self-exclusion. Notification preferences, marketing
+  // consent, and tabbed navigation were all dropped intentionally.
 
   test(
-    "settings page has notification preference section",
+    "settings page surfaces deposit-limits card and related links",
     { tag: ["@regression"] },
     async ({ page }) => {
       await page.goto("/settings");
@@ -67,60 +85,36 @@ test.describe("Account settings — coverage gaps", () => {
         timeout: 10_000,
       });
 
-      const hasNotification = await page
-        .getByText(/notification|avisering|meddelande/i)
+      // Deposit-limits card heading (SCRUM-1071 / SectionCardV2)
+      const hasDepositLimits = await page
+        .getByText(/deposit.*limit|insättningsgräns/i)
         .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
 
-      const hasSwitch = await page
-        .getByRole("switch")
+      // Related-settings grid links: privacy + self-exclusion
+      const hasPrivacyLink = await page
+        .getByRole("link", { name: /privacy|integritet/i })
         .first()
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
 
-      expect(hasNotification || hasSwitch).toBeTruthy();
+      const hasSelfExclusionLink = await page
+        .getByRole("link", { name: /self.?exclusion|spelpaus|avstäng/i })
+        .first()
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false);
+
+      expect(
+        hasDepositLimits || hasPrivacyLink || hasSelfExclusionLink,
+      ).toBeTruthy();
     },
   );
 
-  // ── Marketing consent toggle ───────────────────────────────────────
+  // ── PGSI self-test — Stödlinjen external CTA ──────────────────────
 
   test(
-    "notifications tab has marketing consent toggle",
-    { tag: ["@compliance", "@regression"] },
-    async ({ page }) => {
-      await page.goto("/settings?tab=notifications");
-      await dismissLimitsDialog(page);
-
-      if (page.url().includes("/login")) {
-        test.skip(true, "Session expired");
-        return;
-      }
-
-      await expect(page.locator("main").first()).toBeVisible({
-        timeout: 10_000,
-      });
-
-      const hasMarketing = await page
-        .getByText(/marketing|marknadsföring/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasSwitch = await page
-        .getByRole("switch")
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      expect(hasMarketing || hasSwitch).toBeTruthy();
-    },
-  );
-
-  // ── PGSI self-assessment questionnaire ─────────────────────────────
-
-  test(
-    "PGSI questionnaire is visible on responsible gambling tab",
+    "responsible-gambling page exposes external PGSI self-test",
     { tag: ["@compliance", "@regression"] },
     async ({ page }) => {
       const response = await page.goto("/responsible-gambling");
@@ -139,47 +133,23 @@ test.describe("Account settings — coverage gaps", () => {
         timeout: 10_000,
       });
 
-      // Look for the PGSI questionnaire section
-      const hasSelfAssessment = await page
-        .getByText(/self-assessment|självtest|pgsi/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
+      // Self-test section heading
+      await expect(
+        page.getByText(/självtest|self.?test|pgsi/i).first(),
+      ).toBeVisible({ timeout: 5_000 });
 
-      const hasQuestionText = await page
-        .getByText(/never|aldrig|sometimes|ibland/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      if (!hasSelfAssessment && !hasQuestionText) {
-        test.skip(
-          true,
-          "PGSI questionnaire not visible — may not be deployed yet",
-        );
-        return;
-      }
-
-      expect(hasSelfAssessment || hasQuestionText).toBeTruthy();
+      // External CTA — opens Stödlinjen PGSI in a new tab
+      const cta = page
+        .getByRole("link", { name: /självtest|self.?test|gör.*testet|take.*test/i })
+        .first();
+      await expect(cta).toBeVisible({ timeout: 5_000 });
+      const href = await cta.getAttribute("href");
+      expect(href).toContain("stodlinjen.se");
     },
   );
 
   test(
-    "PGSI questionnaire has score interpretation guide",
-    { tag: ["@compliance", "@regression"] },
-    async ({ page }) => {
-      await page.goto("/responsible-gambling");
-      await dismissLimitsDialog(page);
-
-      // Score interpretation section is always visible below the radio groups
-      await expect(page.getByText(/0 points|0 poäng/i).first()).toBeVisible({ timeout: 5_000 });
-      await expect(page.getByText(/moderate risk|måttlig risk/i).first()).toBeVisible();
-      await expect(page.getByText(/problem gambl|spelproblem/i).first()).toBeVisible();
-    },
-  );
-
-  test(
-    "Responsible gambling page shows Stodlinjen and Spelpaus links",
+    "responsible-gambling page shows Stödlinjen helpline and Spelpaus links",
     { tag: ["@compliance", "@critical"] },
     async ({ page }) => {
       await page.goto("/responsible-gambling");
@@ -187,12 +157,10 @@ test.describe("Account settings — coverage gaps", () => {
 
       await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
 
-      // Stödlinjen helpline
       await expect(
         page.getByText(/stödlinjen|020.819/i).first(),
       ).toBeVisible({ timeout: 5_000 });
 
-      // Spelpaus self-exclusion
       await expect(
         page.getByText(/spelpaus/i).first(),
       ).toBeVisible({ timeout: 5_000 });
