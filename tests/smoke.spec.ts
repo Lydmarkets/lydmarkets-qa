@@ -8,14 +8,29 @@ test.describe("Smoke tests — critical user flows", () => {
 
   test("login page renders BankID sign-in form", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByText(/välkommen tillbaka|welcome back/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i }).first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /välkommen tillbaka|welcome back/i }),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole("button", {
+          name: /bankid on this computer|bankid på den här datorn|mobile bankid|mobilt bankid/i,
+        })
+        .first(),
+    ).toBeVisible();
   });
 
   test("register page renders BankID account creation", async ({ page }) => {
     await page.goto("/register");
-    await expect(page.getByRole("heading", { name: /skapa konto|create( an)? account/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /starta bankid|start bankid/i })).toBeVisible();
+    // Editorial register page (SCRUM-1042) leads with the "Open account" /
+    // "Öppna konto" kicker; the H1 is the editorial line "Trade on what is
+    // about to happen.", so assert against the kicker and the BankID CTA.
+    await expect(
+      page.getByText(/öppna konto|open account/i).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /starta bankid|start bankid/i }),
+    ).toBeVisible();
   });
 
   test("markets page loads", async ({ page }) => {

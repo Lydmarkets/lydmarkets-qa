@@ -1,33 +1,20 @@
 import { test, expect } from "../fixtures/base";
-import { goToFirstMarket } from "../helpers/go-to-market";
+import { openQuickBetFromHome } from "../helpers/open-quick-bet";
 
-// SCRUM-539: Min/max stake display on order panel.
-// Updated for SCRUM-797 — button copy on market detail is now "Ja XX%" /
-// "Nej XX%" or "Yes XX%" / "No XX%", matching the home-page probability pill
-// naming. The modal label text is also bilingual. Assertions match either.
+// SCRUM-539: Min/max stake display on the QuickBet modal.
+//
+// The QuickBet modal is opened from home FeaturedMarketsGrid cards now
+// (SCRUM-1081 made the desktop market-detail modal mobile-only — the
+// side-rail TradePanel handles trades inline at >=lg).
 
 async function openDialogForYes(page: import("@playwright/test").Page) {
-  await goToFirstMarket(page);
-  const yesBtn = page
-    .getByRole("button", { name: /^(buy yes|yes\s*\d|ja\s*\d)/i })
-    .first();
-  await expect(yesBtn).toBeVisible({ timeout: 10_000 });
-  await yesBtn.click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible({ timeout: 5_000 });
-  return dialog;
+  await openQuickBetFromHome(page, "yes");
+  return page.getByRole("dialog");
 }
 
 async function openDialogForNo(page: import("@playwright/test").Page) {
-  await goToFirstMarket(page);
-  const noBtn = page
-    .getByRole("button", { name: /^(buy no|no\s*\d|nej\s*\d)/i })
-    .first();
-  await expect(noBtn).toBeVisible({ timeout: 10_000 });
-  await noBtn.click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible({ timeout: 5_000 });
-  return dialog;
+  await openQuickBetFromHome(page, "no");
+  return page.getByRole("dialog");
 }
 
 test.describe("SCRUM-539: Min/max stake display on order panel", () => {

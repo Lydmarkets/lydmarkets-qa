@@ -74,17 +74,49 @@ test.describe("Accessibility (a11y) tests", () => {
     expect(offenders, `Found text elements below 10px: ${JSON.stringify(offenders)}`).toEqual([]);
   });
 
-  test("form labels are associated with inputs on login page", async ({ page }) => {
-    // Login uses BankID — no standard form inputs. Register has no text inputs either.
-    // Verify the login page is accessible via its button structure.
+  test("buttons on login page expose an accessible name", async ({ page }) => {
+    // Login uses BankID — no standard form inputs. Register has no text inputs
+    // either. Verify every <button> element on the login page exposes either
+    // visible text, an aria-label, an aria-labelledby reference, or a title.
+    // (The previous version only checked text + aria-label and missed buttons
+    // that label themselves via aria-labelledby — produces false positives on
+    // the editorial layout where the ansvarsspel-bar pills compose labels
+    // from sibling spans.)
     await page.goto("/login");
-    const buttons = await page.locator("button").all();
-    expect(buttons.length).toBeGreaterThan(0);
-    for (const btn of buttons) {
-      const text = await btn.textContent();
-      const ariaLabel = await btn.getAttribute("aria-label");
-      expect(text?.trim() || ariaLabel).toBeTruthy();
-    }
+    const accessibleNames = await page.evaluate(() => {
+      const namesByMissing: { html: string }[] = [];
+      const buttons = Array.from(document.querySelectorAll("button"));
+      for (const btn of buttons) {
+        // Skip buttons explicitly hidden from the accessibility tree —
+        // includes the UserMenu drawer scrim, which is a presentational
+        // <button aria-hidden="true" tabindex="-1"> backdrop and is not
+        // exposed to assistive tech.
+        if (btn.getAttribute("aria-hidden") === "true") continue;
+
+        const text = btn.textContent?.trim() ?? "";
+        const aria = btn.getAttribute("aria-label") ?? "";
+        const labelledBy = btn.getAttribute("aria-labelledby") ?? "";
+        const title = btn.getAttribute("title") ?? "";
+        let labelledText = "";
+        if (labelledBy) {
+          labelledText = labelledBy
+            .split(/\s+/)
+            .map((id) => document.getElementById(id)?.textContent?.trim() ?? "")
+            .join(" ");
+        }
+        const accessibleName = text || aria || labelledText || title;
+        if (!accessibleName) {
+          namesByMissing.push({ html: btn.outerHTML.slice(0, 200) });
+        }
+      }
+      return { count: buttons.length, missing: namesByMissing };
+    });
+
+    expect(accessibleNames.count).toBeGreaterThan(0);
+    expect(
+      accessibleNames.missing,
+      `Buttons without accessible name: ${JSON.stringify(accessibleNames.missing)}`,
+    ).toEqual([]);
   });
 
   test("page has proper lang attribute", async ({ page }) => {

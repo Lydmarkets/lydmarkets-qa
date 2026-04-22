@@ -46,28 +46,36 @@ test.describe("Portfolio spec — E2E coverage", () => {
       await page.goto("/portfolio");
       await dismissLimitsDialog(page);
 
+      // The redesigned portfolio page leads with a personalised greeting
+      // ("Good morning, <FirstName>." / "God morgon, …") in the H1 — the
+      // "Portfolio" label moved to a mono eyebrow above. Assert against the
+      // PortfolioGreeting component's data-testid instead of the H1 text.
       await expect(
-        page.getByRole("heading", { level: 1, name: /portfolio|portfölj/i })
+        page.getByTestId("portfolio-greeting-title"),
       ).toBeVisible({ timeout: 15_000 });
     });
 
-    test("portfolio page shows tab navigation: Summary, Open, Processing, Settled, History", { tag: ["@portfolio"] }, async ({ page }) => {
+    test("portfolio page shows the editorial tab strip (Open, Closed, History)", { tag: ["@portfolio"] }, async ({ page }) => {
+      // SCRUM-1042 (A7) trimmed the tab strip to three values: Open / Closed /
+      // History. The legacy Summary, Processing, and Settled tabs are gone.
       await page.goto("/portfolio");
       await dismissLimitsDialog(page);
 
-      await expect(page.getByRole("tab", { name: /^summary$|^översikt$/i })).toBeVisible({ timeout: 15_000 });
-      await expect(page.getByRole("tab", { name: /^open/i })).toBeVisible();
-      await expect(page.getByRole("tab", { name: /^processing|^bearbetar/i })).toBeVisible();
-      await expect(page.getByRole("tab", { name: /^settled|^avgjord/i })).toBeVisible();
-      await expect(page.getByRole("tab", { name: /^history|^historik/i })).toBeVisible();
+      await expect(page.getByRole("tab", { name: /^open$|^öppna$/i })).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole("tab", { name: /^closed$|^stängda$/i })).toBeVisible();
+      await expect(page.getByRole("tab", { name: /^history$|^historik$/i })).toBeVisible();
     });
 
     test("portfolio summary cards are visible on the default tab", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/portfolio");
       await dismissLimitsDialog(page);
 
+      // The redesigned portfolio page leads with a personalised greeting
+      // ("Good morning, <FirstName>." / "God morgon, …") in the H1 — the
+      // "Portfolio" label moved to a mono eyebrow above. Assert against the
+      // PortfolioGreeting component's data-testid instead of the H1 text.
       await expect(
-        page.getByRole("heading", { level: 1, name: /portfolio|portfölj/i })
+        page.getByTestId("portfolio-greeting-title"),
       ).toBeVisible({ timeout: 15_000 });
 
       // Summary cards render totals like "Markets", "Net result", "Win rate".
@@ -87,8 +95,12 @@ test.describe("Portfolio spec — E2E coverage", () => {
       await page.goto("/portfolio?tab=history");
       await dismissLimitsDialog(page);
 
+      // The redesigned portfolio page leads with a personalised greeting
+      // ("Good morning, <FirstName>." / "God morgon, …") in the H1 — the
+      // "Portfolio" label moved to a mono eyebrow above. Assert against the
+      // PortfolioGreeting component's data-testid instead of the H1 text.
       await expect(
-        page.getByRole("heading", { level: 1, name: /portfolio|portfölj/i })
+        page.getByTestId("portfolio-greeting-title"),
       ).toBeVisible({ timeout: 15_000 });
 
       // The History tab trigger should be selected (aria-selected="true")
@@ -157,15 +169,17 @@ test.describe("Portfolio spec — E2E coverage", () => {
       expect(hasAny).toBeTruthy();
     });
 
-    test("settled tab shows settled positions or empty state", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/portfolio?tab=settled");
+    test("closed tab shows closed positions or empty state", { tag: ["@portfolio"] }, async ({ page }) => {
+      // SCRUM-1042: the legacy "Settled" tab was renamed to "Closed" in the
+      // editorial tab strip rewrite (the URL param accepts both for back-compat).
+      await page.goto("/portfolio?tab=closed");
       await dismissLimitsDialog(page);
 
       await expect(
-        page.getByRole("tab", { name: /^settled|^avgjord/i })
+        page.getByRole("tab", { name: /^closed$|^stängda$/i }),
       ).toHaveAttribute("aria-selected", "true", { timeout: 15_000 });
 
-      const empty = page.getByText(/no settled|inga avgjorda/i).first();
+      const empty = page.getByText(/no closed|inga stängda|no settled|inga avgjorda/i).first();
       const table = page.getByRole("table");
       const hasAny =
         (await empty.isVisible({ timeout: 3_000 }).catch(() => false)) ||

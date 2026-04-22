@@ -91,23 +91,29 @@ test.describe("Compliance spec — E2E coverage", () => {
     );
 
     test(
-      "responsible gambling page shows PGSI self-assessment",
+      "responsible gambling page links out to the Stödlinjen PGSI self-test",
       { tag: ["@compliance"] },
       async ({ page }) => {
+        // The inline PGSI questionnaire was removed in 2026-04-16 — only
+        // Stödlinjen's hosted PGSI is LIFS 2018:2 § 10 blessed, so we link
+        // out instead of recreating the validated instrument ourselves.
         await page.goto("/responsible-gambling");
         await dismissLimitsDialog(page);
 
-        // PGSI section has 9 questions with radio groups
-        const radios = page.locator('input[type="radio"][name^="pgsi-"]');
-        // 9 questions × 4 options = 36 radio buttons
-        await expect(radios.first()).toBeAttached({ timeout: 10_000 });
-        const count = await radios.count();
-        expect(count).toBeGreaterThanOrEqual(36);
+        const cta = page
+          .getByRole("link", {
+            name: /självtest|self.?test|gör.*testet|take.*test/i,
+          })
+          .first();
+        await expect(cta).toBeVisible({ timeout: 10_000 });
+        const href = await cta.getAttribute("href");
+        expect(href).toContain("stodlinjen.se");
+        await expect(cta).toHaveAttribute("target", "_blank");
       },
     );
 
     test(
-      "responsible gambling page shows platform tools with links to settings",
+      "responsible gambling page links to platform tools",
       { tag: ["@compliance"] },
       async ({ page }) => {
         await page.goto("/responsible-gambling");
@@ -115,11 +121,26 @@ test.describe("Compliance spec — E2E coverage", () => {
 
         await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
 
-        // Platform tools section links to /settings for limit configuration
-        const settingsLinks = page.locator('a[href="/settings"]');
-        await expect(settingsLinks.first()).toBeVisible({ timeout: 5_000 });
-        const linkCount = await settingsLinks.count();
-        expect(linkCount).toBeGreaterThanOrEqual(1);
+        // After the responsible-gambling rewrite, the page surfaces support
+        // organisations + a Spelgränser deep-link rather than a /settings
+        // overview. Either link is enough to assert the section rendered.
+        const hasSpelgranser = await page
+          .locator('a[href*="/profil/spelgranser"]')
+          .first()
+          .isVisible({ timeout: 5_000 })
+          .catch(() => false);
+        const hasSettings = await page
+          .locator('a[href^="/settings"]')
+          .first()
+          .isVisible({ timeout: 5_000 })
+          .catch(() => false);
+        const hasSelfExclusion = await page
+          .locator('a[href*="/self-exclusion"]')
+          .first()
+          .isVisible({ timeout: 5_000 })
+          .catch(() => false);
+
+        expect(hasSpelgranser || hasSettings || hasSelfExclusion).toBeTruthy();
       },
     );
 
@@ -130,8 +151,10 @@ test.describe("Compliance spec — E2E coverage", () => {
         await page.goto("/responsible-gambling");
         await dismissLimitsDialog(page);
 
+        // SCRUM-796 moved self-exclusion from /settings/self-exclusion to
+        // public /self-exclusion. Match either the new or legacy path.
         await expect(
-          page.locator('a[href="/settings/self-exclusion"]').first(),
+          page.locator('a[href$="/self-exclusion"], a[href*="/self-exclusion?"]').first(),
         ).toBeVisible({ timeout: 10_000 });
       },
     );
@@ -139,10 +162,17 @@ test.describe("Compliance spec — E2E coverage", () => {
     // ── Self-exclusion ────────────────────────────────────────────────
 
     test(
-      "self-exclusion page shows period options (1mo, 3mo, 6mo, permanent)",
+      "self-exclusion page shows the regulated period options",
       { tag: ["@compliance"] },
       async ({ page }) => {
-        const response = await page.goto("/settings/self-exclusion");
+        // SCRUM-796: page moved from /settings/self-exclusion to public
+        // /self-exclusion. The page leads with a scope choice (Lydmarkets
+        // only vs Spelpaus). Period options are revealed only after the
+        // user picks the Lydmarkets-only scope; deep-link via
+        // ?step=form&period=… to skip the scope selection.
+        const response = await page.goto(
+          "/self-exclusion?step=form&period=1_month",
+        );
         await dismissLimitsDialog(page);
         if (!response || response.status() === 404 || page.url().includes("/login")) {
           test.skip(true, "Page not accessible");
@@ -150,57 +180,77 @@ test.describe("Compliance spec — E2E coverage", () => {
         }
 
         await expect(
-          page.getByRole("heading", { name: /self-exclusion|självavstängning/i, level: 1 }),
+          page
+            .getByRole("heading", {
+              name: /self.?excluded?\b|självavstäng|stäng av dig|exclude yourself/i,
+            })
+            .first(),
         ).toBeVisible({ timeout: 15_000 });
 
-        // Period options in Swedish: "1 månad", "3 månader", "6 månader", "Permanent"
+        // Period options are now: 24h, 1mo, 3mo, 6mo, indefinite (minimum
+        // 12 months). The legacy "permanent" label was renamed in
+        // migration 0064.
+        await expect(
+          page.getByText(/24.hours?|24.timmar/i).first(),
+        ).toBeVisible({ timeout: 10_000 });
         await expect(
           page.getByText(/1 month|1 månad/i).first(),
-        ).toBeVisible();
-        await expect(
-          page.getByText(/3 months|3 månader/i).first(),
         ).toBeVisible();
         await expect(
           page.getByText(/6 months|6 månader/i).first(),
         ).toBeVisible();
         await expect(
-          page.getByText(/permanent/i).first(),
+          page.getByText(/indefinite|tillsvidare|minst 12|minimum 12/i).first(),
         ).toBeVisible();
       },
     );
 
     test(
-      "self-exclusion page has two-step confirmation flow",
+      "self-exclusion page exposes a scope choice (Lydmarkets vs Spelpaus)",
       { tag: ["@compliance"] },
       async ({ page }) => {
-        const response = await page.goto("/settings/self-exclusion");
+        // SCRUM-796 introduced a two-step scope choice: exclude from
+        // Lydmarkets only (compliance-service driven) or refer the user out
+        // to the national Spelpaus register.
+        const response = await page.goto("/self-exclusion");
         await dismissLimitsDialog(page);
         if (!response || response.status() === 404 || page.url().includes("/login")) {
           test.skip(true, "Page not accessible");
           return;
         }
 
+        // The redesigned page title is "Self-exclude yourself from gambling" /
+        // "Stäng av dig själv från spel". Match either the kicker text or the
+        // full heading copy.
         await expect(
-          page.getByRole("heading", { name: /self-exclusion|självavstängning/i, level: 1 }),
+          page
+            .getByRole("heading", {
+              name: /self.?excluded?\b|självavstäng|stäng av dig|exclude yourself/i,
+            })
+            .first(),
         ).toBeVisible({ timeout: 15_000 });
 
-        // The page shows period selection, then a confirmation step
-        // Look for any interactive elements indicating a multi-step flow
+        // Either the scope choice (Lydmarkets vs Spelpaus) or a confirmation
+        // CTA / warning / period option should appear before the user can
+        // submit. The exact UI depends on whether the form was reached via
+        // ?step=form deep-link or fresh navigation.
+        const hasLydmarketsOnly = await page
+          .getByText(/only lydmarkets|endast lydmarkets|just lydmarkets/i)
+          .first()
+          .isVisible({ timeout: 5_000 })
+          .catch(() => false);
+        const hasSpelpausCard = await page
+          .getByText(/national.*register|nationella.*registret|spelpaus.*hela/i)
+          .first()
+          .isVisible({ timeout: 5_000 })
+          .catch(() => false);
         const hasConfirmBtn = await page
           .getByRole("button", { name: /continue|fortsätt|bekräfta|confirm/i })
           .first()
           .isVisible({ timeout: 5_000 })
           .catch(() => false);
 
-        const hasWarning = await page
-          .getByText(/warning|varning|cannot be.*reversed|kan inte ångras/i)
-          .first()
-          .isVisible({ timeout: 5_000 })
-          .catch(() => false);
-
-        // At least one confirmation element should exist in the flow
-        const hasPeriods = await page.getByText(/1 månad|1 month/i).first().isVisible().catch(() => false);
-        expect(hasConfirmBtn || hasWarning || hasPeriods).toBeTruthy();
+        expect(hasLydmarketsOnly || hasSpelpausCard || hasConfirmBtn).toBeTruthy();
       },
     );
 

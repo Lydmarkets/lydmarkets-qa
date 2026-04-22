@@ -28,8 +28,10 @@ test.describe("Trading spec — E2E coverage", () => {
       await goToFirstMarketDetail(page);
 
       // "Place Order" / "Lägg order" heading must be visible in sidebar
+      // The TradePanel side rail uses "Trade" / "Handla" as its kicker —
+      // the legacy "Place Order" / "Lägg order" heading is gone.
       await expect(
-        page.getByRole("heading", { name: /place order|lägg order/i }),
+        page.getByText(/^trade$|^handla$/i).first(),
       ).toBeVisible({ timeout: 10_000 });
     },
   );
@@ -40,13 +42,15 @@ test.describe("Trading spec — E2E coverage", () => {
     async ({ page }) => {
       await goToFirstMarketDetail(page);
 
+      // The TradePanel side rail uses "Trade" / "Handla" as its kicker —
+      // the legacy "Place Order" / "Lägg order" heading is gone.
       await expect(
-        page.getByRole("heading", { name: /place order|lägg order/i }),
+        page.getByText(/^trade$|^handla$/i).first(),
       ).toBeVisible({ timeout: 10_000 });
 
-      // YES and NO buttons with percentages exist
-      const yesBtn = page.getByRole("button", { name: /yes/i }).first();
-      const noBtn = page.getByRole("button", { name: /no/i }).first();
+      // The TradePanel SideButton renders <button data-side="yes|no">.
+      const yesBtn = page.locator('button[data-side="yes"]').first();
+      const noBtn = page.locator('button[data-side="no"]').first();
       await expect(yesBtn).toBeVisible({ timeout: 5_000 });
       await expect(noBtn).toBeVisible();
     },
@@ -152,8 +156,8 @@ test.describe("Trading spec — E2E coverage", () => {
           page.getByRole("heading", { name: /place order|lägg order/i }),
         ).toBeVisible({ timeout: 10_000 });
 
-        // YES and NO buttons should be interactive
-        const yesBtn = page.getByRole("button", { name: /yes/i }).first();
+        // YES and NO buttons should be interactive (TradePanel SideButton).
+        const yesBtn = page.locator('button[data-side="yes"]').first();
         await expect(yesBtn).toBeVisible({ timeout: 5_000 });
         await expect(yesBtn).toBeEnabled();
       },

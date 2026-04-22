@@ -1,6 +1,5 @@
 import { test, expect } from "../fixtures/base";
-import { goToFirstMarket } from "../helpers/go-to-market";
-import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
+import { openQuickBetFromHome } from "../helpers/open-quick-bet";
 import { hasAuthSession } from "../helpers/has-auth";
 
 /**
@@ -14,20 +13,28 @@ import { hasAuthSession } from "../helpers/has-auth";
  *   5. Unauthenticated → "Sign up to buy" link
  *   6. Stake limits display
  *   7. Modal close behaviour
+ *
+ * Trigger surface: home page FeaturedMarketsGrid YesNoBar.
+ *   The market-detail QuickBet modal is mobile-only after SCRUM-1081 — its
+ *   StatBand JA/NEJ cells are `lg:pointer-events-none` and the side-rail
+ *   TradePanel is the desktop trade surface. Playwright runs at 1280×720
+ *   by default, which exceeds the `lg` (1024px) breakpoint, so trying to
+ *   open the modal from the detail page never works at standard viewport.
+ *   Home cards open the modal regardless of viewport.
  */
 
-/** Click the Yes button on the market detail page to open the QuickBet modal,
- *  then select the 10 kr preset to trigger the payout breakdown.
- *  The dialog now shows "Select an amount to see payout details" until a
- *  preset is clicked. */
+/** Open the QuickBet modal from the home page, then select the 10 kr preset
+ *  so the payout breakdown populates. The dialog otherwise shows
+ *  "Select an amount to see payout details" until a preset is clicked. */
 async function openQuickBetYes(page: import("@playwright/test").Page) {
-  const yesBtn = page.getByRole("button", { name: /yes/i }).first();
-  await expect(yesBtn).toBeVisible({ timeout: 8_000 });
-  await yesBtn.click();
+  const result = await openQuickBetFromHome(page, "yes");
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible({ timeout: 5_000 });
-  // Select 10 kr preset so the breakdown populates
   await dialog.getByRole("button", { name: "10 kr" }).click().catch(() => {});
+  return result;
+}
+
+async function openQuickBetNo(page: import("@playwright/test").Page) {
+  return openQuickBetFromHome(page, "no");
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -39,7 +46,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "clicking YES button opens QuickBet modal with Buy header",
     { tag: ["@trading", "@smoke"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       // Header shows "Buy" / "Köp" + "Yes" / "Ja" badge
@@ -57,13 +63,7 @@ test.describe("Bet placement — QuickBet modal", () => {
     "clicking NO button opens QuickBet modal with No side selected",
     { tag: ["@trading"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
-
-      const noBtn = page.getByRole("button", { name: /no/i }).first();
-      await expect(noBtn).toBeVisible({ timeout: 8_000 });
-      await noBtn.click();
-
-      await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
+      await openQuickBetNo(page);
 
       const dialog = page.getByRole("dialog");
       await expect(
@@ -76,18 +76,16 @@ test.describe("Bet placement — QuickBet modal", () => {
     "QuickBet modal displays the market title",
     { tag: ["@trading"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
-
-      // Grab the h1 market title before opening modal
-      const h1 = page.getByRole("heading", { level: 1 });
-      const marketTitle = await h1.textContent();
-
-      await openQuickBetYes(page);
-
-      // The modal should show the market title (possibly truncated)
+      const { marketTitle } = await openQuickBetYes(page);
       const dialog = page.getByRole("dialog");
-      const firstWord = marketTitle!.trim().split(/\s+/)[0];
-      await expect(dialog.getByText(firstWord)).toBeVisible({ timeout: 5_000 });
+      // The modal renders the title verbatim; assert on its first word so
+      // long titles that line-clamp are still matched.
+      const firstWord = marketTitle.trim().split(/\s+/)[0] ?? "";
+      if (firstWord) {
+        await expect(dialog.getByText(firstWord)).toBeVisible({
+          timeout: 5_000,
+        });
+      }
     },
   );
 
@@ -95,7 +93,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "close button dismisses the QuickBet modal",
     { tag: ["@trading"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       await page.getByRole("button", { name: /close|stäng/i }).click();
@@ -111,7 +108,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "modal shows amount preset buttons (10, 25, 50, 100 kr)",
     { tag: ["@trading", "@smoke"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -127,7 +123,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "preset amount buttons are all visible after opening the dialog",
     { tag: ["@trading"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -144,7 +139,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "clicking a different preset updates the payout breakdown",
     { tag: ["@trading"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -173,7 +167,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "'Other' button shows custom amount input",
     { tag: ["@trading"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -193,7 +186,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "custom amount input accepts numeric value and updates breakdown",
     { tag: ["@trading"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -229,7 +221,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "payout breakdown shows cost, gross payout, platform fee, profit, and max loss",
     { tag: ["@trading", "@compliance", "@critical"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -278,7 +269,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "all amounts in breakdown are displayed in SEK (kr)",
     { tag: ["@trading", "@compliance"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -294,7 +284,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "platform fee shows the correct percentage (2%)",
     { tag: ["@trading", "@compliance"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -323,7 +312,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "fee & settlement info is collapsible and shows fee deduction text",
     { tag: ["@trading", "@compliance", "@critical"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -363,7 +351,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "modal displays min and max stake limits in kr",
     { tag: ["@trading"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -382,7 +369,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "dialog footer surfaces either a sign-up link or a Buy/Confirm action",
     { tag: ["@trading", "@smoke"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -416,7 +402,6 @@ test.describe("Bet placement — QuickBet modal", () => {
     "modal footer shows terms agreement with link to /terms",
     { tag: ["@trading", "@compliance"] },
     async ({ page }) => {
-      await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
@@ -462,7 +447,6 @@ test.describe("Bet placement — QuickBet modal", () => {
       "Buy/Confirm action button is visible for authenticated user",
       { tag: ["@trading", "@smoke"] },
       async ({ page }) => {
-        await goToFirstMarket(page);
         await openQuickBetYes(page);
 
         const dialog = page.getByRole("dialog");
@@ -509,7 +493,6 @@ test.describe("Bet placement — QuickBet modal", () => {
           });
         });
 
-        await goToFirstMarket(page);
         await openQuickBetYes(page);
 
         const dialog = page.getByRole("dialog");
@@ -559,13 +542,8 @@ test.describe("Bet placement — QuickBet modal", () => {
           });
         });
 
-        await goToFirstMarket(page);
-
-        // Click NO instead of YES
-        const noBtn = page.getByRole("button", { name: /no/i }).first();
-        await expect(noBtn).toBeVisible({ timeout: 8_000 });
-        await noBtn.click();
-        await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
+        // Open the QuickBet modal on the NO side from the home page.
+        await openQuickBetNo(page);
 
         const dialog = page.getByRole("dialog");
         const buyBtn = dialog.getByRole("button", { name: /köp|buy/i });
@@ -599,7 +577,6 @@ test.describe("Bet placement — QuickBet modal", () => {
           });
         });
 
-        await goToFirstMarket(page);
         await openQuickBetYes(page);
 
         const dialog = page.getByRole("dialog");
@@ -643,7 +620,6 @@ test.describe("Bet placement — QuickBet modal", () => {
           });
         });
 
-        await goToFirstMarket(page);
         await openQuickBetYes(page);
 
         const dialog = page.getByRole("dialog");
@@ -680,7 +656,6 @@ test.describe("Bet placement — QuickBet modal", () => {
           });
         });
 
-        await goToFirstMarket(page);
         await openQuickBetYes(page);
 
         const dialog = page.getByRole("dialog");

@@ -1,169 +1,122 @@
 import { test, expect } from "../fixtures/base";
 import { goToFirstMarket } from "../helpers/go-to-market";
 
-// SCRUM-401: Order placement — authenticated user buys YES/NO share
-// Requires authenticated storageState — set up via global setup.
-// Tests are structured to run with auth; assertions reflect the expected
-// authenticated-user UI. In CI, set up playwright/.auth/user.json first.
+// SCRUM-401: Order placement on the market detail page.
+//
+// Editorial-redesign trade surface (SCRUM-1081):
+//   - Desktop (>=lg / 1024px): the side-rail TradePanel is the primary
+//     trade interface — Yes/No toggle + amount input + "Buy {side} · {cost}"
+//     CTA. The StatBand JA/NEJ price cells are `lg:pointer-events-none`.
+//   - Mobile (<lg): the StatBand cells become buttons that open the
+//     QuickBet modal. There is no side rail.
+// Playwright's default 1280×720 viewport hits the desktop layout, so these
+// tests assert the TradePanel side flow.
 
-test.describe("SCRUM-401 — Order placement (authenticated user)", () => {
-  // Requires auth — apply storageState when available
-  // test.use({ storageState: "playwright/.auth/user.json" });
-
-  test("market detail page shows YES and NO order buttons", async ({ page }) => {
+test.describe("SCRUM-401 — Order placement (market detail TradePanel)", () => {
+  test("desktop TradePanel exposes Buy YES / Buy NO toggle", async ({ page }) => {
     await goToFirstMarket(page);
-
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
-    // The order form shows Yes/No percentage buttons
-    const yesButton = page.getByRole("button", { name: /yes/i }).first();
-    const noButton = page.getByRole("button", { name: /no/i }).first();
-    await expect(yesButton).toBeVisible({ timeout: 8000 });
-    await expect(noButton).toBeVisible({ timeout: 8000 });
+    // The TradePanel renders a Yes/No outcome toggle inside the side rail.
+    // The TradePanel SideButton renders <button data-side="yes|no"> inside
+    // the side rail. Scope by data-side to skip the StatBand cells that
+    // share the "Buy YES" / "Buy NO" copy but are pointer-events-none on
+    // desktop.
+    await expect(
+      page.locator('button[data-side="yes"]').first(),
+    ).toBeVisible({ timeout: 8000 });
+    await expect(
+      page.locator('button[data-side="no"]').first(),
+    ).toBeVisible({ timeout: 8000 });
   });
 
-  test("market detail page shows a Place Order section", async ({ page }) => {
+  test("desktop TradePanel surfaces the Trade kicker and amount field", async ({ page }) => {
     await goToFirstMarket(page);
-
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
-    // The page renders a "Place Order" / "Lägg order" heading or section
-    await expect(page.getByText(/place order|lägg order/i).first()).toBeVisible({ timeout: 8000 });
+    await expect(
+      page.getByText(/^trade$|^handla$/i).first(),
+    ).toBeVisible({ timeout: 8000 });
+    // The amount field is labelled "Amount" / "Belopp".
+    const amount = page
+      .getByRole("textbox", { name: /amount|belopp/i })
+      .or(page.getByRole("spinbutton"))
+      .first();
+    await expect(amount).toBeVisible({ timeout: 8000 });
   });
 
-  test("clicking YES selects YES outcome in order form", async ({ page }) => {
-    await goToFirstMarket(page);
-
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    // Click the YES button in the order form panel
-    const yesButton = page.getByRole("button", { name: /yes/i }).first();
-    await expect(yesButton).toBeVisible({ timeout: 8000 });
-    await yesButton.click();
-
-    // After clicking YES, the button should show active/selected state
-    // or a stake/quantity input should appear
-    const hasInput = await page
-      .getByPlaceholder(/e\.g\.|stake|amount|quantity/i)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
-    expect(hasInput || true).toBeTruthy(); // Input already present; click selects the outcome
-  });
-
-  test("order form opens QuickBet modal when clicking Yes or No", async ({ page }) => {
-    await goToFirstMarket(page);
-
-    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
-
-    // Click Yes to open the QuickBet modal
-    const yesButton = page.getByRole("button", { name: /yes/i }).first();
-    await expect(yesButton).toBeVisible({ timeout: 8000 });
-    await yesButton.click();
-
-    // A dialog/modal should appear with order input
-    const hasModal = await page
-      .getByRole("dialog")
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-    const hasInput = await page
-      .getByRole("spinbutton")
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-
-    expect(hasModal || hasInput).toBeTruthy();
-  });
-
-  test("authenticated user sees Place Order submit button after selecting outcome", async ({
+  test("clicking the Yes toggle keeps you in the inline TradePanel (no modal on desktop)", async ({
     page,
   }) => {
-    // Requires authenticated storageState — set up via global setup
-    // test.use({ storageState: "playwright/.auth/user.json" });
     await goToFirstMarket(page);
-
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
-    // Select YES outcome
-    const yesButton = page.getByRole("button", { name: /yes/i }).first();
-    await expect(yesButton).toBeVisible({ timeout: 8000 });
-    await yesButton.click();
+    const yesToggle = page.locator('button[data-side="yes"]').first();
+    await yesToggle.click();
 
-    // The "Place Order" / "Lägg order" / "Buy" / "Köp" submit button or the Place Order section should be present
-    const placeOrderBtn = page
-      .getByRole("button", { name: /place order|lägg order|buy|köp|submit|confirm/i })
-      .first();
-    const placeOrderSection = page.getByText(/place order|lägg order/i).first();
-
-    const hasBuyBtn = await placeOrderBtn.isVisible({ timeout: 5000 }).catch(() => false);
-    const hasSection = await placeOrderSection.isVisible({ timeout: 3000 }).catch(() => false);
-
-    expect(hasBuyBtn || hasSection).toBeTruthy();
+    // Side toggle changes the active side — no QuickBet modal should appear
+    // on the desktop layout. The CTA button text updates to reflect the
+    // chosen side.
+    const dialog = await page
+      .getByRole("dialog")
+      .isVisible({ timeout: 1500 })
+      .catch(() => false);
+    expect(dialog).toBeFalsy();
   });
 
-  test("placing an order as authenticated user opens QuickBet modal", async ({ page }) => {
-    // Requires authenticated storageState — set up via global setup
-    // test.use({ storageState: "playwright/.auth/user.json" });
+  test("desktop TradePanel exposes a Buy CTA button", async ({ page }) => {
     await goToFirstMarket(page);
-
     await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
 
-    // Click YES to open QuickBet modal
-    const yesButton = page.getByRole("button", { name: /yes/i }).first();
-    await expect(yesButton).toBeVisible({ timeout: 8000 });
-    await yesButton.click();
-
-    // Wait for the modal to appear
-    const hasModal = await page.getByRole("dialog").isVisible({ timeout: 5000 }).catch(() => false);
-    if (!hasModal) {
-      // No modal — the order form may require auth or the feature changed
-      const url = page.url();
-      expect(url.includes("/auth") || url.includes("/markets/")).toBeTruthy();
-      return;
-    }
-
-    // Fill stake amount in the modal
-    const stakeInput = page.getByRole("spinbutton").first();
-    const hasInput = await stakeInput.isVisible({ timeout: 3000 }).catch(() => false);
-    if (!hasInput) {
-      // Modal opened but input may be different — just verify modal is visible
-      await expect(page.getByRole("dialog")).toBeVisible();
-      return;
-    }
-    await stakeInput.fill("10");
-
-    // Submit the order
-    const placeOrderBtn = page
-      .getByRole("button", { name: /place order|lägg order|buy|köp|submit|confirm/i })
+    // CTA copy: "Buy {side} · {cost}" / "Köp {side} · {cost}". Match either
+    // the active label or the side toggle as a fallback.
+    const cta = page
+      .getByRole("button", { name: /^(buy|köp)\s+(yes|ja|no|nej)/i })
       .first();
-
-    const btnVisible = await placeOrderBtn.isVisible({ timeout: 5000 }).catch(() => false);
-    if (btnVisible) {
-      await placeOrderBtn.click();
-
-      // Assert success toast or confirmation (English or Swedish)
-      await expect(
-        page.getByText(/order placed|order lagd|success|lyckades|confirmed|bekräftad|thank|tack/i).first()
-      ).toBeVisible({ timeout: 10000 });
-    } else {
-      // If submit button not found (unauthenticated), assert redirect to auth
-      const url = page.url();
-      expect(url.includes("/auth") || url.includes("/markets/")).toBeTruthy();
-    }
+    await expect(cta).toBeVisible({ timeout: 8000 });
   });
 
-  test("order history tab shows recent orders after placement", async ({ page }) => {
-    // /orders was consolidated into /portfolio?tab=history in SCRUM-776.
+  test("mobile viewport opens the QuickBet modal when the JA cell is tapped", async ({
+    page,
+  }) => {
+    // On mobile the StatBand JA cell becomes a real button (not
+    // pointer-events-none) and opens the QuickBet modal — same code path
+    // home cards use, just rooted at the market detail page.
+    await page.setViewportSize({ width: 393, height: 851 });
+    await goToFirstMarket(page);
+    await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
+
+    // The mobile JA cell still uses an aria-label "Buy YES · X%" (not
+    // data-side); on mobile both cells are clickable and there's no
+    // pointer-events-none.
+    const yesCell = page
+      .getByRole("button", { name: /buy yes|köp ja/i })
+      .first();
+    const isVisible = await yesCell
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
+    if (!isVisible) {
+      // Some markets on staging are inactive (no clickable cells) — skip.
+      test.skip(true, "Active YES cell not present on this market");
+      return;
+    }
+    await yesCell.click();
+
+    await expect(
+      page.getByRole("dialog"),
+    ).toBeVisible({ timeout: 5000 });
+  });
+
+  test("/portfolio?tab=history is reachable as the post-order destination", async ({ page }) => {
+    // /orders was consolidated into /portfolio?tab=history in SCRUM-776 and
+    // remains there post-redesign.
     await page.goto("/portfolio?tab=history");
     const url = page.url();
     const isOnPortfolio = url.includes("/portfolio");
     const isOnAuth = url.includes("/login") || url.includes("/auth");
-
     if (isOnPortfolio) {
       await expect(page.locator("main")).toBeVisible({ timeout: 8000 });
     }
-
-    // Should either show portfolio (history tab) or redirect to auth
     expect(isOnPortfolio || isOnAuth).toBeTruthy();
   });
 });
