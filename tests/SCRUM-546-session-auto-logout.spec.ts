@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { isAuthenticated } from "../helpers/is-authenticated";
+import { SESSION_TIMER_REGEX, openUserMenu } from "../helpers/user-menu";
 /**
  * SCRUM-546: Automatic session logout on time limit expiry.
  *
@@ -28,9 +29,12 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
         return;
       }
 
-      // Session timer must exist for timeout enforcement to work
-      const header = page.locator("header, [role='banner']").first();
-      await expect(header.getByText(/\d{1,2}:\d{2}/)).toBeVisible({ timeout: 5_000 });
+      // SCRUM-1090 relocated the timer into the UserMenu drawer. The new
+      // minute-level format is "X min" / "Y tim X min".
+      await openUserMenu(page);
+      await expect(
+        page.getByText(SESSION_TIMER_REGEX).first()
+      ).toBeVisible({ timeout: 5_000 });
     },
   );
 
