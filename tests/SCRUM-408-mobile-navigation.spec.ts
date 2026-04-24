@@ -3,30 +3,26 @@ import { isAuthenticated } from "../helpers/is-authenticated";
 
 const MOBILE_VIEWPORT = { width: 393, height: 851 };
 
-// Mobile navigation uses a BottomNav (below lg breakpoint) that renders for
-// both anonymous and authenticated visitors. It has 4 entries:
-//   - Marknader / Markets -> /markets
-//   - Sök / Search -> opens search overlay
-//   - Mina positioner / My Positions -> /portfolio
-//   - Mer / More -> opens the right-side sheet drawer
-//
-// Drawer content (anonymous): Settings link, theme toggle, language toggle,
-// Responsible Gambling link. Close button dismisses it.
-// Drawer content (authenticated): all of the above plus a Logout button.
+// SCRUM-1090/1092 consolidated navigation:
+//   - BottomNav (below lg): 3 tabs — Marknader/Markets, Sök/Search, Mina
+//     positioner/My Positions. The fourth "Mer/More" slot was removed.
+//   - Top header: "Öppna meny" / "Open menu" hamburger opens the UserMenu
+//     drawer (aside). The drawer replaces the old BottomNav sheet and holds
+//     Sign in / Register (guest) or Logout + Settings + Responsible gambling
+//     links (authenticated) plus theme + language toggles.
+//   - Drawer close button is "Stäng meny" / "Close menu".
+
 test.describe("SCRUM-408: Mobile navigation — unauthenticated", () => {
   test.use({ viewport: MOBILE_VIEWPORT });
 
-  test("unauthenticated mobile header shows Sign in and Sign up inline", async ({ page }) => {
+  test("unauthenticated mobile header exposes the UserMenu trigger", async ({ page }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("link", { name: /sign in|logga in/i }).first()
+      page.getByRole("button", { name: /öppna meny|open menu/i })
     ).toBeVisible({ timeout: 10_000 });
-    await expect(
-      page.getByRole("link", { name: /sign up|registrera/i }).first()
-    ).toBeVisible();
   });
 
-  test("unauthenticated mobile home renders the BottomNav with Marknader/Mer", async ({
+  test("unauthenticated mobile home renders the BottomNav with Markets tab", async ({
     page,
   }) => {
     await page.goto("/");
@@ -36,23 +32,23 @@ test.describe("SCRUM-408: Mobile navigation — unauthenticated", () => {
     await expect(
       bottomNav.getByRole("link", { name: /marknader|markets/i })
     ).toBeVisible();
-    await expect(
-      bottomNav.getByRole("button", { name: /^mer$|^more$/i })
-    ).toBeVisible();
   });
 
-  test("Mer / More button opens a drawer with Settings and Responsible Gambling", async ({
+  test("UserMenu drawer shows Sign in / Register and the Responsible Gambling section", async ({
     page,
   }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /^mer$|^more$/i }).click();
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible({ timeout: 5_000 });
+    await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
+
     await expect(
-      dialog.getByRole("link", { name: /inställningar|settings/i })
+      page.getByRole("link", { name: /^logga in$|^sign in$/i })
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(
+      page.getByRole("link", { name: /^registrera$|^sign up$/i })
     ).toBeVisible();
+    // Responsible-gambling section heading (non-link label).
     await expect(
-      dialog.getByRole("link", { name: /ansvarsfullt spelande|responsible gambling/i })
+      page.getByText(/ansvarsfullt spelande|responsible gambling/i).first()
     ).toBeVisible();
   });
 });
@@ -63,79 +59,90 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
     storageState: "playwright/.auth/user.json",
   });
 
-  test("Mer / More button opens a drawer with Settings", async ({ page }) => {
+  test("UserMenu drawer shows My Profile link for authenticated users", async ({ page }) => {
+    // Note: SCRUM-1092 (in progress) will add a Settings shortcut + Logout
+    // button. Until then the drawer exposes account management via My Profile,
+    // which is the existing route for account settings.
     await page.goto("/");
     if (!(await isAuthenticated(page))) {
       test.skip(true, "Requires authenticated session");
       return;
     }
 
-    const moreBtn = page.getByRole("button", { name: /^mer$|^more$/i });
-    await expect(moreBtn).toBeVisible({ timeout: 5_000 });
-    await moreBtn.click();
+    const menuBtn = page.getByRole("button", { name: /öppna meny|open menu/i });
+    await expect(menuBtn).toBeVisible({ timeout: 5_000 });
+    await menuBtn.click();
 
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible({ timeout: 5_000 });
     await expect(
-      dialog.getByRole("link", { name: /settings|inställningar/i })
+      page.getByRole("link", { name: /^my profile$|^min profil$/i })
     ).toBeVisible({ timeout: 5_000 });
   });
 
-  test("More drawer shows theme and language toggles", async ({ page }) => {
+  test("UserMenu drawer shows theme and language toggles", async ({ page }) => {
     await page.goto("/");
     if (!(await isAuthenticated(page))) {
       test.skip(true, "Requires authenticated session");
       return;
     }
 
-    await page.getByRole("button", { name: /^mer$|^more$/i }).click();
-    const dialog = page.getByRole("dialog");
+    await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
 
-    // Theme toggle — aria-label is "Switch to light/dark mode" (or Swedish).
+    // Language toggle is present even when unauthenticated ("Byt till
+    // engelska" / "Switch to English"); asserting it also implicitly
+    // confirms the drawer opened.
     await expect(
-      dialog.getByRole("button", {
-        name: /switch to (light|dark) mode|byt till (ljust|mörkt) läge/i,
+      page.getByRole("button", {
+        name: /switch to (swedish|english)|byt till (svenska|engelska)/i,
       })
     ).toBeVisible({ timeout: 5_000 });
-    // Language toggle — English label "Switch to Swedish" or Swedish label
-    // "Byt till engelska".
+    // Theme toggle aria-label.
     await expect(
-      dialog.getByRole("button", {
-        name: /switch to (swedish|english)|byt till (svenska|engelska)/i,
+      page.getByRole("button", {
+        name: /switch to (light|dark) mode|byt till (ljust|mörkt) läge/i,
       })
     ).toBeVisible();
   });
 
-  test("More drawer has a Logout button", async ({ page }) => {
+  test("UserMenu drawer surfaces the session timer and balance for authenticated users", async ({
+    page,
+  }) => {
+    // SCRUM-1090 relocated the session timer and wallet balance into the
+    // drawer header. A Logout button is planned in SCRUM-1092 — add a test
+    // for it once that ticket ships.
     await page.goto("/");
     if (!(await isAuthenticated(page))) {
       test.skip(true, "Requires authenticated session");
       return;
     }
 
-    await page.getByRole("button", { name: /^mer$|^more$/i }).click();
-    const dialog = page.getByRole("dialog");
+    await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
 
+    // Session timer format: "0 min" / "5 min" / "1 tim 23 min" (SCRUM-1090).
     await expect(
-      dialog.getByRole("button", { name: /log ?out|logga ut/i })
+      page.getByText(/^\d+\s*(min|tim)/i).first()
+    ).toBeVisible({ timeout: 5_000 });
+    // Balance formatted as "X,XX kr".
+    await expect(
+      page.getByText(/\d+[.,]\d{2}\s*kr/i).first()
     ).toBeVisible({ timeout: 5_000 });
   });
 
-  test("Settings link in drawer navigates to /settings", async ({ page }) => {
+  test("My Profile link in drawer navigates to /profile", async ({ page }) => {
     await page.goto("/");
     if (!(await isAuthenticated(page))) {
       test.skip(true, "Requires authenticated session");
       return;
     }
 
-    const moreBtn = page.getByRole("button", { name: /^mer$|^more$/i });
-    await expect(moreBtn).toBeVisible({ timeout: 5_000 });
-    await moreBtn.click();
+    const menuBtn = page.getByRole("button", { name: /öppna meny|open menu/i });
+    await expect(menuBtn).toBeVisible({ timeout: 5_000 });
+    await menuBtn.click();
 
-    const dialog = page.getByRole("dialog");
-    const settingsLink = dialog.getByRole("link", { name: /settings|inställningar/i });
-    await expect(settingsLink).toBeVisible({ timeout: 5_000 });
-    await settingsLink.click();
-    await page.waitForURL(/\/settings/, { timeout: 10_000 });
+    const profileLink = page.getByRole("link", {
+      name: /^my profile$|^min profil$/i,
+    });
+    await expect(profileLink).toBeVisible({ timeout: 5_000 });
+    await profileLink.click();
+    await page.waitForURL(/\/profile/, { timeout: 10_000 });
   });
 });
