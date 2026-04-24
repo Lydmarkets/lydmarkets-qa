@@ -81,6 +81,10 @@ test.describe("Accessibility (a11y) tests", () => {
     const buttons = await page.locator("button").all();
     expect(buttons.length).toBeGreaterThan(0);
     for (const btn of buttons) {
+      // Decorative buttons (e.g. the drawer backdrop) are hidden from
+      // assistive tech via aria-hidden + tabindex=-1; they don't need a label.
+      const ariaHidden = await btn.getAttribute("aria-hidden");
+      if (ariaHidden === "true") continue;
       const text = await btn.textContent();
       const ariaLabel = await btn.getAttribute("aria-label");
       expect(text?.trim() || ariaLabel).toBeTruthy();
