@@ -1,16 +1,18 @@
 import { test, expect } from "../fixtures/base";
 import { goToFirstMarket } from "../helpers/go-to-market";
+import {
+  MOBILE_VIEWPORT,
+  getQuickBetNoTrigger,
+  getQuickBetYesTrigger,
+} from "../helpers/order-form";
 
 // SCRUM-539: Min/max stake display on order panel.
-// Updated for SCRUM-797 — button copy on market detail is now "Ja XX%" /
-// "Nej XX%" or "Yes XX%" / "No XX%", matching the home-page probability pill
-// naming. The modal label text is also bilingual. Assertions match either.
+// QuickBetModal is mobile-only since SCRUM-797 — desktop shows the same
+// info inline in the TradePanel. Run at a mobile viewport to open the modal.
 
 async function openDialogForYes(page: import("@playwright/test").Page) {
   await goToFirstMarket(page);
-  const yesBtn = page
-    .getByRole("button", { name: /^(buy yes|yes\s*\d|ja\s*\d)/i })
-    .first();
+  const yesBtn = getQuickBetYesTrigger(page);
   await expect(yesBtn).toBeVisible({ timeout: 10_000 });
   await yesBtn.click();
   const dialog = page.getByRole("dialog");
@@ -20,9 +22,7 @@ async function openDialogForYes(page: import("@playwright/test").Page) {
 
 async function openDialogForNo(page: import("@playwright/test").Page) {
   await goToFirstMarket(page);
-  const noBtn = page
-    .getByRole("button", { name: /^(buy no|no\s*\d|nej\s*\d)/i })
-    .first();
+  const noBtn = getQuickBetNoTrigger(page);
   await expect(noBtn).toBeVisible({ timeout: 10_000 });
   await noBtn.click();
   const dialog = page.getByRole("dialog");
@@ -31,6 +31,8 @@ async function openDialogForNo(page: import("@playwright/test").Page) {
 }
 
 test.describe("SCRUM-539: Min/max stake display on order panel", () => {
+  test.use({ viewport: MOBILE_VIEWPORT });
+
   test(
     "order dialog shows min/max stake text when Yes is clicked",
     { tag: ["@regression", "@compliance"] },

@@ -2,6 +2,11 @@ import { test, expect } from "../fixtures/base";
 import { goToFirstMarket } from "../helpers/go-to-market";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
+import {
+  MOBILE_VIEWPORT,
+  getQuickBetNoTrigger,
+  getQuickBetYesTrigger,
+} from "../helpers/order-form";
 
 /**
  * Bet placement — QuickBet modal E2E tests
@@ -21,7 +26,7 @@ import { hasAuthSession } from "../helpers/has-auth";
  *  The dialog now shows "Select an amount to see payout details" until a
  *  preset is clicked. */
 async function openQuickBetYes(page: import("@playwright/test").Page) {
-  const yesBtn = page.getByRole("button", { name: /yes/i }).first();
+  const yesBtn = getQuickBetYesTrigger(page);
   await expect(yesBtn).toBeVisible({ timeout: 8_000 });
   await yesBtn.click();
   const dialog = page.getByRole("dialog");
@@ -35,6 +40,10 @@ async function openQuickBetYes(page: import("@playwright/test").Page) {
 // ─────────────────────────────────────────────────────────────────────
 
 test.describe("Bet placement — QuickBet modal", () => {
+  // QuickBetModal is a mobile-only entry point on the detail page.
+  // Desktop uses the inline TradePanel (tested elsewhere, no dialog opens).
+  test.use({ viewport: MOBILE_VIEWPORT });
+
   test(
     "clicking YES button opens QuickBet modal with Buy header",
     { tag: ["@trading", "@smoke"] },
@@ -59,7 +68,7 @@ test.describe("Bet placement — QuickBet modal", () => {
     async ({ page }) => {
       await goToFirstMarket(page);
 
-      const noBtn = page.getByRole("button", { name: /no/i }).first();
+      const noBtn = getQuickBetNoTrigger(page);
       await expect(noBtn).toBeVisible({ timeout: 8_000 });
       await noBtn.click();
 
@@ -561,13 +570,18 @@ test.describe("Bet placement — QuickBet modal", () => {
 
         await goToFirstMarket(page);
 
-        // Click NO instead of YES
-        const noBtn = page.getByRole("button", { name: /no/i }).first();
+        // Open QuickBet on the NO side (mobile viewport — data-side buttons
+        // are desktop-only; the aria-labelled StatBand trigger is what exists
+        // on mobile).
+        const noBtn = getQuickBetNoTrigger(page);
         await expect(noBtn).toBeVisible({ timeout: 8_000 });
         await noBtn.click();
         await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
 
         const dialog = page.getByRole("dialog");
+        // Select a preset so the Buy button becomes enabled
+        await dialog.getByRole("button", { name: "10 kr" }).click().catch(() => {});
+
         const buyBtn = dialog.getByRole("button", { name: /köp|buy/i });
         const hasBuy = await buyBtn.isVisible({ timeout: 5_000 }).catch(() => false);
         if (!hasBuy) {
