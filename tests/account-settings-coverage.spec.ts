@@ -83,39 +83,10 @@ test.describe("Account settings — coverage gaps", () => {
     },
   );
 
-  // ── Marketing consent toggle ───────────────────────────────────────
-
-  test(
-    "notifications tab has marketing consent toggle",
-    { tag: ["@compliance", "@regression"] },
-    async ({ page }) => {
-      await page.goto("/settings?tab=notifications");
-      await dismissLimitsDialog(page);
-
-      if (page.url().includes("/login")) {
-        test.skip(true, "Session expired");
-        return;
-      }
-
-      await expect(page.locator("main").first()).toBeVisible({
-        timeout: 10_000,
-      });
-
-      const hasMarketing = await page
-        .getByText(/marketing|marknadsföring/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasSwitch = await page
-        .getByRole("switch")
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      expect(hasMarketing || hasSwitch).toBeTruthy();
-    },
-  );
+  // The "marketing consent toggle" test previously lived here. The toggle
+  // was intentionally removed from the notifications tab — Lydmarkets does
+  // not run a marketing channel, so the consent surface was dropped rather
+  // than shipped as a no-op. Do not re-add without a new feature ticket.
 
   // ── PGSI self-assessment questionnaire ─────────────────────────────
 
@@ -164,19 +135,12 @@ test.describe("Account settings — coverage gaps", () => {
     },
   );
 
-  test(
-    "PGSI questionnaire has score interpretation guide",
-    { tag: ["@compliance", "@regression"] },
-    async ({ page }) => {
-      await page.goto("/responsible-gambling");
-      await dismissLimitsDialog(page);
-
-      // Score interpretation section is always visible below the radio groups
-      await expect(page.getByText(/0 points|0 poäng/i).first()).toBeVisible({ timeout: 5_000 });
-      await expect(page.getByText(/moderate risk|måttlig risk/i).first()).toBeVisible();
-      await expect(page.getByText(/problem gambl|spelproblem/i).first()).toBeVisible();
-    },
-  );
+  // The "PGSI score interpretation guide" test was removed — the inline
+  // 9-question self-assessment (and its score-interpretation legend) was
+  // dropped in favour of linking out to Stödlinjen's authoritative version,
+  // so the "0 points / moderate risk / problem gambling" rows no longer
+  // exist on our page. The external link is asserted in
+  // compliance-spec-coverage.spec.ts.
 
   test(
     "Responsible gambling page shows Stodlinjen and Spelpaus links",
