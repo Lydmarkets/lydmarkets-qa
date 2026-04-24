@@ -2,6 +2,11 @@ import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { goToFirstMarket } from "../helpers/go-to-market";
 import { hasAuthSession } from "../helpers/has-auth";
+import {
+  getOrderNoBtn,
+  getOrderYesBtn,
+  ORDER_SECTION_LABEL,
+} from "../helpers/order-form";
 
 /**
  * Trading spec — E2E coverage
@@ -27,9 +32,10 @@ test.describe("Trading spec — E2E coverage", () => {
     async ({ page }) => {
       await goToFirstMarketDetail(page);
 
-      // "Place Order" / "Lägg order" heading must be visible in sidebar
+      // SCRUM-797: the order panel label is now a kicker ("Handla" / "Trade"),
+      // not an <h2>. Assert on the text instead of role=heading.
       await expect(
-        page.getByRole("heading", { name: /place order|lägg order/i }),
+        page.getByText(ORDER_SECTION_LABEL).first(),
       ).toBeVisible({ timeout: 10_000 });
     },
   );
@@ -41,14 +47,11 @@ test.describe("Trading spec — E2E coverage", () => {
       await goToFirstMarketDetail(page);
 
       await expect(
-        page.getByRole("heading", { name: /place order|lägg order/i }),
+        page.getByText(ORDER_SECTION_LABEL).first(),
       ).toBeVisible({ timeout: 10_000 });
 
-      // YES and NO buttons with percentages exist
-      const yesBtn = page.getByRole("button", { name: /yes/i }).first();
-      const noBtn = page.getByRole("button", { name: /no/i }).first();
-      await expect(yesBtn).toBeVisible({ timeout: 5_000 });
-      await expect(noBtn).toBeVisible();
+      await expect(getOrderYesBtn(page)).toBeVisible({ timeout: 5_000 });
+      await expect(getOrderNoBtn(page)).toBeVisible();
     },
   );
 
@@ -147,13 +150,11 @@ test.describe("Trading spec — E2E coverage", () => {
       async ({ page }) => {
         await goToFirstMarketDetail(page);
 
-        // Place Order section visible
         await expect(
-          page.getByRole("heading", { name: /place order|lägg order/i }),
+          page.getByText(ORDER_SECTION_LABEL).first(),
         ).toBeVisible({ timeout: 10_000 });
 
-        // YES and NO buttons should be interactive
-        const yesBtn = page.getByRole("button", { name: /yes/i }).first();
+        const yesBtn = getOrderYesBtn(page);
         await expect(yesBtn).toBeVisible({ timeout: 5_000 });
         await expect(yesBtn).toBeEnabled();
       },

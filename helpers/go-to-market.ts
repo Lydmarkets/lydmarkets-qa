@@ -20,7 +20,10 @@ export async function goToFirstMarket(page: Page): Promise<string> {
     .click({ timeout: 5_000 })
     .catch(() => {});
 
-  const marketLinks = page.locator('main a[href*="/markets/"]');
+  // SCRUM-797 renders duplicate desktop/mobile hero sections — one is always
+  // hidden via `hidden lg:block` / `lg:hidden`. Filter to visible matches so
+  // the helper works on both mobile and desktop viewports.
+  const marketLinks = page.locator('main a[href*="/markets/"]:visible');
   await marketLinks.first().waitFor({ state: "visible", timeout: 15_000 });
   const count = await marketLinks.count();
 
