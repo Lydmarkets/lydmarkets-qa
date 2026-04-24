@@ -3,39 +3,39 @@ import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 
 test.describe("Remaining spec coverage", () => {
-  // ── Market filters bar ────────────────────────────────────────────
+  // ── /markets category filter bar ──────────────────────────────────
   test(
-    "home page renders the Market filters bar with category links",
+    "/markets renders the category filter bar with per-category links",
     { tag: ["@regression"] },
     async ({ page }) => {
-      await page.goto("/");
-      const filters = page.locator('[aria-label="Market filters"]').first();
+      // SCRUM-1040 moved the filter bar from the home page to /markets and
+      // rebuilt it as a <nav aria-label="Filtrera efter kategori"> of
+      // `?cat=<Name>` anchor links.
+      await page.goto("/markets");
+      const filters = page
+        .locator('[aria-label="Filtrera efter kategori"], [aria-label="Filter by category"]')
+        .first();
       await expect(filters).toBeVisible({ timeout: 10_000 });
-      // Categories are server-rendered into the filter bar — one link per
-      // active DB category.
       await expect(
-        filters.locator('a[href^="/category/"]').first()
+        filters.locator('a[href*="/markets?cat="]').first()
       ).toBeVisible({ timeout: 15_000 });
     }
   );
 
-  // ── Hero carousel of featured markets ─────────────────────────────
+  // ── Featured hero + grid on home ───────────────────────────────────
   test(
-    "home page renders a hero carousel (SCRUM-797)",
+    "home page renders the featured hero and Utvalda marknader grid",
     { tag: ["@regression"] },
     async ({ page }) => {
+      // SCRUM-797 shipped a single hero (not a carousel). The `Utvalda
+      // marknader` / `Featured markets` heading titles the grid below it.
       await page.goto("/");
-      // HeroCarousel has an sr-only h2 "Utvalda marknader" / "Featured prediction markets"
       await expect(
-        page.getByRole("heading", { name: /utvalda|featured/i })
-      ).toBeAttached({ timeout: 10_000 });
-      // Prev/next controls — English or Swedish
+        page.locator('[data-testid="home-hero-desktop"], [data-testid="home-hero-mobile"]').first()
+      ).toBeVisible({ timeout: 10_000 });
       await expect(
-        page.getByRole("button", { name: /föregående|previous/i })
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: /nästa|next/i })
-      ).toBeVisible();
+        page.getByRole("heading", { name: /utvalda marknader|featured markets/i })
+      ).toBeVisible({ timeout: 10_000 });
     }
   );
 
@@ -85,17 +85,18 @@ test.describe("Remaining spec coverage", () => {
     "market detail page renders resolution criteria when present",
     { tag: ["@regression"] },
     async ({ page }) => {
-      // Navigate to home page and find a market card heading to extract its link
+      // Pick up a market link from a featured-market-card on the home page.
+      // The card's clickable wrapper carries the question as its aria-label
+      // (h3 headings were removed in the redesign).
       await page.goto("/");
-      // Market card titles are h3 headings. Their sibling link contains the href.
-      const marketHeading = page.getByRole("heading", { level: 3 }).first();
-      await expect(marketHeading).toBeVisible({ timeout: 10_000 });
-      const marketTitle = await marketHeading.textContent();
-
-      // Find the link with matching aria-label (same text as h3)
-      const marketLink = page.getByRole("link", { name: marketTitle! });
-      const href = await marketLink.first().getAttribute("href");
-      expect(href).toMatch(/^\/markets\//);
+      const cardLink = page
+        .locator('[data-testid="featured-market-card"]')
+        .first()
+        .locator('a[href*="/markets/"]')
+        .first();
+      await expect(cardLink).toBeAttached({ timeout: 10_000 });
+      const href = await cardLink.getAttribute("href");
+      expect(href).toMatch(/\/markets\//);
 
       await page.goto(href!);
       // Market detail should load with an h1 title
@@ -111,10 +112,8 @@ test.describe("Remaining spec coverage", () => {
         .catch(() => false);
 
       if (hasResolution) {
-        // The criteria text follows the heading in the same card
         await expect(resolutionHeading).toBeVisible();
       } else {
-        // This market may not have resolution_criteria_text set
         test.info().annotations.push({
           type: "note",
           description:

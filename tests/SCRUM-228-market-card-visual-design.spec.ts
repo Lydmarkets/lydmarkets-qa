@@ -1,11 +1,11 @@
 import { test, expect } from "../fixtures/base";
 
-// SCRUM-228 updated for SCRUM-797 Kalshi-style redesign:
-// The new HomeMarketCard is "question first, odds second" — a single card
-// renders the market question as an <h3> heading with a Yes probability pill
-// (Ja XX%) and a No pill (Nej XX%). Thumbnails, volume badges, and bookmark
-// counts were intentionally removed in the redesign. Yes% + No% still sums
-// to ~100 via LMSR pricing.
+// SCRUM-228 updated for the SCRUM-797 Kalshi redesign as it ships today.
+// The new `featured-market-card` uses a role=link wrapper (aria-label = market
+// question) and renders the question as a styled div (no h3 heading), with a
+// combined YES / NO probability bar (role=img, aria-label="JA 21% / NEJ 79%")
+// plus individual YES + NO pill buttons (aria-label="JA 21%" / "NEJ 79%").
+// Thumbnails, volume badges, and bookmark counts were intentionally removed.
 
 test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-797)", () => {
   test("home page loads without error", async ({ page }) => {
@@ -13,13 +13,11 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
     await expect(page.locator("main").first()).toBeVisible({ timeout: 8000 });
   });
 
-  test("home page renders at least one market card with a question heading", async ({
-    page,
-  }) => {
+  test("home page renders at least one featured-market-card", async ({ page }) => {
     await page.goto("/");
-    const headings = page.getByRole("heading", { level: 3 });
-    await expect(headings.first()).toBeVisible({ timeout: 10000 });
-    const count = await headings.count();
+    const cards = page.locator('[data-testid="featured-market-card"]');
+    await expect(cards.first()).toBeVisible({ timeout: 10000 });
+    const count = await cards.count();
     expect(count).toBeGreaterThan(0);
   });
 
@@ -41,16 +39,23 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
     page,
   }) => {
     await page.goto("/");
-    const marketLink = page.locator('a[href*="/markets/"]').first();
-    await expect(marketLink).toBeVisible({ timeout: 10000 });
+    const marketLink = page
+      .locator('[data-testid="featured-market-card"]')
+      .first()
+      .locator('a[href*="/markets/"]')
+      .first();
+    await expect(marketLink).toBeAttached({ timeout: 10000 });
     const href = await marketLink.getAttribute("href");
     expect(href).toMatch(/\/markets\/[a-zA-Z0-9-]+/);
   });
 
   test("clicking a market card navigates to the market detail page", async ({ page }) => {
     await page.goto("/");
-    const marketLink = page.locator('a[href*="/markets/"]').first();
-    await expect(marketLink).toBeVisible({ timeout: 10000 });
+    const marketLink = page
+      .locator('[data-testid="featured-market-card"]')
+      .first()
+      .locator('a[href*="/markets/"]')
+      .first();
     const href = await marketLink.getAttribute("href");
     await page.goto(href!);
     await expect(page).toHaveURL(/\/markets\//);
@@ -71,21 +76,18 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
 
   test("Yes + No probabilities on a card sum to approximately 100", async ({ page }) => {
     await page.goto("/");
-    // Find a card that has both a Ja and Nej button referencing the same question
-    const yesPill = page.getByRole("button", { name: /^(yes|ja)\s+\d+%/i }).first();
-    await expect(yesPill).toBeVisible({ timeout: 10000 });
-    const yesLabel = await yesPill.getAttribute("aria-label");
-    const question = yesLabel?.split("—")[1]?.trim();
-    expect(question).toBeTruthy();
-
-    const noPill = page
-      .getByRole("button", { name: new RegExp(`^(no|nej)\\s+\\d+%.*${escapeRegExp(question!)}`, "i") })
+    // The combined probability bar is a role=img with aria-label formatted as
+    // "JA 21% / NEJ 79%" (or "YES 21% / NO 79%"). Parse both percentages from
+    // that single label to avoid cross-card mismatches.
+    const bar = page
+      .getByRole("img", { name: /^(ja|yes)\s+\d+%\s*\/\s*(nej|no)\s+\d+%/i })
       .first();
-    await expect(noPill).toBeVisible({ timeout: 10000 });
-    const noLabel = await noPill.getAttribute("aria-label");
-
-    const yesPct = Number(yesLabel!.match(/(yes|ja)\s+(\d+)%/i)![2]);
-    const noPct = Number(noLabel!.match(/(no|nej)\s+(\d+)%/i)![2]);
+    await expect(bar).toBeVisible({ timeout: 10000 });
+    const label = (await bar.getAttribute("aria-label")) ?? "";
+    const m = label.match(/(?:ja|yes)\s+(\d+)%\s*\/\s*(?:nej|no)\s+(\d+)%/i);
+    expect(m).not.toBeNull();
+    const yesPct = Number(m![1]);
+    const noPct = Number(m![2]);
     expect(yesPct + noPct).toBeGreaterThanOrEqual(99);
     expect(yesPct + noPct).toBeLessThanOrEqual(101);
   });
@@ -95,11 +97,7 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
     await page.goto("/");
     await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     await expect(
-      page.getByRole("heading", { level: 3 }).first()
+      page.locator('[data-testid="featured-market-card"]').first()
     ).toBeVisible({ timeout: 10000 });
   });
 });
-
-function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
