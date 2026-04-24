@@ -1,16 +1,18 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { isAuthenticated } from "../helpers/is-authenticated";
+import { BALANCE_REGEX, openUserMenu } from "../helpers/user-menu";
 
 /**
  * SCRUM-542: Account balance visibility on every screen.
  *
- * SIFS requires the player's balance to be always visible. The balance is shown
- * as "Saldo: X,XX kr" in the header nav, linking to /wallet.
+ * SIFS requires the player's balance to be always reachable. SCRUM-1090
+ * moved the inline `Saldo: X,XX kr` pill out of the top header and into the
+ * UserMenu drawer. The balance is still always reachable via one click on
+ * the "Öppna meny" / "Open menu" hamburger, satisfying the compliance
+ * "always visible to the player on request" interpretation — see the note
+ * on SCRUM-1092 for the planned further redesign of the drawer header.
  */
-
-/** Matches Swedish currency format like "0,00 kr" or "1 234,50 kr" */
-const BALANCE_REGEX = /[\d\s.,]+\s*kr/;
 
 const AUTHENTICATED_PAGES = [
   { path: "/markets", name: "Markets" },
@@ -23,7 +25,7 @@ test.use({ storageState: "playwright/.auth/user.json" });
 
 test.describe("SCRUM-542: Account balance visibility", () => {
   test(
-    "balance is visible in header linking to wallet",
+    "balance is visible inside the UserMenu drawer",
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
@@ -32,17 +34,16 @@ test.describe("SCRUM-542: Account balance visibility", () => {
         return;
       }
 
-      const balanceLink = page.locator('a[href="/wallet"]').first();
-      await expect(balanceLink).toBeVisible({ timeout: 5_000 });
-      await expect(balanceLink).toHaveAttribute("href", /\/wallet/);
-
-      await expect(balanceLink).toHaveText(BALANCE_REGEX);
+      await openUserMenu(page);
+      await expect(
+        page.getByText(BALANCE_REGEX).first()
+      ).toBeVisible({ timeout: 5_000 });
     },
   );
 
   for (const { path, name } of AUTHENTICATED_PAGES) {
     test(
-      `balance is visible on ${name} page (${path})`,
+      `balance is reachable from the UserMenu on ${name} page (${path})`,
       { tag: ["@regression", "@compliance"] },
       async ({ page }) => {
         await page.goto(path);
@@ -51,10 +52,10 @@ test.describe("SCRUM-542: Account balance visibility", () => {
           return;
         }
 
-        const header = page.locator("header, [role='banner']").first();
-        await expect(header.getByText(BALANCE_REGEX).first()).toBeVisible({
-          timeout: 5_000,
-        });
+        await openUserMenu(page);
+        await expect(
+          page.getByText(BALANCE_REGEX).first()
+        ).toBeVisible({ timeout: 5_000 });
       },
     );
   }
@@ -69,11 +70,12 @@ test.describe("SCRUM-542: Account balance visibility", () => {
         return;
       }
 
-      const balanceLink = page.locator('a[href="/wallet"]').first();
-      await expect(balanceLink).toBeVisible({ timeout: 5_000 });
+      await openUserMenu(page);
+      const balanceEl = page.getByText(BALANCE_REGEX).first();
+      await expect(balanceEl).toBeVisible({ timeout: 5_000 });
 
-      const text = await balanceLink.textContent();
-      expect(text).toMatch(/\d.*kr/);
+      const text = await balanceEl.textContent();
+      expect(text).toMatch(/\d.*kr/i);
       expect(text).not.toMatch(/loading|laddar/i);
     },
   );
@@ -90,18 +92,20 @@ test.describe("SCRUM-542: Account balance visibility", () => {
         return;
       }
 
-      const balanceLink = page.locator('a[href="/wallet"]').first();
-      await expect(balanceLink).toBeVisible({ timeout: 5_000 });
-      const balanceOnMarkets = await balanceLink.textContent();
+      await openUserMenu(page);
+      const balanceOnMarkets = (
+        await page.getByText(BALANCE_REGEX).first().textContent()
+      )?.trim();
 
       await page.goto("/wallet");
       await dismissLimitsDialog(page);
+      await openUserMenu(page);
+      const balanceOnWallet = (
+        await page.getByText(BALANCE_REGEX).first().textContent()
+      )?.trim();
 
-      const balanceLinkAfterNav = page.locator('a[href="/wallet"]').first();
-      await expect(balanceLinkAfterNav).toBeVisible({ timeout: 5_000 });
-      const balanceOnWallet = await balanceLinkAfterNav.textContent();
-
-      expect(balanceOnMarkets?.trim()).toEqual(balanceOnWallet?.trim());
+      expect(balanceOnMarkets).toBeTruthy();
+      expect(balanceOnMarkets).toEqual(balanceOnWallet);
     },
   );
 });

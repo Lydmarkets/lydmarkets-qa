@@ -91,18 +91,20 @@ test.describe("Compliance spec — E2E coverage", () => {
     );
 
     test(
-      "responsible gambling page shows PGSI self-assessment",
+      "responsible gambling page links to external PGSI self-test",
       { tag: ["@compliance"] },
       async ({ page }) => {
+        // The inline 9-question PGSI form was replaced by a link to the
+        // Stödlinjen-hosted PGSI test — the authoritative version run by
+        // the national helpline.
         await page.goto("/responsible-gambling");
         await dismissLimitsDialog(page);
 
-        // PGSI section has 9 questions with radio groups
-        const radios = page.locator('input[type="radio"][name^="pgsi-"]');
-        // 9 questions × 4 options = 36 radio buttons
-        await expect(radios.first()).toBeAttached({ timeout: 10_000 });
-        const count = await radios.count();
-        expect(count).toBeGreaterThanOrEqual(36);
+        await expect(
+          page.locator(
+            'a[href*="stodlinjen.se"][href*="pgsi"], a[href*="spelberoende-test-pgsi"]',
+          ).first(),
+        ).toBeVisible({ timeout: 10_000 });
       },
     );
 
@@ -130,8 +132,11 @@ test.describe("Compliance spec — E2E coverage", () => {
         await page.goto("/responsible-gambling");
         await dismissLimitsDialog(page);
 
+        // Self-exclusion was promoted from /settings/self-exclusion to a
+        // top-level /self-exclusion route (it's also deep-linked from the
+        // compliance aside with `?step=form&period=…`).
         await expect(
-          page.locator('a[href="/settings/self-exclusion"]').first(),
+          page.locator('a[href^="/self-exclusion"]').first(),
         ).toBeVisible({ timeout: 10_000 });
       },
     );

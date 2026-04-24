@@ -5,14 +5,10 @@ import { hasAuthSession } from "../helpers/has-auth";
 /**
  * Portfolio spec — E2E coverage
  *
- * SCRUM-776 consolidated the old /orders page into /portfolio as a tabbed
- * interface. Tabs: Summary | Open | Processing | Settled | History. The
- * `tab` query parameter controls which tab is active (default: summary).
- *
- * Tests cover:
- * - Unauthenticated access redirects for /portfolio (and legacy /orders → 404)
- * - Authenticated portfolio page with summary cards and tab navigation
- * - History tab structure (previously the standalone /orders page)
+ * /portfolio renders a "Welcome." h1 masthead with an editorial "Portfolio"
+ * eyebrow, followed by a `region[aria-label="Portfolio summary"]` with an
+ * Open/Closed/History tablist (Closed selected by default). The earlier
+ * Summary/Processing/Settled tab names were dropped in the redesign.
  */
 
 test.describe("Portfolio spec — E2E coverage", () => {
@@ -42,42 +38,44 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
     // ── Portfolio page (summary tab) ───────────────────────────────────
 
-    test("portfolio page renders heading and subtitle", { tag: ["@portfolio"] }, async ({ page }) => {
+    test("portfolio page renders the Welcome masthead", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/portfolio");
       await dismissLimitsDialog(page);
 
+      // H1 is a "Welcome." / "Välkommen." masthead; the "Portfolio" label is
+      // a kicker/eyebrow above it, not the heading itself.
       await expect(
-        page.getByRole("heading", { level: 1, name: /portfolio|portfölj/i })
+        page.getByRole("heading", { level: 1, name: /^welcome|^välkommen/i })
       ).toBeVisible({ timeout: 15_000 });
+      await expect(
+        page.getByText(/^portfolio$|^portfölj$/i).first()
+      ).toBeVisible({ timeout: 10_000 });
     });
 
-    test("portfolio page shows tab navigation: Summary, Open, Processing, Settled, History", { tag: ["@portfolio"] }, async ({ page }) => {
+    test("portfolio page shows Open / Closed / History tablist", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/portfolio");
       await dismissLimitsDialog(page);
 
-      await expect(page.getByRole("tab", { name: /^summary$|^översikt$/i })).toBeVisible({ timeout: 15_000 });
-      await expect(page.getByRole("tab", { name: /^open/i })).toBeVisible();
-      await expect(page.getByRole("tab", { name: /^processing|^bearbetar/i })).toBeVisible();
-      await expect(page.getByRole("tab", { name: /^settled|^avgjord/i })).toBeVisible();
+      await expect(page.getByRole("tab", { name: /^open|^öppn/i })).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole("tab", { name: /^closed|^stängd/i })).toBeVisible();
       await expect(page.getByRole("tab", { name: /^history|^historik/i })).toBeVisible();
     });
 
-    test("portfolio summary cards are visible on the default tab", { tag: ["@portfolio"] }, async ({ page }) => {
+    test("portfolio summary region is visible with PnL + activity sections", { tag: ["@portfolio"] }, async ({ page }) => {
       await page.goto("/portfolio");
       await dismissLimitsDialog(page);
 
       await expect(
-        page.getByRole("heading", { level: 1, name: /portfolio|portfölj/i })
+        page.getByRole("region", { name: /portfolio summary|portfölj/i })
       ).toBeVisible({ timeout: 15_000 });
 
-      // Summary cards render totals like "Markets", "Net result", "Win rate".
-      // The component renders them as cards with numeric content — assert that
-      // at least one of the known labels is visible.
-      const markets = page.getByText(/^markets$|^marknader$/i).first();
-      const winRate = page.getByText(/win rate|vinstfrekvens/i).first();
+      // The summary region contains PnL and Recent-activity sub-sections plus
+      // a positions panel (Open/Closed tab target).
+      const pnl = page.getByRole("heading", { name: /pn.?l/i }).first();
+      const activity = page.getByRole("heading", { name: /recent activity|senaste aktivitet/i }).first();
       const hasAny =
-        (await markets.isVisible({ timeout: 5_000 }).catch(() => false)) ||
-        (await winRate.isVisible({ timeout: 5_000 }).catch(() => false));
+        (await pnl.isVisible({ timeout: 5_000 }).catch(() => false)) ||
+        (await activity.isVisible({ timeout: 5_000 }).catch(() => false));
       expect(hasAny).toBeTruthy();
     });
 
@@ -88,7 +86,7 @@ test.describe("Portfolio spec — E2E coverage", () => {
       await dismissLimitsDialog(page);
 
       await expect(
-        page.getByRole("heading", { level: 1, name: /portfolio|portfölj/i })
+        page.getByRole("heading", { level: 1, name: /^welcome|^välkommen/i })
       ).toBeVisible({ timeout: 15_000 });
 
       // The History tab trigger should be selected (aria-selected="true")
@@ -157,15 +155,23 @@ test.describe("Portfolio spec — E2E coverage", () => {
       expect(hasAny).toBeTruthy();
     });
 
-    test("settled tab shows settled positions or empty state", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/portfolio?tab=settled");
+    test("closed tab shows settled positions or empty state", { tag: ["@portfolio"] }, async ({ page }) => {
+      // The "Settled" tab was renamed to "Closed" in the redesign. Click the
+      // tab explicitly — the default-selected tab varies by empty/populated
+      // state, so we don't rely on it.
+      await page.goto("/portfolio");
       await dismissLimitsDialog(page);
 
-      await expect(
-        page.getByRole("tab", { name: /^settled|^avgjord/i })
-      ).toHaveAttribute("aria-selected", "true", { timeout: 15_000 });
+      const closedTab = page.getByRole("tab", { name: /^closed|^stängd/i });
+      await expect(closedTab).toBeVisible({ timeout: 15_000 });
+      await closedTab.click();
+      await expect(closedTab).toHaveAttribute("aria-selected", "true", {
+        timeout: 5_000,
+      });
 
-      const empty = page.getByText(/no settled|inga avgjorda/i).first();
+      const empty = page
+        .getByText(/no settled|no closed|inga avgjorda|inga stängda/i)
+        .first();
       const table = page.getByRole("table");
       const hasAny =
         (await empty.isVisible({ timeout: 3_000 }).catch(() => false)) ||
