@@ -17,12 +17,14 @@ test.describe("Markets listing page (/markets)", () => {
   );
 
   test(
-    "/markets renders the Market filters bar",
+    "/markets renders the category filter bar",
     { tag: ["@regression"] },
     async ({ page }) => {
+      // SCRUM-1040 replaced the old [aria-label="Market filters"] with a
+      // <nav aria-label="Filtrera efter kategori"> of anchor links.
       await page.goto("/markets");
       await expect(
-        page.locator('[aria-label="Market filters"]').first()
+        page.locator('[aria-label="Filtrera efter kategori"], [aria-label="Filter by category"]').first()
       ).toBeVisible({ timeout: 10_000 });
     }
   );
