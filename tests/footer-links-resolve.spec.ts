@@ -27,8 +27,11 @@ test.describe("Footer — canonical links resolve", () => {
       const link = footer.getByRole("link", { name: label }).first();
       await expect(link).toBeVisible({ timeout: 10_000 });
 
-      const href = (await link.getAttribute("href")) ?? "";
-      expect(href).not.toBe("");
+      // `getAttribute("href")` may return a relative path; the request
+      // fixture rejects those, so resolve through the DOM's `href` property
+      // to get an absolute URL regardless of how the page authored the link.
+      const href = await link.evaluate((el) => (el as HTMLAnchorElement).href);
+      expect(href).toMatch(/^https?:\/\//);
 
       const response = await request.get(href);
       expect(
