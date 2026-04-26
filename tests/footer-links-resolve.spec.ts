@@ -21,22 +21,25 @@ const FOOTER_LABELS = [
 
 test.describe("Footer — canonical links resolve", () => {
   for (const label of FOOTER_LABELS) {
-    test(`footer link ${label} returns HTTP 200`, async ({ page, request }) => {
+    test(`footer link ${label} returns HTTP 200`, async ({ page }) => {
       await page.goto("/");
       const footer = page.getByRole("contentinfo");
       const link = footer.getByRole("link", { name: label }).first();
       await expect(link).toBeVisible({ timeout: 10_000 });
 
-      // `getAttribute("href")` may return a relative path; the request
-      // fixture rejects those, so resolve through the DOM's `href` property
-      // to get an absolute URL regardless of how the page authored the link.
+      // Resolve through the DOM's `href` property so we always get an
+      // absolute URL, then issue the status probe via Node's native fetch.
+      // Playwright's `request` fixture has been observed to throw a
+      // `TypeError: "/path" cannot be parsed as a URL` even when the
+      // underlying call succeeded with 200 under parallel workers — using
+      // global fetch sidesteps that quirk.
       const href = await link.evaluate((el) => (el as HTMLAnchorElement).href);
       expect(href).toMatch(/^https?:\/\//);
 
-      const response = await request.get(href);
+      const response = await fetch(href, { redirect: "follow" });
       expect(
-        response.status(),
-        `${label} pointed at ${href}, expected 200, got ${response.status()}`
+        response.status,
+        `${label} pointed at ${href}, expected 200, got ${response.status}`
       ).toBe(200);
     });
   }
