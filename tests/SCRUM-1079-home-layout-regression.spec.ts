@@ -144,7 +144,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     }
   });
 
-  test("responsible-gambling tools strip exposes Spelpaus + 24h pause", async ({ page }) => {
+  test("responsible-gambling tools strip exposes Spelpaus + Spelgränser + Självtest", async ({ page }) => {
     await page.goto("/");
     // Unauthenticated visitors get the SV locale by default, so the
     // complementary landmark's aria-label is "Spelansvarsverktyg".
@@ -153,19 +153,17 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     });
     await expect(rg).toBeVisible({ timeout: 10_000 });
 
-    // Each chip wraps a Swedish brand label as visible text; the anchor's
-    // accessible name is a longer English description, so target the chip text
-    // directly instead of going through `getByRole(link, name)`.
+    // Three chips ship today: Spelpaus, Spelgränser, Självtest. The earlier
+    // "24h pause" chip was dropped from the strip — self-exclusion is reached
+    // via the Spelpaus chip's /self-exclusion target.
     await expect(rg.getByText("Spelpaus", { exact: true })).toBeVisible();
     await expect(rg.getByText("Spelgränser", { exact: true })).toBeVisible();
     await expect(rg.getByText("Självtest", { exact: true })).toBeVisible();
-    await expect(rg.getByText("24 h", { exact: true })).toBeVisible();
 
-    // Spelpaus is mandated by Swedish gambling law — must always link out.
-    const spelpaus = rg.getByRole("link", {
-      name: /spelpaus.*national self-exclusion|spelpaus.*nationellt avst[äa]ngningsregister/i,
-    });
-    await expect(spelpaus).toHaveAttribute("href", /spelpaus\.se/);
+    // Spelpaus chip should point to the local /self-exclusion deep-link
+    // (which itself links out to spelpaus.se for the national register).
+    const spelpaus = rg.getByRole("link", { name: /spelpaus/i }).first();
+    await expect(spelpaus).toHaveAttribute("href", /\/self-exclusion|spelpaus\.se/);
   });
 
   test("footer renders copyright and the canonical nav links", async ({ page }) => {
