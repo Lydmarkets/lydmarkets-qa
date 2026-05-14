@@ -146,7 +146,11 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
 
   test("responsible-gambling tools strip exposes Spelpaus + 24h pause", async ({ page }) => {
     await page.goto("/");
-    const rg = page.getByRole("complementary", { name: /responsible gambling tools/i });
+    // Unauthenticated visitors get the SV locale by default, so the
+    // complementary landmark's aria-label is "Spelansvarsverktyg".
+    const rg = page.getByRole("complementary", {
+      name: /responsible gambling tools|spelansvarsverktyg/i,
+    });
     await expect(rg).toBeVisible({ timeout: 10_000 });
 
     // Each chip wraps a Swedish brand label as visible text; the anchor's
@@ -158,7 +162,9 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     await expect(rg.getByText("24 h", { exact: true })).toBeVisible();
 
     // Spelpaus is mandated by Swedish gambling law — must always link out.
-    const spelpaus = rg.getByRole("link", { name: /spelpaus.*national self-exclusion/i });
+    const spelpaus = rg.getByRole("link", {
+      name: /spelpaus.*national self-exclusion|spelpaus.*nationellt avst[äa]ngningsregister/i,
+    });
     await expect(spelpaus).toHaveAttribute("href", /spelpaus\.se/);
   });
 
