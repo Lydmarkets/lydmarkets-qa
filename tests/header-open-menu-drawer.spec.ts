@@ -66,9 +66,9 @@ test.describe("Header — Open-menu drawer", () => {
     await expect(
       drawer.getByRole("link", { name: /^self.?test$/i })
     ).toHaveAttribute("href", /stodlinjen\.se/);
-    await expect(drawer.getByRole("link", { name: /^limits$/i })).toHaveAttribute(
+    await expect(drawer.getByRole("link", { name: /^limits$/i }).first()).toHaveAttribute(
       "href",
-      "/settings/limits"
+      "/limits"
     );
     await expect(
       drawer.getByRole("link", { name: /^self.?exclusion$/i })

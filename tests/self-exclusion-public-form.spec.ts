@@ -17,7 +17,7 @@ test.describe("Public /self-exclusion page", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: /self.?exclude yourself from gambling|stäng av dig själv/i,
+        name: /self.?exclusion|självavstängning/i,
       })
     ).toBeVisible({ timeout: 10_000 });
 
@@ -43,7 +43,7 @@ test.describe("Public /self-exclusion page", () => {
     // prefix) without a 404.
     expect(new URL(page.url()).pathname).toMatch(/\/self-exclusion$/);
     await expect(
-      page.getByRole("heading", { level: 1, name: /self.?exclude|stäng av/i })
+      page.getByRole("heading", { level: 1, name: /self.?exclusion|självavstängning/i })
     ).toBeVisible({ timeout: 10_000 });
   });
 });

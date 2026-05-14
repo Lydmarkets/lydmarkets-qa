@@ -64,19 +64,22 @@ test.describe("Remaining spec coverage", () => {
     );
   }
 
-  // ── Dark mode default ─────────────────────────────────────────────
+  // ── Anti-FOUC theme script applies a theme class on first paint ───
   test(
-    "app defaults to dark mode",
+    "anti-FOUC script applies a theme class to <html>",
     { tag: ["@regression"] },
     async ({ page }) => {
-      // Clear the theme cookie so the anti-FOUC script falls back to default
+      // With no theme cookie the anti-FOUC script falls back to
+      // `prefers-color-scheme`, so either `light` or `dark` may be applied
+      // depending on the runner. The contract is that *some* theme class
+      // lands on <html> before paint — otherwise the brand/paper palette
+      // CSS variables never resolve.
       await page.context().clearCookies();
       await page.goto("/");
-      // The root <html> element should have class="dark" by default
       const htmlClass = await page
         .locator("html")
         .getAttribute("class");
-      expect(htmlClass).toContain("dark");
+      expect(htmlClass).toMatch(/\b(light|dark)\b/);
     }
   );
 

@@ -4,15 +4,16 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   // they need a storageState fixture. The test structure is complete — a future sprint will
   // add storageState-based auth setup once BankID test accounts are provisioned.
 
-  test("unauthenticated user sees Sign In and Sign Up in the nav", async ({ page }) => {
+  test("unauthenticated user sees a Sign-In entry point in the nav", async ({ page }) => {
+    // The header collapses auth links into the Open-menu drawer; the banner
+    // exposes a Sign-In *button* that opens the drawer. The actual /login +
+    // /register links live inside the drawer and are covered by
+    // header-open-menu-drawer.spec.ts.
     await page.goto("/");
     const nav = page.getByRole("banner");
     await expect(
-      nav.getByRole("link", { name: /logga in|sign in/i })
+      nav.getByRole("button", { name: /logga in|sign in/i }),
     ).toBeVisible({ timeout: 10000 });
-    await expect(
-      nav.getByRole("link", { name: /registrera|sign up/i })
-    ).toBeVisible();
   });
 
   test("protected route /settings redirects to /login when unauthenticated", async ({ page }) => {
