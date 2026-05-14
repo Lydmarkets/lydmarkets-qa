@@ -11,9 +11,12 @@
  *   TEST_MARKET_ID     — UUID of a test market for order placement
  */
 
-// Default staging URL
+// Default to staging — the "production" Railway env is not yet live
+// (pre-launch state), so its containers sleep and cold-start past the
+// scraper's retry window, producing detail_p95 = 0 (no IDs discovered).
+// Staging is exercised by the 01:00 UTC E2E run and stays warm.
 export const BASE_URL =
-  __ENV.BASE_URL || "https://web-production-bb35.up.railway.app";
+  __ENV.BASE_URL || "https://web-staging-71a7.up.railway.app";
 
 // Direct service URLs — only set when targeting backend services directly.
 // When unset, scripts use frontend SSR pages instead of internal APIs.
