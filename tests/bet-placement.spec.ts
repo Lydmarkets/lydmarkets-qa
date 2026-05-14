@@ -348,9 +348,9 @@ test.describe("Bet placement — QuickBet modal", () => {
       await infoToggle.click();
       await expect(infoToggle).toHaveAttribute("aria-expanded", "true");
 
-      // Fee deduction text: "A 2.0% platform fee is deducted..." / "En avgift på 2.0% dras..."
+      // Fee disclosure copy: "A 2.0% platform fee is added..." / "En avgift på 2.0% läggs till..."
       await expect(
-        dialog.getByText(/(?:fee|avgift).*(?:deducted|dras)|(?:deducted|dras).*(?:fee|avgift)/i).first(),
+        dialog.getByText(/(?:fee|avgift).*(?:added|läggs)|(?:added|läggs).*(?:fee|avgift)/i).first(),
       ).toBeVisible({ timeout: 3_000 });
 
       // Max loss explainer

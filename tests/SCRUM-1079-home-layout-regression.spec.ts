@@ -155,7 +155,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     await expect(rg.getByText("Spelpaus", { exact: true })).toBeVisible();
     await expect(rg.getByText("Spelgränser", { exact: true })).toBeVisible();
     await expect(rg.getByText("Självtest", { exact: true })).toBeVisible();
-    await expect(rg.getByText("24h", { exact: true })).toBeVisible();
+    await expect(rg.getByText("24 h", { exact: true })).toBeVisible();
 
     // Spelpaus is mandated by Swedish gambling law — must always link out.
     const spelpaus = rg.getByRole("link", { name: /spelpaus.*national self-exclusion/i });
