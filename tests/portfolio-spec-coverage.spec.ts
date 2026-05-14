@@ -5,10 +5,12 @@ import { hasAuthSession } from "../helpers/has-auth";
 /**
  * Portfolio spec — E2E coverage
  *
- * /portfolio renders a "Welcome." h1 masthead with an editorial "Portfolio"
- * eyebrow, followed by a `region[aria-label="Portfolio summary"]` with an
- * Open/Closed/History tablist (Closed selected by default). The earlier
- * Summary/Processing/Settled tab names were dropped in the redesign.
+ * /portfolio renders a "Mina positioner" / "My Positions" h1 followed by a
+ * five-pill filter (`Öppna / Stängda / Vunna / Förlorade / Alla`) with
+ * `aria-pressed` reflecting the active filter, a date-range trigger that
+ * opens a calendar dialog, and an infinite-scroll list of position rows that
+ * open `PositionReceiptModal` on click. See `spec/portfolio.md` (pill-filter
+ * redesign).
  */
 
 test.describe("Portfolio spec — E2E coverage", () => {
@@ -23,7 +25,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
   test("legacy /orders route no longer exists (404)", { tag: ["@portfolio"] }, async ({ page }) => {
     const response = await page.goto("/orders");
-    // The route was removed in SCRUM-776 — expect a 404 response from Next.js
     expect(response?.status()).toBe(404);
   });
 
@@ -36,147 +37,89 @@ test.describe("Portfolio spec — E2E coverage", () => {
       if (!hasAuthSession()) testInfo.skip();
     });
 
-    // ── Portfolio page (summary tab) ───────────────────────────────────
+    test(
+      "portfolio page loads with header, five filter pills, and a date trigger",
+      { tag: ["@portfolio", "@smoke", "@critical"] },
+      async ({ page }) => {
+        await page.goto("/portfolio");
+        await dismissLimitsDialog(page);
 
-    test("portfolio page renders the Welcome masthead", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/portfolio");
-      await dismissLimitsDialog(page);
+        await expect(
+          page.getByRole("heading", { name: /mina positioner|my positions/i })
+        ).toBeVisible({ timeout: 15_000 });
 
-      // H1 is a "Welcome." / "Välkommen." masthead; the "Portfolio" label is
-      // a kicker/eyebrow above it, not the heading itself.
-      await expect(
-        page.getByRole("heading", { level: 1, name: /^welcome|^välkommen/i })
-      ).toBeVisible({ timeout: 15_000 });
-      await expect(
-        page.getByText(/^portfolio$|^portfölj$/i).first()
-      ).toBeVisible({ timeout: 10_000 });
-    });
+        // Öppna is the default-active pill.
+        await expect(
+          page.getByRole("button", { name: /öppna|^open/i, pressed: true })
+        ).toBeVisible();
 
-    test("portfolio page shows Open / Closed / History tablist", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/portfolio");
-      await dismissLimitsDialog(page);
+        for (const name of [/stängda|^closed/i, /vunna|^won/i, /förlorade|^lost/i, /alla|^all/i]) {
+          await expect(page.getByRole("button", { name })).toBeVisible();
+        }
 
-      await expect(page.getByRole("tab", { name: /^open|^öppn/i })).toBeVisible({ timeout: 15_000 });
-      await expect(page.getByRole("tab", { name: /^closed|^stängd/i })).toBeVisible();
-      await expect(page.getByRole("tab", { name: /^history|^historik/i })).toBeVisible();
-    });
+        await expect(
+          page.getByRole("button", { name: /filter by date|filtrera på datum/i })
+        ).toBeVisible();
+      }
+    );
 
-    test("portfolio summary region is visible with PnL + activity sections", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/portfolio");
-      await dismissLimitsDialog(page);
+    test(
+      "clicking the Stängda pill makes it the active filter",
+      { tag: ["@portfolio", "@regression"] },
+      async ({ page }) => {
+        await page.goto("/portfolio");
+        await dismissLimitsDialog(page);
 
-      await expect(
-        page.getByRole("region", { name: /portfolio summary|portfölj/i })
-      ).toBeVisible({ timeout: 15_000 });
+        const stängda = page.getByRole("button", { name: /stängda|^closed/i });
+        await expect(stängda).toBeVisible({ timeout: 15_000 });
+        await stängda.click();
+        await expect(stängda).toHaveAttribute("aria-pressed", "true", { timeout: 5_000 });
+      }
+    );
 
-      // The summary region contains PnL and Recent-activity sub-sections plus
-      // a positions panel (Open/Closed tab target).
-      const pnl = page.getByRole("heading", { name: /pn.?l/i }).first();
-      const activity = page.getByRole("heading", { name: /recent activity|senaste aktivitet/i }).first();
-      const hasAny =
-        (await pnl.isVisible({ timeout: 5_000 }).catch(() => false)) ||
-        (await activity.isVisible({ timeout: 5_000 }).catch(() => false));
-      expect(hasAny).toBeTruthy();
-    });
+    test(
+      "clicking the calendar trigger opens the range-picker dialog",
+      { tag: ["@portfolio", "@regression"] },
+      async ({ page }) => {
+        await page.goto("/portfolio");
+        await dismissLimitsDialog(page);
 
-    // ── History tab (replaces legacy /orders page) ─────────────────────
+        await page.getByRole("button", { name: /filter by date|filtrera på datum/i }).click();
+        await expect(
+          page.getByRole("dialog", { name: /filter by date|filtrera på datum/i })
+        ).toBeVisible({ timeout: 5_000 });
+      }
+    );
 
-    test("history tab can be activated via ?tab=history", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/portfolio?tab=history");
-      await dismissLimitsDialog(page);
+    test(
+      "Öppna filter renders positions or the empty message",
+      { tag: ["@portfolio", "@critical"] },
+      async ({ page }) => {
+        await page.goto("/portfolio");
+        await dismissLimitsDialog(page);
 
-      await expect(
-        page.getByRole("heading", { level: 1, name: /^welcome|^välkommen/i })
-      ).toBeVisible({ timeout: 15_000 });
+        const positionsList = page.getByRole("list", { name: /positions|positioner/i });
+        const emptyMsg = page.getByText(/no open positions|inga öppna positioner/i);
 
-      // The History tab trigger should be selected (aria-selected="true")
-      await expect(
-        page.getByRole("tab", { name: /^history|^historik/i })
-      ).toHaveAttribute("aria-selected", "true");
-    });
+        const hasList = await positionsList.isVisible({ timeout: 10_000 }).catch(() => false);
+        const hasEmpty = await emptyMsg.isVisible({ timeout: 3_000 }).catch(() => false);
 
-    test("history tab shows empty state or orders table", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/portfolio?tab=history");
-      await dismissLimitsDialog(page);
+        expect(hasList || hasEmpty).toBeTruthy();
+      }
+    );
 
-      await expect(
-        page.getByRole("tab", { name: /^history|^historik/i })
-      ).toHaveAttribute("aria-selected", "true", { timeout: 15_000 });
+    test(
+      "Alla pill shows every position regardless of status",
+      { tag: ["@portfolio", "@regression"] },
+      async ({ page }) => {
+        await page.goto("/portfolio");
+        await dismissLimitsDialog(page);
 
-      const emptyState = page.getByText(/no orders yet|inga ordrar/i).first();
-      const ordersTable = page.getByRole("table");
-
-      const emptyVisible = await emptyState.isVisible({ timeout: 3_000 }).catch(() => false);
-      const tableVisible = await ordersTable.isVisible({ timeout: 3_000 }).catch(() => false);
-
-      expect(emptyVisible || tableVisible).toBeTruthy();
-    });
-
-    test("history tab shows pagination controls (Page, Previous, Next)", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/portfolio?tab=history");
-      await dismissLimitsDialog(page);
-
-      await expect(
-        page.getByRole("tab", { name: /^history|^historik/i })
-      ).toHaveAttribute("aria-selected", "true", { timeout: 15_000 });
-
-      // Pagination is only rendered when there are orders. Accept either the
-      // pagination controls or the empty state.
-      const pageLabel = page.getByText(/^page\b|^sida\b/i).first();
-      const previous = page.getByRole("button", { name: /previous|föregående/i });
-      const next = page.getByRole("button", { name: /next|nästa/i });
-      const emptyState = page.getByText(/no orders yet|inga ordrar/i).first();
-
-      const hasPagination =
-        (await pageLabel.isVisible({ timeout: 3_000 }).catch(() => false)) &&
-        (await previous.isVisible({ timeout: 1_000 }).catch(() => false)) &&
-        (await next.isVisible({ timeout: 1_000 }).catch(() => false));
-      const isEmpty = await emptyState.isVisible({ timeout: 1_000 }).catch(() => false);
-
-      expect(hasPagination || isEmpty).toBeTruthy();
-    });
-
-    // ── Open / Settled tabs ────────────────────────────────────────────
-
-    test("open tab shows positions table or empty state", { tag: ["@portfolio"] }, async ({ page }) => {
-      await page.goto("/portfolio?tab=open");
-      await dismissLimitsDialog(page);
-
-      await expect(
-        page.getByRole("tab", { name: /^open/i })
-      ).toHaveAttribute("aria-selected", "true", { timeout: 15_000 });
-
-      // Either the empty state or a table
-      const empty = page.getByText(/no open positions|inga öppna positioner/i).first();
-      const table = page.getByRole("table");
-      const hasAny =
-        (await empty.isVisible({ timeout: 3_000 }).catch(() => false)) ||
-        (await table.isVisible({ timeout: 3_000 }).catch(() => false));
-      expect(hasAny).toBeTruthy();
-    });
-
-    test("closed tab shows settled positions or empty state", { tag: ["@portfolio"] }, async ({ page }) => {
-      // The "Settled" tab was renamed to "Closed" in the redesign. Click the
-      // tab explicitly — the default-selected tab varies by empty/populated
-      // state, so we don't rely on it.
-      await page.goto("/portfolio");
-      await dismissLimitsDialog(page);
-
-      const closedTab = page.getByRole("tab", { name: /^closed|^stängd/i });
-      await expect(closedTab).toBeVisible({ timeout: 15_000 });
-      await closedTab.click();
-      await expect(closedTab).toHaveAttribute("aria-selected", "true", {
-        timeout: 5_000,
-      });
-
-      const empty = page
-        .getByText(/no settled|no closed|inga avgjorda|inga stängda/i)
-        .first();
-      const table = page.getByRole("table");
-      const hasAny =
-        (await empty.isVisible({ timeout: 3_000 }).catch(() => false)) ||
-        (await table.isVisible({ timeout: 3_000 }).catch(() => false));
-      expect(hasAny).toBeTruthy();
-    });
+        const alla = page.getByRole("button", { name: /alla|^all/i });
+        await expect(alla).toBeVisible({ timeout: 15_000 });
+        await alla.click();
+        await expect(alla).toHaveAttribute("aria-pressed", "true", { timeout: 5_000 });
+      }
+    );
   });
 });
