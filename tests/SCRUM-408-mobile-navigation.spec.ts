@@ -87,18 +87,19 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
 
     await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
 
-    // Language toggle is present even when unauthenticated ("Byt till
-    // engelska" / "Switch to English"); asserting it also implicitly
-    // confirms the drawer opened.
+    // Language toggle button is composed as "<icon> <label> <state>",
+    // e.g. "Språk SV" / "Language EN" (nav.languageLabel + locale code).
+    // Asserting it also implicitly confirms the drawer opened.
     await expect(
       page.getByRole("button", {
-        name: /switch to (swedish|english)|byt till (svenska|engelska)/i,
+        name: /(språk|language)\s+(en|sv)/i,
       })
     ).toBeVisible({ timeout: 5_000 });
-    // Theme toggle aria-label.
+    // Theme toggle composes as "Tema Mörkt|Ljust" / "Theme Dark|Light"
+    // (nav.themeLabel + nav.themeDark|nav.themeLight).
     await expect(
       page.getByRole("button", {
-        name: /switch to (light|dark) mode|byt till (ljust|mörkt) läge/i,
+        name: /(tema|theme)\s+(mörkt|ljust|dark|light)/i,
       })
     ).toBeVisible();
   });

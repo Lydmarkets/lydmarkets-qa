@@ -13,11 +13,14 @@ import { SESSION_TIMER_REGEX, openUserMenu } from "../helpers/user-menu";
  * `[role="banner"]` anymore.
  */
 
+// `/settings` is a route group without its own page.tsx — only nested
+// subpages exist (`/settings/privacy`). Hitting `/settings` returns 404.
+// Use `/settings/privacy` to cover the settings area.
 const AUTHENTICATED_PAGES = [
   { path: "/markets", name: "Markets" },
   { path: "/portfolio", name: "Portfolio" },
   { path: "/wallet", name: "Wallet" },
-  { path: "/settings", name: "Settings" },
+  { path: "/settings/privacy", name: "Settings" },
 ];
 
 test.use({ storageState: "playwright/.auth/user.json" });

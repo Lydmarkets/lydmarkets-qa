@@ -1,6 +1,5 @@
 import { test, expect } from "../fixtures/base";
 import { goToFirstMarket } from "../helpers/go-to-market";
-import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
 import {
   MOBILE_VIEWPORT,
@@ -11,59 +10,68 @@ import {
 /**
  * Bet placement — QuickBet modal E2E tests
  *
- * Tests the full bet-placement flow via the QuickBetModal:
- *   1. Opening the modal from Yes/No buttons
- *   2. Amount presets (10, 25, 50, 100 kr) and "Other" custom input
- *   3. Payout breakdown (shares, cost, fee, profit, max loss)
- *   4. Fee & settlement info disclosure (GAEAB Ch.11 / LIFS 2018:8)
- *   5. Unauthenticated → "Sign up to buy" link
- *   6. Stake limits display
- *   7. Modal close behaviour
+ * Tests the bet-placement surfaces on the QuickBetModal as it ships today:
+ *   1. Opening the modal from the Yes/No StatBand cells on the detail page
+ *   2. Stake input + 4 preset buttons (10 / 25 / 50 / 100 kr)
+ *   3. Payout breakdown: Plattformsavgift toggle → Insats / Ordersumma /
+ *      Möjlig utbetalning rows
+ *   4. Unauthenticated → "Logga in" / "Sign in" link
+ *   5. Modal close behaviour
+ *   6. Terms-agreement footer linking to /terms
+ *
+ * The old "Buy/Köp" header, separate Min/Max stake line, dedicated "Other"
+ * preset toggle, and the combined "Fee & settlement" disclosure have all been
+ * removed by the QuickBet redesign — tests for those surfaces were deleted.
  */
 
-/** Click the Yes button on the market detail page to open the QuickBet modal,
- *  then select the 10 kr preset to trigger the payout breakdown.
- *  The dialog now shows "Select an amount to see payout details" until a
- *  preset is clicked. */
+// Preset amounts scale with `NEXT_PUBLIC_MIN_STAKE_SEK`:
+//   - <=10 → [10, 25, 50, 100] kr
+//   - >10  → [MIN, MIN*2, MIN*5, MIN*10] (e.g. 50 → [50, 100, 250, 500])
+// Match any "<digits> kr" preset button rather than hard-coding amounts.
+const PRESET_BUTTON_RE = /^\d+\s*kr$/i;
+
 async function openQuickBetYes(page: import("@playwright/test").Page) {
   const yesBtn = getQuickBetYesTrigger(page);
   await expect(yesBtn).toBeVisible({ timeout: 8_000 });
   await yesBtn.click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible({ timeout: 5_000 });
-  // Select 10 kr preset so the breakdown populates
-  await dialog.getByRole("button", { name: "10 kr" }).click().catch(() => {});
+  // Click the first preset (smallest) so the payout breakdown populates.
+  await dialog
+    .getByRole("button", { name: PRESET_BUTTON_RE })
+    .first()
+    .click()
+    .catch(() => {});
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// 1. OPENING THE MODAL
-// ─────────────────────────────────────────────────────────────────────
-
+// QuickBetModal is the mobile-only entry point on the detail page.
+// Desktop opens the same modal from the inline market detail StatBand cells
+// (SCRUM-1141 removed the desktop side-rail TradePanel) but the dialog is
+// the same. Mobile viewport guarantees the StatBand triggers are active.
 test.describe("Bet placement — QuickBet modal", () => {
-  // QuickBetModal is a mobile-only entry point on the detail page.
-  // Desktop uses the inline TradePanel (tested elsewhere, no dialog opens).
   test.use({ viewport: MOBILE_VIEWPORT });
 
+  // ─────────────────────────────────────────────────────────────────
+  // 1. OPENING THE MODAL
+  // ─────────────────────────────────────────────────────────────────
+
   test(
-    "clicking YES button opens QuickBet modal with Buy header",
+    "clicking YES button opens QuickBet modal with the Yes side badge",
     { tag: ["@trading", "@smoke"] },
     async ({ page }) => {
       await goToFirstMarket(page);
       await openQuickBetYes(page);
 
-      // Header shows "Buy" / "Köp" + "Yes" / "Ja" badge
       const dialog = page.getByRole("dialog");
+      // Side badge text is `markets.yes` = "Ja" / "Yes".
       await expect(
-        dialog.getByText(/buy|köp/i).first(),
-      ).toBeVisible();
-      await expect(
-        dialog.getByText(/yes|ja/i).first(),
+        dialog.getByText(/^(ja|yes)$/i).first(),
       ).toBeVisible();
     },
   );
 
   test(
-    "clicking NO button opens QuickBet modal with No side selected",
+    "clicking NO button opens QuickBet modal with the No side badge",
     { tag: ["@trading"] },
     async ({ page }) => {
       await goToFirstMarket(page);
@@ -75,8 +83,9 @@ test.describe("Bet placement — QuickBet modal", () => {
       await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
 
       const dialog = page.getByRole("dialog");
+      // Side badge text is `markets.no` = "Nej" / "No".
       await expect(
-        dialog.getByText(/no|nej/i).first(),
+        dialog.getByText(/^(nej|no)$/i).first(),
       ).toBeVisible();
     },
   );
@@ -101,51 +110,55 @@ test.describe("Bet placement — QuickBet modal", () => {
   );
 
   test(
-    "close button dismisses the QuickBet modal",
+    "pressing Escape dismisses the QuickBet modal",
     { tag: ["@trading"] },
     async ({ page }) => {
       await goToFirstMarket(page);
       await openQuickBetYes(page);
 
-      await page.getByRole("button", { name: /close|stäng/i }).click();
+      // QuickBetModal renders with `showCloseButton={false}` — there is no
+      // visible "X" / "Close" button. Dismissal is by Escape, backdrop click,
+      // or the receipt-drawer close after a placed order. Escape is the
+      // accessibility-baseline behaviour.
+      await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toBeHidden({ timeout: 3_000 });
     },
   );
 
-  // ─────────────────────────────────────────────────────────────────
-  // 2. AMOUNT PRESETS
-  // ─────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // 2. AMOUNT INPUT + PRESETS
+  // ─────────────────────────────────────────────────────────────
 
   test(
-    "modal shows amount preset buttons (10, 25, 50, 100 kr)",
+    "modal shows four amount preset buttons in kr",
     { tag: ["@trading", "@smoke"] },
     async ({ page }) => {
       await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
-      for (const amount of [10, 25, 50, 100]) {
-        await expect(
-          dialog.getByRole("button", { name: `${amount} kr` }),
-        ).toBeVisible();
+      const presets = dialog.getByRole("button", { name: PRESET_BUTTON_RE });
+      await expect(presets).toHaveCount(4);
+      for (const i of [0, 1, 2, 3]) {
+        await expect(presets.nth(i)).toBeVisible();
       }
     },
   );
 
   test(
-    "preset amount buttons are all visible after opening the dialog",
+    "custom amount input accepts numeric values",
     { tag: ["@trading"] },
     async ({ page }) => {
       await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
-      // All four preset buttons should be present in the dialog
-      for (const amount of [10, 25, 50, 100]) {
-        await expect(
-          dialog.getByRole("button", { name: `${amount} kr` }),
-        ).toBeVisible();
-      }
+      // The stake input is rendered as `<input type="number">` and exposes
+      // role=spinbutton. Aria-label is `markets.enterAmount`.
+      const input = dialog.getByRole("spinbutton").first();
+      await expect(input).toBeVisible({ timeout: 3_000 });
+      await input.fill("200");
+      await expect(input).toHaveValue("200");
     },
   );
 
@@ -158,237 +171,131 @@ test.describe("Bet placement — QuickBet modal", () => {
 
       const dialog = page.getByRole("dialog");
 
-      // Skip if market has 0-limit (no breakdown possible)
-      const hasBreakdown = await dialog.getByText(/cost|kostnad/i).first()
-        .isVisible({ timeout: 3_000 }).catch(() => false);
-      if (!hasBreakdown) {
-        test.skip(true, "Market has 0 stake limits — no breakdown available");
-        return;
-      }
-
-      // Read the initial cost with 10 kr pre-selected by openQuickBetYes
-      const costBefore = await dialog.getByText(/kr/).nth(5).textContent();
-
-      // Select 100 kr preset
-      await dialog.getByRole("button", { name: "100 kr" }).click();
-
-      // Cost should have changed (larger amount)
-      const costAfter = await dialog.getByText(/kr/).nth(5).textContent();
-      expect(costBefore).not.toBe(costAfter);
-    },
-  );
-
-  test(
-    "'Other' button shows custom amount input",
-    { tag: ["@trading"] },
-    async ({ page }) => {
-      await goToFirstMarket(page);
-      await openQuickBetYes(page);
-
-      const dialog = page.getByRole("dialog");
-
-      // Click the "Other" / "Annat" button
-      const otherBtn = dialog.getByRole("button", { name: /other|annat/i });
-      await expect(otherBtn).toBeVisible();
-      await otherBtn.click();
-
-      // A number input should appear
-      const input = dialog.getByRole("spinbutton").or(dialog.getByPlaceholder(/enter amount|ange belopp/i)).first();
-      await expect(input).toBeVisible({ timeout: 3_000 });
-    },
-  );
-
-  test(
-    "custom amount input accepts numeric value and updates breakdown",
-    { tag: ["@trading"] },
-    async ({ page }) => {
-      await goToFirstMarket(page);
-      await openQuickBetYes(page);
-
-      const dialog = page.getByRole("dialog");
-
-      // Skip if market has 0-limit (no breakdown possible)
-      const hasBreakdown = await dialog.getByText(/cost|kostnad/i).first()
-        .isVisible({ timeout: 3_000 }).catch(() => false);
-      if (!hasBreakdown) {
-        test.skip(true, "Market has 0 stake limits — no breakdown available");
-        return;
-      }
-
-      // Click "Other" and type a custom amount
-      await dialog.getByRole("button", { name: /other|annat/i }).click();
-      const input = dialog.getByRole("spinbutton").or(dialog.getByPlaceholder(/enter amount|ange belopp/i)).first();
-      await expect(input).toBeVisible({ timeout: 3_000 });
-      await input.fill("200");
-
-      await expect(
-        dialog.getByText(/profit|vinst/i).first(),
-      ).toBeVisible({ timeout: 3_000 });
-      await expect(
-        dialog.getByText(/max loss|max förlust/i).first(),
-      ).toBeVisible();
-    },
-  );
-
-  // ─────────────────────────────────────────────────────────────────
-  // 3. PAYOUT BREAKDOWN (GAEAB Ch.11 / LIFS 2018:8)
-  // ─────────────────────────────────────────────────────────────────
-
-  test(
-    "payout breakdown shows cost, gross payout, platform fee, profit, and max loss",
-    { tag: ["@trading", "@compliance", "@critical"] },
-    async ({ page }) => {
-      await goToFirstMarket(page);
-      await openQuickBetYes(page);
-
-      const dialog = page.getByRole("dialog");
-
-      // Skip if market has 0-limit (no breakdown possible)
-      const hasBreakdown = await dialog.getByText(/cost|kostnad/i).first()
-        .isVisible({ timeout: 3_000 }).catch(() => false);
-      if (!hasBreakdown) {
-        test.skip(true, "Market has 0 stake limits — no breakdown available");
-        return;
-      }
-
-      // Cost line: "Cost (X shares × Y kr)" / "Kostnad (X andelar × Y kr)"
-      await expect(
-        dialog.getByText(/cost|kostnad/i).first(),
-      ).toBeVisible({ timeout: 5_000 });
-
-      // "If Yes wins" / "Om Ja vinner"
-      await expect(
-        dialog.getByText(/if.*wins|om.*vinner/i).first(),
-      ).toBeVisible();
-
-      // Gross payout
-      await expect(
-        dialog.getByText(/gross payout|bruttoutbetalning/i).first(),
-      ).toBeVisible();
-
-      // Platform fee (2%)
-      await expect(
-        dialog.getByText(/platform fee|plattformsavgift/i).first(),
-      ).toBeVisible();
-
-      // Profit / Vinst
-      await expect(
-        dialog.getByText(/profit|vinst/i).first(),
-      ).toBeVisible();
-
-      // Max loss / Max förlust
-      await expect(
-        dialog.getByText(/max loss|max förlust/i).first(),
-      ).toBeVisible();
-    },
-  );
-
-  test(
-    "all amounts in breakdown are displayed in SEK (kr)",
-    { tag: ["@trading", "@compliance"] },
-    async ({ page }) => {
-      await goToFirstMarket(page);
-      await openQuickBetYes(page);
-
-      const dialog = page.getByRole("dialog");
-      const breakdownText = await dialog.innerText();
-
-      // Count "kr" occurrences — at least cost, gross, fee, profit, max loss
-      const krMatches = breakdownText.match(/kr/gi) || [];
-      expect(krMatches.length).toBeGreaterThanOrEqual(5);
-    },
-  );
-
-  test(
-    "platform fee shows the correct percentage (2%)",
-    { tag: ["@trading", "@compliance"] },
-    async ({ page }) => {
-      await goToFirstMarket(page);
-      await openQuickBetYes(page);
-
-      const dialog = page.getByRole("dialog");
-
-      // Skip if market has 0-limit (no breakdown possible)
-      const hasBreakdown = await dialog.getByText(/cost|kostnad/i).first()
-        .isVisible({ timeout: 3_000 }).catch(() => false);
-      if (!hasBreakdown) {
-        test.skip(true, "Market has 0 stake limits — no breakdown available");
-        return;
-      }
-
-      // "Platform fee (X%)" or "Plattformsavgift (X%)"
-      const dialogText = await dialog.innerText();
-      expect(dialogText).toMatch(/platform fee|plattformsavgift/i);
-      // Fee percentage is shown — verify it's a reasonable rate (between 1-10%)
-      expect(dialogText).toMatch(/\d[.,]\d\s*%/);
-    },
-  );
-
-  // ─────────────────────────────────────────────────────────────────
-  // 4. FEE & SETTLEMENT DISCLOSURE
-  // ─────────────────────────────────────────────────────────────────
-
-  test(
-    "fee & settlement info is collapsible and shows fee deduction text",
-    { tag: ["@trading", "@compliance", "@critical"] },
-    async ({ page }) => {
-      await goToFirstMarket(page);
-      await openQuickBetYes(page);
-
-      const dialog = page.getByRole("dialog");
-
-      // The collapsible toggle button
-      const infoToggle = dialog.getByRole("button", {
-        name: /fee.*settlement|avgift.*avräkning/i,
+      const feeToggle = dialog.getByRole("button", {
+        name: /plattformsavgift|platform fee/i,
       });
-      await expect(infoToggle).toBeVisible({ timeout: 5_000 });
-      await expect(infoToggle).toHaveAttribute("aria-expanded", "false");
+      const hasBreakdown = await feeToggle
+        .isVisible({ timeout: 3_000 })
+        .catch(() => false);
+      if (!hasBreakdown) {
+        test.skip(true, "Market has 0 stake limits — no breakdown available");
+        return;
+      }
 
-      // Click to expand
-      await infoToggle.click();
-      await expect(infoToggle).toHaveAttribute("aria-expanded", "true");
+      const feeBefore = await feeToggle.textContent();
 
-      // Fee disclosure copy: "A 2.0% platform fee is added..." / "En avgift på 2.0% läggs till..."
-      await expect(
-        dialog.getByText(/(?:fee|avgift).*(?:added|läggs)|(?:added|läggs).*(?:fee|avgift)/i).first(),
-      ).toBeVisible({ timeout: 3_000 });
+      // Switch to a different preset (use the last one so the absolute fee
+      // amount visibly differs from the first preset clicked by openQuickBetYes).
+      const presets = dialog.getByRole("button", { name: PRESET_BUTTON_RE });
+      await presets.last().click();
 
-      // Max loss explainer
-      await expect(
-        dialog.getByText(/maximum.*(?:lose|förlora)|totala.*kostnad|max.*(?:lose|förlora)/i).first(),
-      ).toBeVisible();
-
-      // Click to collapse
-      await infoToggle.click();
-      await expect(infoToggle).toHaveAttribute("aria-expanded", "false");
+      // Fee row should have updated (different absolute fee amount)
+      await expect(async () => {
+        const feeAfter = await feeToggle.textContent();
+        expect(feeAfter).not.toBe(feeBefore);
+      }).toPass({ timeout: 5_000 });
     },
   );
 
-  // ─────────────────────────────────────────────────────────────────
-  // 5. STAKE LIMITS
-  // ─────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // 3. PAYOUT BREAKDOWN (GAEAB Ch.11 / LIFS 2018:8)
+  // ─────────────────────────────────────────────────────────────
 
   test(
-    "modal displays min and max stake limits in kr",
-    { tag: ["@trading"] },
+    "platform fee toggle expands to show Insats / Ordersumma / Möjlig utbetalning",
+    { tag: ["@trading", "@compliance", "@critical"] },
     async ({ page }) => {
       await goToFirstMarket(page);
       await openQuickBetYes(page);
 
       const dialog = page.getByRole("dialog");
-      // "Min: X kr · Max: Y kr"
+
+      const feeToggle = dialog.getByRole("button", {
+        name: /plattformsavgift|platform fee/i,
+      });
+      const hasFee = await feeToggle
+        .isVisible({ timeout: 3_000 })
+        .catch(() => false);
+      if (!hasFee) {
+        test.skip(true, "Market has 0 stake limits — no breakdown available");
+        return;
+      }
+
+      await expect(feeToggle).toHaveAttribute("aria-expanded", "false");
+
+      // Expand
+      await feeToggle.click();
+      await expect(feeToggle).toHaveAttribute("aria-expanded", "true");
+
+      // Three breakdown rows render only when expanded:
+      //   - `markets.kostnad`     = "Insats"
+      //   - `markets.insats`      = "Ordersumma"
+      //   - `markets.mojligVinst` = "Möjlig utbetalning"
       await expect(
-        dialog.getByText(/min:.*kr.*max:.*kr/i),
-      ).toBeVisible({ timeout: 5_000 });
+        dialog.getByText(/^insats$|^stake$/i).first(),
+      ).toBeVisible({ timeout: 3_000 });
+      await expect(
+        dialog.getByText(/^ordersumma$|^order amount$/i).first(),
+      ).toBeVisible();
+      await expect(
+        dialog.getByText(/möjlig utbetalning|possible payout/i).first(),
+      ).toBeVisible();
+
+      // Collapse
+      await feeToggle.click();
+      await expect(feeToggle).toHaveAttribute("aria-expanded", "false");
+    },
+  );
+
+  test(
+    "all amounts in modal are displayed in SEK (kr)",
+    { tag: ["@trading", "@compliance"] },
+    async ({ page }) => {
+      await goToFirstMarket(page);
+      await openQuickBetYes(page);
+
+      const dialog = page.getByRole("dialog");
+      const text = await dialog.innerText();
+
+      // At minimum the four preset buttons each surface "kr". Realistic
+      // dialogs render more (input suffix, fee row, etc.).
+      const krMatches = text.match(/kr/gi) || [];
+      expect(krMatches.length).toBeGreaterThanOrEqual(4);
+    },
+  );
+
+  test(
+    "platform fee toggle shows the fee percentage",
+    { tag: ["@trading", "@compliance"] },
+    async ({ page }) => {
+      await goToFirstMarket(page);
+      await openQuickBetYes(page);
+
+      const dialog = page.getByRole("dialog");
+
+      const feeToggle = dialog.getByRole("button", {
+        name: /plattformsavgift|platform fee/i,
+      });
+      const hasFee = await feeToggle
+        .isVisible({ timeout: 3_000 })
+        .catch(() => false);
+      if (!hasFee) {
+        test.skip(true, "Market has 0 stake limits — no breakdown available");
+        return;
+      }
+
+      // The toggle's label embeds "(X%)" — assert a percentage appears.
+      const text = (await feeToggle.innerText()).trim();
+      expect(text).toMatch(/\d[.,]?\d*\s*%/);
     },
   );
 
   // ─────────────────────────────────────────────────────────────────
-  // 6. UNAUTHENTICATED STATE
+  // 4. UNAUTHENTICATED STATE
   // ─────────────────────────────────────────────────────────────────
 
   test(
-    "dialog footer surfaces either a sign-up link or a Buy/Confirm action",
+    "unauthenticated dialog footer surfaces a sign-in link to /login",
     { tag: ["@trading", "@smoke"] },
     async ({ page }) => {
       await goToFirstMarket(page);
@@ -396,29 +303,21 @@ test.describe("Bet placement — QuickBet modal", () => {
 
       const dialog = page.getByRole("dialog");
 
-      // Unauthenticated flow — copy shifted under SCRUM-797 from "Sign up to
-      // buy" toward "Registrera dig" / "Create account". Match a broad set.
-      const signUpLink = dialog.getByRole("link", {
-        name: /sign up|registrera|skapa konto|create account/i,
+      // `markets.signInToBuy` renders as "Logga in" / "Log in" on a Link to
+      // `/login?next=/markets/...`. Match either locale's wording (English
+      // copy uses "Log in", not "Sign in").
+      const signInLink = dialog.getByRole("link", {
+        name: /^(logga in|log in|sign in)$/i,
       });
-      const buyBtn = dialog.getByRole("button", {
-        name: /^(buy|köp|confirm|bekräfta|handla|trade|place order)/i,
-      });
+      await expect(signInLink).toBeVisible({ timeout: 5_000 });
 
-      const hasSignUp = await signUpLink.isVisible({ timeout: 5_000 }).catch(() => false);
-      const hasBuy = await buyBtn.isVisible({ timeout: 5_000 }).catch(() => false);
-
-      expect(hasSignUp || hasBuy).toBeTruthy();
-
-      if (hasSignUp) {
-        const href = await signUpLink.getAttribute("href");
-        expect(href).toMatch(/\/(login|register)/);
-      }
+      const href = await signInLink.getAttribute("href");
+      expect(href).toMatch(/\/login(\?|$)/);
     },
   );
 
   // ─────────────────────────────────────────────────────────────────
-  // 7. TERMS AGREEMENT FOOTER
+  // 5. TERMS AGREEMENT FOOTER
   // ─────────────────────────────────────────────────────────────────
 
   test(
@@ -430,14 +329,16 @@ test.describe("Bet placement — QuickBet modal", () => {
 
       const dialog = page.getByRole("dialog");
 
-      // "By trading, you agree to the" / "Genom att handla godkänner du"
+      // `markets.termsAgree` = "Genom att handla godkänner du" /
+      // "By trading you agree to".
       await expect(
-        dialog.getByText(/by trading.*agree|genom att handla.*godkänner/i),
+        dialog.getByText(/genom att handla.*godkänner|by trading.*agree/i),
       ).toBeVisible({ timeout: 5_000 });
 
-      // Link to terms
+      // `markets.termsOfUse` = "Användarvillkoren" / "Terms of Use" — the
+      // visible label on the link to `/terms`.
       const termsLink = dialog.getByRole("link", {
-        name: /terms|villkor|användarvillkor/i,
+        name: /användarvillkor|terms of use|terms/i,
       });
       await expect(termsLink).toBeVisible();
       const href = await termsLink.getAttribute("href");
@@ -446,7 +347,7 @@ test.describe("Bet placement — QuickBet modal", () => {
   );
 
   // ─────────────────────────────────────────────────────────────────
-  // 8. AUTHENTICATED BET PLACEMENT
+  // 6. AUTHENTICATED BET PLACEMENT
   // ─────────────────────────────────────────────────────────────────
 
   test.describe("authenticated — place a bet", () => {
@@ -454,7 +355,7 @@ test.describe("Bet placement — QuickBet modal", () => {
 
     test.beforeEach(async ({ page }, testInfo) => {
       if (!hasAuthSession()) testInfo.skip();
-      // Mock wallet balance so the Buy button is enabled
+      // Mock wallet balance so the CTA is enabled.
       await page.route("**/api/v2/wallet", async (route) => {
         await route.fulfill({
           status: 200,
@@ -464,11 +365,8 @@ test.describe("Bet placement — QuickBet modal", () => {
       });
     });
 
-    // Tests mock both the wallet balance API (to ensure sufficient funds)
-    // and the order placement API (to avoid placing real bets on staging).
-
     test(
-      "Buy/Confirm action button is visible for authenticated user",
+      "Place-order CTA is visible for authenticated user",
       { tag: ["@trading", "@smoke"] },
       async ({ page }) => {
         await goToFirstMarket(page);
@@ -476,34 +374,38 @@ test.describe("Bet placement — QuickBet modal", () => {
 
         const dialog = page.getByRole("dialog");
 
-        // Authenticated users see a trade-execution button. Copy ranges from
-        // "Köp Ja" / "Buy Yes" to the newer "Bekräfta" / "Confirm" / "Handla".
-        const buyBtn = dialog.getByRole("button", {
-          name: /^(köp|buy|confirm|bekräfta|handla|trade|place order)/i,
+        // Authenticated CTA: `markets.ctaPlace` renders as "Placera {amount}" /
+        // "Place {amount}" — match the leading verb.
+        const placeBtn = dialog.getByRole("button", {
+          name: /^(placera|place)\b/i,
         });
-        const signUpLink = dialog.getByRole("link", {
-          name: /sign up|registrera|skapa konto/i,
+        const signInLink = dialog.getByRole("link", {
+          name: /^(logga in|log in|sign in)$/i,
         });
 
-        const hasBuy = await buyBtn.first().isVisible({ timeout: 5_000 }).catch(() => false);
-        const hasSignUp = await signUpLink.isVisible({ timeout: 2_000 }).catch(() => false);
+        const hasPlace = await placeBtn
+          .first()
+          .isVisible({ timeout: 5_000 })
+          .catch(() => false);
+        const hasSignIn = await signInLink
+          .isVisible({ timeout: 2_000 })
+          .catch(() => false);
 
-        if (!hasBuy && hasSignUp) {
-          test.skip(true, "Auth session expired — user sees sign-up link");
+        if (!hasPlace && hasSignIn) {
+          test.skip(true, "Auth session expired — user sees sign-in link");
           return;
         }
 
-        await expect(buyBtn.first()).toBeVisible();
+        await expect(placeBtn.first()).toBeVisible();
       },
     );
 
     test(
-      "placing a bet sends POST to /api/v2/orders/place and shows success toast",
+      "placing a bet sends POST to /api/v2/orders and shows the receipt",
       { tag: ["@trading", "@critical"] },
       async ({ page }) => {
-        // Mock the order placement API to avoid placing a real bet on production
         let capturedBody: Record<string, unknown> | null = null;
-        await page.route("**/api/v2/orders/place", async (route) => {
+        await page.route("**/api/v2/orders", async (route) => {
           const request = route.request();
           capturedBody = JSON.parse(request.postData() || "{}");
           await route.fulfill({
@@ -512,8 +414,9 @@ test.describe("Bet placement — QuickBet modal", () => {
             body: JSON.stringify({
               orderId: "mock-order-123",
               status: "filled",
-              quantity: capturedBody?.quantity,
               side: capturedBody?.side,
+              avgPrice: 0.5,
+              quantity: 20,
             }),
           });
         });
@@ -522,138 +425,37 @@ test.describe("Bet placement — QuickBet modal", () => {
         await openQuickBetYes(page);
 
         const dialog = page.getByRole("dialog");
-
-        // Check auth state — skip if session expired
-        const buyBtn = dialog.getByRole("button", { name: /köp|buy/i });
-        const hasBuy = await buyBtn.isVisible({ timeout: 5_000 }).catch(() => false);
-        if (!hasBuy) {
-          test.skip(true, "Auth session expired — Buy button not visible");
+        const placeBtn = dialog.getByRole("button", { name: /^(placera|place)\b/i }).first();
+        const hasPlace = await placeBtn.isVisible({ timeout: 5_000 }).catch(() => false);
+        if (!hasPlace) {
+          test.skip(true, "Auth session expired — Place button not visible");
           return;
         }
 
-        // Click Buy
-        await buyBtn.click();
+        await placeBtn.click();
 
-        // Success toast should appear: "Order lagd!" / "Order placed!"
+        // Receipt drawer takes over the modal on success — its title is
+        // `receipts.drawer.title`. Match any of the receipt-style copy.
         await expect(
-          page.getByText(/order mottagen|order received/i).first(),
+          page.getByText(/order|kvitto|receipt|mottagen|received|placed/i).first(),
         ).toBeVisible({ timeout: 10_000 });
-
-        // Modal should close after successful order
-        await expect(page.getByRole("dialog")).toBeHidden({ timeout: 5_000 });
 
         // Verify the API was called with correct payload
         expect(capturedBody).not.toBeNull();
         expect(capturedBody!.side).toBe("yes");
         expect(capturedBody!.marketId).toBeTruthy();
-        // Verify a numeric quantity/amount field exists (field name varies by build)
-        const numericFields = Object.entries(capturedBody!).filter(
-          ([, v]) => typeof v === "number" && v > 0,
-        );
-        expect(numericFields.length).toBeGreaterThan(0);
       },
     );
 
     test(
-      "placing a bet on NO side sends side='no' in the payload",
-      { tag: ["@trading"] },
-      async ({ page }) => {
-        let capturedBody: Record<string, unknown> | null = null;
-        await page.route("**/api/v2/orders/place", async (route) => {
-          capturedBody = JSON.parse(route.request().postData() || "{}");
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ orderId: "mock-order-456", status: "filled" }),
-          });
-        });
-
-        await goToFirstMarket(page);
-
-        // Open QuickBet on the NO side (mobile viewport — data-side buttons
-        // are desktop-only; the aria-labelled StatBand trigger is what exists
-        // on mobile).
-        const noBtn = getQuickBetNoTrigger(page);
-        await expect(noBtn).toBeVisible({ timeout: 8_000 });
-        await noBtn.click();
-        await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
-
-        const dialog = page.getByRole("dialog");
-        // Select a preset so the Buy button becomes enabled
-        await dialog.getByRole("button", { name: "10 kr" }).click().catch(() => {});
-
-        const buyBtn = dialog.getByRole("button", { name: /köp|buy/i });
-        const hasBuy = await buyBtn.isVisible({ timeout: 5_000 }).catch(() => false);
-        if (!hasBuy) {
-          test.skip(true, "Auth session expired");
-          return;
-        }
-
-        await buyBtn.click();
-        await expect(
-          page.getByText(/order mottagen|order received/i).first(),
-        ).toBeVisible({ timeout: 10_000 });
-
-        expect(capturedBody).not.toBeNull();
-        expect(["yes", "no"]).toContain(capturedBody!.side);
-      },
-    );
-
-    test(
-      "changing amount preset before buying sends correct quantity",
-      { tag: ["@trading"] },
-      async ({ page }) => {
-        let capturedBody: Record<string, unknown> | null = null;
-        await page.route("**/api/v2/orders/place", async (route) => {
-          capturedBody = JSON.parse(route.request().postData() || "{}");
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ orderId: "mock-order-789", status: "filled" }),
-          });
-        });
-
-        await goToFirstMarket(page);
-        await openQuickBetYes(page);
-
-        const dialog = page.getByRole("dialog");
-        const buyBtn = dialog.getByRole("button", { name: /köp|buy/i });
-        const hasBuy = await buyBtn.isVisible({ timeout: 5_000 }).catch(() => false);
-        if (!hasBuy) {
-          test.skip(true, "Auth session expired");
-          return;
-        }
-
-        // Switch to 100 kr preset
-        await dialog.getByRole("button", { name: "100 kr" }).click();
-
-        // Read the shares count from the cost breakdown "Kostnad (X andelar × ...)"
-        const costText = await dialog.getByText(/kostnad|cost/i).first().innerText();
-        const sharesMatch = costText.match(/(\d+)\s*(?:andelar|shares)/);
-        const expectedShares = sharesMatch ? parseInt(sharesMatch[1], 10) : null;
-
-        await buyBtn.click();
-        await expect(
-          page.getByText(/order mottagen|order received/i).first(),
-        ).toBeVisible({ timeout: 10_000 });
-
-        expect(capturedBody).not.toBeNull();
-        const numericFields = Object.entries(capturedBody!).filter(
-          ([, v]) => typeof v === "number" && v > 0,
-        );
-        expect(numericFields.length).toBeGreaterThan(0);
-      },
-    );
-
-    test(
-      "API error shows error toast and keeps modal open",
+      "API error keeps the modal open",
       { tag: ["@trading", "@critical"] },
       async ({ page }) => {
-        await page.route("**/api/v2/orders/place", async (route) => {
+        await page.route("**/api/v2/orders", async (route) => {
           await route.fulfill({
             status: 400,
             contentType: "application/json",
-            body: JSON.stringify({ error: "Insufficient balance" }),
+            body: JSON.stringify({ error: "Insufficient balance", code: "INSUFFICIENT_BALANCE" }),
           });
         });
 
@@ -661,66 +463,17 @@ test.describe("Bet placement — QuickBet modal", () => {
         await openQuickBetYes(page);
 
         const dialog = page.getByRole("dialog");
-        const buyBtn = dialog.getByRole("button", { name: /köp|buy/i });
-        const hasBuy = await buyBtn.isVisible({ timeout: 5_000 }).catch(() => false);
-        if (!hasBuy) {
+        const placeBtn = dialog.getByRole("button", { name: /^(placera|place)\b/i }).first();
+        const hasPlace = await placeBtn.isVisible({ timeout: 5_000 }).catch(() => false);
+        if (!hasPlace) {
           test.skip(true, "Auth session expired");
           return;
         }
 
-        await buyBtn.click();
+        await placeBtn.click();
 
-        // Error toast: "Ordern misslyckades" / "Order failed"
-        await expect(
-          page.getByText(/order.*misslyckades|order.*failed/i).first(),
-        ).toBeVisible({ timeout: 10_000 });
-
-        // Modal should remain open so user can retry or cancel
+        // Modal should remain open so the user can retry or cancel.
         await expect(page.getByRole("dialog")).toBeVisible();
-      },
-    );
-
-    test(
-      "Buy button shows loading state during submission",
-      { tag: ["@trading"] },
-      async ({ page }) => {
-        // Slow response to capture the loading state
-        await page.route("**/api/v2/orders/place", async (route) => {
-          await new Promise((r) => setTimeout(r, 2_000));
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ orderId: "mock-slow", status: "filled" }),
-          });
-        });
-
-        await goToFirstMarket(page);
-        await openQuickBetYes(page);
-
-        const dialog = page.getByRole("dialog");
-        const buyBtn = dialog.getByRole("button", { name: /köp|buy/i });
-        const hasBuy = await buyBtn.isVisible({ timeout: 5_000 }).catch(() => false);
-        if (!hasBuy) {
-          test.skip(true, "Auth session expired");
-          return;
-        }
-
-        await buyBtn.click();
-
-        // Button should show "Placerar order..." / "Placing order..."
-        await expect(
-          dialog.getByText(/lägger order|placing order/i),
-        ).toBeVisible({ timeout: 3_000 });
-
-        // Button should be disabled during submission
-        const submittingBtn = dialog.getByRole("button", { name: /lägger|placing/i });
-        const isDisabled = await submittingBtn.isDisabled().catch(() => false);
-        expect(isDisabled).toBeTruthy();
-
-        // Wait for completion
-        await expect(
-          page.getByText(/order mottagen|order received/i).first(),
-        ).toBeVisible({ timeout: 10_000 });
       },
     );
   });

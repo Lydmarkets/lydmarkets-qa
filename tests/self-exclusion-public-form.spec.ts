@@ -21,8 +21,17 @@ test.describe("Public /self-exclusion page", () => {
       })
     ).toBeVisible({ timeout: 10_000 });
 
+    // Two scope cards: `exclusion.scopeSiteTitle` = "Avstängning från
+    // Lydmarkets" / "Exclusion from Lydmarkets", and
+    // `exclusion.scopeSpelpausTitle` = "Nationell avstängning" / "National
+    // exclusion". Match either as an H2.
     await expect(
-      page.getByRole("heading", { level: 2, name: /exclude from lydmarkets only|spelpaus/i }).first()
+      page
+        .getByRole("heading", {
+          level: 2,
+          name: /avstängning från lydmarkets|exclusion from lydmarkets|nationell avstängning|national exclusion/i,
+        })
+        .first(),
     ).toBeVisible();
   });
 
