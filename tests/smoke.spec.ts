@@ -1,4 +1,9 @@
 import { test, expect } from "../fixtures/base";
+
+// See auth.spec.ts BANKID_BUTTON_RE — same set of variants.
+const BANKID_BUTTON_RE =
+  /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i;
+
 test.describe("Smoke tests — critical user flows", () => {
   test("homepage loads with key elements", async ({ page }) => {
     await page.goto("/");
@@ -8,19 +13,25 @@ test.describe("Smoke tests — critical user flows", () => {
 
   test("login page renders BankID sign-in form", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByText(/välkommen tillbaka|welcome back/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i }).first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /logga in|sign in/i, level: 1 }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: BANKID_BUTTON_RE }).first(),
+    ).toBeVisible();
   });
 
   test("register page renders BankID account creation", async ({ page }) => {
     await page.goto("/register");
-    // SCRUM-797: register heading is the marketing split title now.
     await expect(
       page.getByRole("heading", {
-        name: /handla på det som|trade on what|skapa konto|create( an)? account/i,
+        name: /bankid-?verifiering|bankid verification/i,
+        level: 1,
       })
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: /starta bankid|start bankid/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: BANKID_BUTTON_RE }).first(),
+    ).toBeVisible();
   });
 
   test("markets page loads", async ({ page }) => {

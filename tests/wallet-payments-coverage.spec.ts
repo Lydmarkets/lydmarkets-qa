@@ -9,10 +9,36 @@ test.describe("Wallet & payments — authenticated coverage", () => {
     if (!hasAuthSession()) testInfo.skip();
   });
 
-  // ── SIFS: Header balance display ───────────────────────────────────
+  // ── SIFS: balance reachable on every screen ────────────────────────
+  // SCRUM-1090 moved the inline header balance into the UserMenu drawer.
+  // The SIFS "always reachable" requirement is met by one click on the
+  // "Öppna meny" / "Open menu" hamburger surfacing the balance row. See
+  // SCRUM-542 for the per-page drawer-balance coverage; these checks
+  // exercise the wallet area entry points.
+
+  async function balanceReachableInDrawer(
+    page: import("@playwright/test").Page,
+  ): Promise<boolean> {
+    const menuBtn = page.getByRole("button", { name: /öppna meny|open menu/i });
+    const opened = await menuBtn
+      .click({ timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!opened) return false;
+
+    const balanceByLabel = page.getByLabel(/saldo|balance/i).first();
+    const balanceByText = page.getByText(/\d+[,.]?\d*\s*kr/i).first();
+    const hasLabel = await balanceByLabel
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
+    const hasText = await balanceByText
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
+    return hasLabel || hasText;
+  }
 
   test(
-    "header balance is visible on markets page (SIFS requirement)",
+    "balance is reachable from the drawer on markets page (SIFS requirement)",
     { tag: ["@smoke", "@critical", "@sifs"] },
     async ({ page }) => {
       await page.goto("/");
@@ -23,27 +49,12 @@ test.describe("Wallet & payments — authenticated coverage", () => {
         return;
       }
 
-      // BalanceDisplay component uses aria-label with "Saldo" or shows "kr"
-      const balanceByLabel = page.getByLabel(/saldo/i).first();
-      const balanceByText = page.getByText(/\d+[,.]?\d*\s*kr/i).first();
-      const balanceLink = page.locator('a[href="/wallet"]').first();
-
-      const hasLabel = await balanceByLabel
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-      const hasText = await balanceByText
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-      const hasLink = await balanceLink
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      expect(hasLabel || hasText || hasLink).toBeTruthy();
+      expect(await balanceReachableInDrawer(page)).toBeTruthy();
     },
   );
 
   test(
-    "header balance is visible on portfolio page (SIFS requirement)",
+    "balance is reachable from the drawer on portfolio page (SIFS requirement)",
     { tag: ["@critical", "@sifs"] },
     async ({ page }) => {
       await page.goto("/portfolio");
@@ -54,21 +65,7 @@ test.describe("Wallet & payments — authenticated coverage", () => {
         return;
       }
 
-      const balanceByLabel = page.getByLabel(/saldo/i).first();
-      const balanceByText = page.getByText(/\d+[,.]?\d*\s*kr/i).first();
-      const balanceLink = page.locator('a[href="/wallet"]').first();
-
-      const hasLabel = await balanceByLabel
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-      const hasText = await balanceByText
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-      const hasLink = await balanceLink
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      expect(hasLabel || hasText || hasLink).toBeTruthy();
+      expect(await balanceReachableInDrawer(page)).toBeTruthy();
     },
   );
 
@@ -219,7 +216,9 @@ test.describe("Wallet & payments — authenticated coverage", () => {
     "transactions page loads with content",
     { tag: ["@smoke"] },
     async ({ page }) => {
-      await page.goto("/transactions");
+      // Route lives under `/wallet/transactions` (the top-level `/transactions`
+      // route was removed when the wallet area was reorganised).
+      await page.goto("/wallet/transactions");
       await dismissLimitsDialog(page);
 
       if (page.url().includes("/login")) {

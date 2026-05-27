@@ -5,14 +5,17 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   // add storageState-based auth setup once BankID test accounts are provisioned.
 
   test("unauthenticated user sees a Sign-In entry point in the nav", async ({ page }) => {
-    // The header collapses auth links into the Open-menu drawer; the banner
-    // exposes a Sign-In *button* that opens the drawer. The actual /login +
-    // /register links live inside the drawer and are covered by
+    // The header collapses auth links into the Open-menu drawer. For
+    // unauthenticated users the menu trigger surfaces visible "Sign in" /
+    // "Logga in" text inside the button (the button's accessible name is
+    // the drawer label "Open menu" — `getByRole` matches accessible name,
+    // so target the visible label via `getByText` instead). The actual
+    // /login + /register links live inside the drawer and are covered by
     // header-open-menu-drawer.spec.ts.
     await page.goto("/");
     const nav = page.getByRole("banner");
     await expect(
-      nav.getByRole("button", { name: /logga in|sign in/i }),
+      nav.getByText(/^(logga in|sign in)$/i).first(),
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -31,7 +34,11 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   test("login page is accessible at /login", async ({ page }) => {
     await page.goto("/login");
     await expect(
-      page.getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i }).first()
+      page
+        .getByRole("button", {
+          name: /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i,
+        })
+        .first(),
     ).toBeVisible({ timeout: 10000 });
   });
 

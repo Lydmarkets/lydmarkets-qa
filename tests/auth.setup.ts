@@ -92,10 +92,11 @@ async function tryBankIdMock(
     const cookieAccept = page.getByRole("button", { name: /acceptera|accept/i });
     await cookieAccept.click({ timeout: 3_000 }).catch(() => {});
 
-    // Click BankID login — button text changed from "Sign in with BankID"
-    // to "BankID on this computer" / "Mobile BankID" after the auth page refactor
+    // Click a BankID action button. Buttons render as "Öppna BankID" /
+    // "Visa QR-kod" / "Öppna BankID på den här enheten" (and English
+    // counterparts) after the auth-page redesign.
     await page
-      .getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i })
+      .getByRole("button", { name: /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i })
       .first()
       .click();
 
@@ -124,7 +125,8 @@ async function tryBankIdMock(
     await cookieAccept.click({ timeout: 2_000 }).catch(() => {});
 
     await page
-      .getByRole("button", { name: /^starta bankid$|^start bankid$/i })
+      .getByRole("button", { name: /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i })
+      .first()
       .click();
 
     const emailField = page.getByRole("textbox", { name: /e-postadress|email/i });
@@ -144,7 +146,7 @@ async function tryBankIdMock(
 
     if (page.url().includes("/login")) {
       await page
-        .getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i })
+        .getByRole("button", { name: /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i })
         .first()
         .click();
       await page.waitForURL((url) => !url.pathname.includes("/login"), {

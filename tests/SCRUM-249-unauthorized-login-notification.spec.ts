@@ -24,7 +24,11 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
     await page.goto("/login");
     await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     await expect(
-      page.getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i }).first()
+      page
+        .getByRole("button", {
+          name: /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i,
+        })
+        .first(),
     ).toBeVisible({ timeout: 8000 });
   });
 

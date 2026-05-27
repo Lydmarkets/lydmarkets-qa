@@ -3,10 +3,14 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
   test("login page renders with BankID sign-in options", async ({ page }) => {
     await page.goto("/login");
     await expect(
-      page.getByRole("heading", { name: /welcome back|välkommen tillbaka/i })
+      page.getByRole("heading", { name: /logga in|sign in/i, level: 1 })
     ).toBeVisible({ timeout: 10000 });
     await expect(
-      page.getByRole("button", { name: /bankid on this computer|bankid på den här datorn|sign in with bankid|logga in med bankid/i }).first()
+      page
+        .getByRole("button", {
+          name: /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i,
+        })
+        .first(),
     ).toBeVisible();
   });
 

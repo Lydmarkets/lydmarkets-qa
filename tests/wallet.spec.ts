@@ -6,7 +6,9 @@ test.describe("Wallet and payment flows", () => {
   test("wallet page redirects unauthenticated users to login", async ({ page }) => {
     await page.goto("/wallet");
     await page.waitForURL(/\/login/);
-    await expect(page.getByText(/välkommen tillbaka|welcome back/i)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /logga in|sign in/i, level: 1 }),
+    ).toBeVisible();
   });
 
   test("login redirect includes wallet return path", async ({ page }) => {
