@@ -12,11 +12,13 @@ import {
  *
  * Tests the bet-placement surfaces on the QuickBetModal as it ships today:
  *   1. Opening the modal from the Yes/No StatBand cells on the detail page
- *   2. Stake input + 4 preset buttons (10 / 25 / 50 / 100 kr)
+ *   2. Stake input + 4 preset buttons in kr (amounts scale with the
+ *      `NEXT_PUBLIC_MIN_STAKE_SEK` env — see PRESET_BUTTON_RE below)
  *   3. Payout breakdown: Plattformsavgift toggle → Insats / Ordersumma /
  *      Möjlig utbetalning rows
- *   4. Unauthenticated → "Logga in" / "Sign in" link
- *   5. Modal close behaviour
+ *   4. Unauthenticated → "Logga in" / "Log in" link
+ *   5. Modal dismissal via Escape (the modal renders with
+ *      `showCloseButton={false}`)
  *   6. Terms-agreement footer linking to /terms
  *
  * The old "Buy/Köp" header, separate Min/Max stake line, dedicated "Other"
