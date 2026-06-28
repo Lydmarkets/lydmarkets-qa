@@ -1,8 +1,10 @@
-import { test as setup } from "@playwright/test";
+import { test as setup, expect } from "@playwright/test";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import * as fs from "fs";
 
 const AUTH_FILE = "playwright/.auth/user.json";
+const BOT_BASE = "https://web-bot-production-518c.up.railway.app";
+const REGISTER_PASSWORD = "QaTest1234!";
 
 function hasValidSession(): boolean {
   try {
@@ -24,141 +26,67 @@ function saveEmptyAuth(): void {
 }
 
 /**
- * Strategy 1: Call the test-only /api/test/create-session endpoint.
- * Requires E2E_TEST_SECRET to be set on both the web app and the test runner.
- * Returns true if a valid session was created.
+ * Register a fresh account on the bot legislation build (email/password,
+ * no BankID). Each setup run creates a new unique user — there is no shared
+ * "e2e user" / test-session backdoor to keep alive. The session is cached in
+ * AUTH_FILE for 24h+, so registration only happens about once a day.
  */
-async function tryTestEndpoint(
+async function registerNewUser(
   page: import("@playwright/test").Page,
   baseURL: string,
 ): Promise<boolean> {
-  const secret = process.env.E2E_TEST_SECRET;
-  if (!secret) return false;
-
   try {
-    const res = await page.request.post(`${baseURL}/api/test/create-session`, {
-      data: { secret },
-    });
+    // Wake the bot service first — it can cold-start on the first hit of a
+    // nightly run, and a cold navigation can otherwise blow the test timeout.
+    await page.request.get(`${baseURL}/`, { timeout: 60_000 }).catch(() => {});
 
-    if (!res.ok()) return false;
+    await page.goto(`${baseURL}/register`, { timeout: 60_000 });
 
-    const { token, cookieName } = (await res.json()) as {
-      token: string;
-      cookieName: string;
-    };
+    const email = `qa-e2e+${Date.now()}@lydmarkets.test`;
+    const submit = page.locator('button[type="submit"]').first();
+    await submit.waitFor({ state: "visible", timeout: 30_000 });
 
-    if (!token || !cookieName) return false;
+    // Re-apply the whole form on each attempt: React hydration can run after the
+    // SSR'd inputs are interactive and wipe values entered too early. Both consent
+    // checkboxes are required — the submit button only enables once both are
+    // ticked, so we use that as the "form is ready + accepted" signal.
+    // ponytail: attribute locators because the inputs expose no label/role.
+    await expect(async () => {
+      await page.locator('input[type="email"]').fill(email);
+      await page.locator('input[type="password"]').fill(REGISTER_PASSWORD);
+      for (const box of await page.getByRole("checkbox").all()) {
+        await box.check();
+      }
+      await expect(submit).toBeEnabled({ timeout: 1_000 });
+    }).toPass({ timeout: 30_000 });
 
-    const domain = new URL(baseURL).hostname;
-    const isSecure = baseURL.startsWith("https");
+    await submit.click();
 
-    await page.context().addCookies([
-      {
-        name: cookieName,
-        value: token,
-        domain,
-        path: "/",
-        httpOnly: true,
-        secure: isSecure,
-        sameSite: "Strict",
-        expires: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-      },
+    // Successful registration logs straight in and leaves /register. Surface
+    // the rate-limit case explicitly — it's expected if setup runs many times
+    // in quick succession (the 24h session cache means production hits it ~once
+    // a day, well under the limit).
+    await Promise.race([
+      page.waitForURL((url) => !url.pathname.includes("/register"), {
+        timeout: 30_000,
+      }),
+      page
+        .getByText(/too many attempts|för många försök/i)
+        .waitFor({ timeout: 30_000 })
+        .then(() => {
+          throw new Error("rate limited by the registration endpoint");
+        }),
     ]);
 
-    // Navigate to trigger server-side session validation and any additional
-    // cookies the server needs to set (CSRF, callback URL, etc.)
-    await page.goto(`${baseURL}/`);
-    await dismissLimitsDialog(page);
+    // Save the session the moment we're authenticated — before any optional
+    // post-login dialog handling, so a dialog hiccup can't discard a good session.
     await page.context().storageState({ path: AUTH_FILE });
-    console.log("[auth.setup] Authenticated via test endpoint");
+    await dismissLimitsDialog(page).catch(() => {});
+    await page.context().storageState({ path: AUTH_FILE });
+    console.log(`[auth.setup] Registered + authenticated as ${email}`);
     return true;
   } catch (err) {
-    console.warn("[auth.setup] Test endpoint failed:", err);
-    return false;
-  }
-}
-
-/**
- * Strategy 2: Authenticate via mock BankID UI flow.
- * Works when the target environment has a BankID test/mock service configured.
- * Returns true if a valid session was created.
- */
-async function tryBankIdMock(
-  page: import("@playwright/test").Page,
-): Promise<boolean> {
-  try {
-    await page.goto("/login");
-    // Dismiss cookie banner if present
-    const cookieAccept = page.getByRole("button", { name: /acceptera|accept/i });
-    await cookieAccept.click({ timeout: 3_000 }).catch(() => {});
-
-    // Click a BankID action button. Buttons render as "Öppna BankID" /
-    // "Visa QR-kod" / "Öppna BankID på den här enheten" (and English
-    // counterparts) after the auth-page redesign.
-    await page
-      .getByRole("button", { name: /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i })
-      .first()
-      .click();
-
-    // Wait for BankID mock to resolve — either redirect or "No account found"
-    const noAccount = page.getByText(/no account found|inget konto/i);
-    const notOnLogin = page.waitForURL(
-      (url) => !url.pathname.includes("/login"),
-      { timeout: 15_000 },
-    );
-
-    await Promise.race([
-      noAccount.waitFor({ timeout: 15_000 }),
-      notOnLogin,
-    ]);
-
-    // If already logged in, save and done
-    if (!page.url().includes("/login")) {
-      await dismissLimitsDialog(page);
-      await page.context().storageState({ path: AUTH_FILE });
-      console.log("[auth.setup] Authenticated via BankID mock (existing account)");
-      return true;
-    }
-
-    // No account — need to register
-    await page.goto("/register");
-    await cookieAccept.click({ timeout: 2_000 }).catch(() => {});
-
-    await page
-      .getByRole("button", { name: /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i })
-      .first()
-      .click();
-
-    const emailField = page.getByRole("textbox", { name: /e-postadress|email/i });
-    await emailField.waitFor({ timeout: 30_000 });
-    await emailField.fill("e2e-test@lydmarkets.test");
-
-    const gdprCheckbox = page.getByRole("checkbox").first();
-    await gdprCheckbox.check();
-
-    await page
-      .getByRole("button", { name: /skapa konto|create account/i })
-      .click();
-
-    await page.waitForURL((url) => !url.pathname.includes("/register"), {
-      timeout: 30_000,
-    });
-
-    if (page.url().includes("/login")) {
-      await page
-        .getByRole("button", { name: /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i })
-        .first()
-        .click();
-      await page.waitForURL((url) => !url.pathname.includes("/login"), {
-        timeout: 30_000,
-      });
-    }
-
-    await dismissLimitsDialog(page);
-    await page.context().storageState({ path: AUTH_FILE });
-    console.log("[auth.setup] Authenticated via BankID mock (new registration)");
-    return true;
-  } catch {
+    console.warn("[auth.setup] Registration failed:", err);
     return false;
   }
 }
@@ -169,7 +97,7 @@ setup("authenticate", { timeout: 90_000 }, async ({ page, baseURL }) => {
     return;
   }
 
-  const base = baseURL || "https://web-staging-71a7.up.railway.app";
+  const base = baseURL || BOT_BASE;
 
   // Force English locale on the saved storageState — middleware reads this
   // cookie to decide which language to serve. Tests use English text selectors.
@@ -182,11 +110,17 @@ setup("authenticate", { timeout: 90_000 }, async ({ page, baseURL }) => {
     },
   ]);
 
-  // Try strategies in order of reliability
-  if (await tryTestEndpoint(page, base)) return;
-  if (await tryBankIdMock(page)) return;
+  // Pre-accept cookie consent so the CookieBanner's modal overlay never renders
+  // — it intercepts pointer events and blocks the register form (same approach
+  // as fixtures/base.ts, which this setup file doesn't inherit).
+  await page.context().addInitScript(() => {
+    localStorage.setItem("cookieConsent", "recorded");
+    localStorage.setItem("cookieConsentVersion", "1");
+  });
 
-  // All strategies failed — save empty auth so tests run unauthenticated
-  console.warn("[auth.setup] All auth strategies failed — running unauthenticated");
+  if (await registerNewUser(page, base)) return;
+
+  // Registration failed — save empty auth so tests run unauthenticated
+  console.warn("[auth.setup] Registration failed — running unauthenticated");
   saveEmptyAuth();
 });
