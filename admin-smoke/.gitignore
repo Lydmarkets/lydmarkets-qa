@@ -1,0 +1,5 @@
+# Captured session cookies — a live admin credential. Never commit.
+admin-auth.json
+# Crawl artifacts
+crawl-results.json
+shots/
