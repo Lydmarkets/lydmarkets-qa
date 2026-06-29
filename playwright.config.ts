@@ -12,8 +12,10 @@ export default defineConfig({
     ["html", { open: "never" }],
   ],
   use: {
+    // Default to the bot legislation build: email/password auth (no BankID),
+    // so the full authenticated suite can register + run unattended.
     baseURL:
-      process.env.BASE_URL || "https://web-staging-71a7.up.railway.app",
+      process.env.BASE_URL || "https://web-bot-production-518c.up.railway.app",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -21,7 +23,9 @@ export default defineConfig({
     {
       name: "setup",
       testMatch: /auth\.setup\.ts/,
-      timeout: 90_000,
+      // Generous: the bot service can cold-start on the first hit of a run.
+      timeout: 120_000,
+      retries: 2,
     },
     {
       name: "default",
