@@ -42,18 +42,21 @@ test.describe("Header — Open-menu drawer", () => {
     page,
   }) => {
     const drawer = page.getByRole("complementary", { name: /open menu/i });
+    // Hrefs carry the active locale prefix on this build (e.g.
+    // `/en/wallet/deposit`), so match the path suffix rather than an exact
+    // string.
     await expect(drawer.getByText(/^transfers$/i)).toBeVisible();
     await expect(drawer.getByRole("link", { name: /^deposit$/i })).toHaveAttribute(
       "href",
-      "/wallet/deposit"
+      /\/wallet\/deposit$/
     );
     await expect(drawer.getByRole("link", { name: /^withdrawal$/i })).toHaveAttribute(
       "href",
-      "/wallet/withdraw"
+      /\/wallet\/withdraw$/
     );
     await expect(
       drawer.getByRole("link", { name: /^transaction history$/i })
-    ).toHaveAttribute("href", "/wallet/transactions");
+    ).toHaveAttribute("href", /\/wallet\/transactions$/);
   });
 
   test("Responsible-gambling group covers Self-test / Limits / Self-exclusion", async ({
@@ -66,12 +69,14 @@ test.describe("Header — Open-menu drawer", () => {
     await expect(
       drawer.getByRole("link", { name: /^self.?test$/i })
     ).toHaveAttribute("href", /stodlinjen\.se/);
+    // Internal links carry the active locale prefix (e.g. `/en/limits`) on this
+    // build, so match the path suffix rather than an exact string.
     await expect(drawer.getByRole("link", { name: /^limits$/i }).first()).toHaveAttribute(
       "href",
-      "/limits"
+      /\/limits$/
     );
     await expect(
       drawer.getByRole("link", { name: /^self.?exclusion$/i })
-    ).toHaveAttribute("href", "/self-exclusion");
+    ).toHaveAttribute("href", /\/self-exclusion$/);
   });
 });

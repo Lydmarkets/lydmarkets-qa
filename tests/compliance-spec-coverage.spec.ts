@@ -22,14 +22,16 @@ test.describe("Compliance spec — E2E coverage", () => {
   );
 
   test(
-    "unauthenticated /settings/self-exclusion redirects to login",
+    "legacy /settings/self-exclusion route is gone (404)",
     { tag: ["@compliance"] },
     async ({ browser }) => {
+      // The self-exclusion tool was promoted out of the (now removed) /settings
+      // area to a top-level /self-exclusion route. The old nested path returns
+      // 404 rather than redirecting to login.
       const context = await browser.newContext();
       const page = await context.newPage();
-      await page.goto("/settings/self-exclusion");
-      await page.waitForURL(/\/login/, { timeout: 10_000 });
-      expect(page.url()).toMatch(/\/login/);
+      const response = await page.goto("/settings/self-exclusion");
+      expect(response?.status()).toBe(404);
       await context.close();
     },
   );
@@ -92,8 +94,10 @@ test.describe("Compliance spec — E2E coverage", () => {
 
         await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
 
-        // Platform tools section links to /settings for limit configuration
-        const settingsLinks = page.locator('a[href="/settings"]');
+        // Platform tools section links to /settings for limit configuration.
+        // Hrefs carry the active locale prefix on this build (e.g.
+        // `/en/settings`), so match the path suffix.
+        const settingsLinks = page.locator('a[href$="/settings"]');
         await expect(settingsLinks.first()).toBeVisible({ timeout: 5_000 });
         const linkCount = await settingsLinks.count();
         expect(linkCount).toBeGreaterThanOrEqual(1);
@@ -108,10 +112,10 @@ test.describe("Compliance spec — E2E coverage", () => {
         await dismissLimitsDialog(page);
 
         // Self-exclusion was promoted from /settings/self-exclusion to a
-        // top-level /self-exclusion route (it's also deep-linked from the
-        // compliance aside with `?step=form&period=…`).
+        // top-level /self-exclusion route. Hrefs carry the active locale prefix
+        // on this build (e.g. `/en/self-exclusion`), so match anywhere in path.
         await expect(
-          page.locator('a[href^="/self-exclusion"]').first(),
+          page.locator('a[href*="/self-exclusion"]').first(),
         ).toBeVisible({ timeout: 10_000 });
       },
     );

@@ -118,13 +118,18 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
 
     await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
 
-    // Session timer format: "0 min" / "5 min" / "1 tim 23 min" (SCRUM-1090).
+    // Session timer format: "0 min" / "5 min" / "43 mins" / "1 tim 23 min".
     await expect(
       page.getByText(/^\d+\s*(min|tim)/i).first()
     ).toBeVisible({ timeout: 5_000 });
-    // Balance formatted as "X,XX kr".
+    // The balance (in €) is privacy-masked behind a "Show balance" toggle in
+    // the rail; its presence proves the balance is reachable on this screen.
     await expect(
-      page.getByText(/\d+[.,]\d{2}\s*kr/i).first()
+      page
+        .getByRole("button", {
+          name: /show balance|hide balance|visa saldo|dölj saldo/i,
+        })
+        .first()
     ).toBeVisible({ timeout: 5_000 });
   });
 

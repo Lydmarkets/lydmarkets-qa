@@ -1,8 +1,9 @@
 import { test, expect } from "../fixtures/base";
 
-// See auth.spec.ts BANKID_BUTTON_RE — same set of variants.
-const BANKID_BUTTON_RE =
-  /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i;
+// The bot legislation build uses email/password auth (no BankID): the login
+// page is an email + password form with a "Sign in with email" button and the
+// register page is a "Create account" email/password form. The Swedish text
+// alternatives are kept so the same spec still passes on a Swedish build.
 
 test.describe("Smoke tests — critical user flows", () => {
   test("homepage loads with key elements", async ({ page }) => {
@@ -11,26 +12,31 @@ test.describe("Smoke tests — critical user flows", () => {
     await expect(page.getByRole("heading").first()).toBeVisible();
   });
 
-  test("login page renders BankID sign-in form", async ({ page }) => {
+  test("login page renders the email sign-in form", async ({ page }) => {
     await page.goto("/login");
     await expect(
       page.getByRole("heading", { name: /logga in|sign in/i, level: 1 }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: BANKID_BUTTON_RE }).first(),
+      page.getByRole("textbox", { name: /email|e-?post/i }).first(),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole("button", { name: /sign in with email|sign in|logga in/i })
+        .first(),
     ).toBeVisible();
   });
 
-  test("register page renders BankID account creation", async ({ page }) => {
+  test("register page renders the email account-creation form", async ({ page }) => {
     await page.goto("/register");
     await expect(
       page.getByRole("heading", {
-        name: /bankid-?verifiering|bankid verification/i,
+        name: /create account|skapa konto|registrera/i,
         level: 1,
       })
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: BANKID_BUTTON_RE }).first(),
+      page.getByRole("textbox", { name: /email|e-?post/i }).first(),
     ).toBeVisible();
   });
 

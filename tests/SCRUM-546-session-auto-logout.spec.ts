@@ -48,22 +48,15 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
       // Simulate what happens when a user is redirected after session expiry
       await page.goto("/login?reason=session_expired");
       // The login page should load without errors
-      await expect(page.locator("main")).toBeVisible({ timeout: 8_000 });
+      await expect(page.getByRole("main")).toBeVisible({ timeout: 8_000 });
 
-      // Should show the BankID login form (Swedish: "Välkommen tillbaka")
-      const hasWelcome = await page
-        .getByRole("heading", { name: /välkommen|welcome/i })
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasBankIdBtn = await page
-        .getByText(/bankid/i)
-        .first()
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-
-      expect(hasWelcome || hasBankIdBtn).toBeTruthy();
+      // Bot legislation build: email/password sign-in form (no BankID).
+      await expect(
+        page.getByRole("heading", { name: /^sign in$/i })
+      ).toBeVisible({ timeout: 5_000 });
+      await expect(
+        page.getByRole("button", { name: /sign in with email/i })
+      ).toBeVisible();
     },
   );
 
@@ -76,10 +69,12 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
 
       // Navigate to login with a timeout indication
       await page.goto("/login?reason=timeout");
-      await expect(page.locator("main")).toBeVisible({ timeout: 8_000 });
+      await expect(page.getByRole("main")).toBeVisible({ timeout: 8_000 });
 
-      // Page should be functional — BankID login form renders
-      await expect(page.getByText(/bankid/i).first()).toBeVisible({ timeout: 5_000 });
+      // Page should be functional — email/password sign-in form renders.
+      await expect(
+        page.getByRole("button", { name: /sign in with email/i })
+      ).toBeVisible({ timeout: 5_000 });
     },
   );
 
