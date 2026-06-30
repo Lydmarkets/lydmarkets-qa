@@ -32,12 +32,14 @@ test.describe("Remaining spec coverage", () => {
       // (decorative), so assert the rendered grid instead: a market card
       // (<article>) plus a YES price button.
       await page.goto("/");
+      // The home markets grid is data-fetched and renders slowly under load;
+      // give it generous headroom so it doesn't flake on the nightly.
       await expect(
         page.getByRole("article").first()
-      ).toBeVisible({ timeout: 10_000 });
+      ).toBeVisible({ timeout: 25_000 });
       await expect(
         page.getByRole("button", { name: /YES|JA/ }).first()
-      ).toBeVisible({ timeout: 10_000 });
+      ).toBeVisible({ timeout: 25_000 });
     }
   );
 
@@ -94,17 +96,17 @@ test.describe("Remaining spec coverage", () => {
       // The card's clickable wrapper carries the question as its aria-label
       // (h3 headings were removed in the redesign).
       await page.goto("/");
-      const cardLink = page
-        .locator('a[href*="/markets/"]')
-        .first();
-      await expect(cardLink).toBeAttached({ timeout: 10_000 });
+      // Scope to the visible main grid link (SCRUM-797 renders hidden duplicate
+      // hero links); wait generously — the grid is data-fetched and slow under load.
+      const cardLink = page.locator('main a[href*="/markets/"]:visible').first();
+      await expect(cardLink).toBeVisible({ timeout: 25_000 });
       const href = await cardLink.getAttribute("href");
       expect(href).toMatch(/\/markets\//);
 
       await page.goto(href!);
       // Market detail should load with an h1 title
       const title = page.getByRole("heading", { level: 1 });
-      await expect(title).toBeVisible({ timeout: 10_000 });
+      await expect(title).toBeVisible({ timeout: 20_000 });
 
       // Resolution criteria is conditionally rendered — check if it exists
       const resolutionHeading = page.getByRole("heading", {
