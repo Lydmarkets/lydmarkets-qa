@@ -1,22 +1,21 @@
 import { test, expect } from "../fixtures/base";
-// Auth uses BankID exclusively — no email/password form exists.
 
-// Login + register pages share the BankID action buttons after the auth-page
-// redesign. Match all rendered variants across locales:
-//   - "Öppna BankID" / "Open BankID"            (mobile, auto-start)
-//   - "Visa QR-kod" / "Show QR code"            (desktop, QR mode)
-//   - "Öppna BankID på den här enheten" / "Open BankID on this device"
-const BANKID_BUTTON_RE =
-  /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i;
+// The bot legislation build serves an email/password auth form (no BankID,
+// English /en/ locale). Login + register pages render a "Sign in" /
+// "Create account" heading with email + password fields and a submit button.
 
 test.describe("Authentication flows", () => {
-  test("login page renders BankID sign-in options", async ({ page }) => {
+  test("login page renders email/password sign-in form", async ({ page }) => {
     await page.goto("/login");
     await expect(
-      page.getByRole("heading", { name: /logga in|sign in/i, level: 1 }),
+      page.getByRole("heading", { name: /sign in/i, level: 1 }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: BANKID_BUTTON_RE }).first(),
+      page.getByRole("textbox", { name: /email/i }),
+    ).toBeVisible();
+    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /sign in with email/i }),
     ).toBeVisible();
   });
 
@@ -40,19 +39,19 @@ test.describe("Authentication flows", () => {
     await page.waitForURL(/\/register/);
   });
 
-  test("register page renders BankID account creation", async ({ page }) => {
+  test("register page renders email/password account creation", async ({ page }) => {
     await page.goto("/register");
-    // Register page H1 is `auth.register.step1Title` = "BankID-verifiering" /
-    // "BankID Verification". The 2-step flow indicator "Steg 1 av 2" /
-    // "Step 1 of 2" appears above the heading.
     await expect(
-      page.getByRole("heading", {
-        name: /bankid-?verifiering|bankid verification/i,
-        level: 1,
-      })
+      page.getByRole("heading", { name: /create account/i, level: 1 }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: BANKID_BUTTON_RE }).first(),
+      page.getByRole("textbox", { name: /email/i }),
+    ).toBeVisible();
+    await expect(page.getByLabel(/password/i)).toBeVisible();
+    // GDPR consent checkbox must be present and acknowledged before creating.
+    await expect(page.getByRole("checkbox").first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /create account/i }),
     ).toBeVisible();
   });
 
@@ -72,7 +71,7 @@ test.describe("Authentication flows", () => {
     await page.goto("/wallet");
     await page.waitForURL(/\/login/);
     await expect(
-      page.getByRole("heading", { name: /logga in|sign in/i, level: 1 }),
+      page.getByRole("heading", { name: /sign in/i, level: 1 }),
     ).toBeVisible();
   });
 });

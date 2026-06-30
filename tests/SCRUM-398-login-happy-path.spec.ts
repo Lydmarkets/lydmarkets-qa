@@ -1,24 +1,23 @@
 import { test, expect } from "../fixtures/base";
 test.describe("SCRUM-398: Login happy path — successful login redirects to dashboard", () => {
-  test("login page renders with BankID sign-in options", async ({ page }) => {
+  test("login page renders with email/password sign-in form", async ({ page }) => {
     await page.goto("/login");
     await expect(
-      page.getByRole("heading", { name: /logga in|sign in/i, level: 1 })
+      page.getByRole("heading", { name: /sign in/i, level: 1 })
     ).toBeVisible({ timeout: 10000 });
     await expect(
-      page
-        .getByRole("button", {
-          name: /öppna bankid|visa qr-?kod|open bankid|show qr|bankid på den här enheten|bankid on this device/i,
-        })
-        .first(),
+      page.getByRole("textbox", { name: /email/i })
+    ).toBeVisible();
+    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /sign in with email/i }),
     ).toBeVisible();
   });
 
-  test("login page shows subtitle explaining BankID flow", async ({ page }) => {
+  test("login page shows the Sign in heading", async ({ page }) => {
     await page.goto("/login");
-    // Subtitle copy mentions BankID — tolerate marketing-style variants.
     await expect(
-      page.getByText(/bankid|logga in|sign in/i).first()
+      page.getByRole("heading", { name: /sign in/i, level: 1 })
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -31,7 +30,9 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
   });
 
   test("unauthenticated user visiting protected route is redirected to login", async ({ page }) => {
-    await page.goto("/settings");
+    // /wallet is protected and redirects to /login; /settings 404s on the bot
+    // build and never redirects.
+    await page.goto("/wallet");
     await page.waitForURL(/\/login/, { timeout: 10000 });
     await expect(page).toHaveURL(/\/login/);
   });

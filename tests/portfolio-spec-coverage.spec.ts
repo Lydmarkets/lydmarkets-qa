@@ -38,7 +38,7 @@ test.describe("Portfolio spec — E2E coverage", () => {
     });
 
     test(
-      "portfolio page loads with header, five filter pills, and a date trigger",
+      "portfolio page loads with header, status filter pills, and a date trigger",
       { tag: ["@portfolio", "@smoke", "@critical"] },
       async ({ page }) => {
         await page.goto("/portfolio");
@@ -48,12 +48,14 @@ test.describe("Portfolio spec — E2E coverage", () => {
           page.getByRole("heading", { name: /mina positioner|my positions/i })
         ).toBeVisible({ timeout: 15_000 });
 
-        // Öppna is the default-active pill.
+        // Öppna / Open is the default-active pill.
         await expect(
           page.getByRole("button", { name: /öppna|^open/i, pressed: true })
         ).toBeVisible();
 
-        for (const name of [/stängda|^closed/i, /vunna|^won/i, /förlorade|^lost/i, /alla|^all/i]) {
+        // The bot build's "Positions" filter group exposes Open / Closed / All
+        // (the separate Won / Lost pills are not present on this build).
+        for (const name of [/stängda|^closed/i, /alla|^all/i]) {
           await expect(page.getByRole("button", { name })).toBeVisible();
         }
 

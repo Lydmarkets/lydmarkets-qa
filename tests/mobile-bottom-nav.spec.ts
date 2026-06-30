@@ -16,9 +16,11 @@ test.describe("Mobile BottomNav — unauthenticated", () => {
       await page.goto("/");
       const bottomNav = page.locator("nav.fixed.inset-x-0.bottom-0").first();
       await expect(bottomNav).toBeVisible({ timeout: 10_000 });
-      // Link labels vary by locale, so assert link tabs by stable href.
-      await expect(bottomNav.locator('a[href="/markets"]')).toBeVisible();
-      await expect(bottomNav.locator('a[href="/portfolio"]')).toBeVisible();
+      // Link labels vary by locale, so assert link tabs by stable href. Hrefs
+      // carry the active locale prefix on this build (e.g. `/en/markets`), so
+      // match the path suffix.
+      await expect(bottomNav.locator('a[href$="/markets"]')).toBeVisible();
+      await expect(bottomNav.locator('a[href$="/portfolio"]')).toBeVisible();
       await expect(
         bottomNav.getByRole("button", { name: /^sök$|^search$/i })
       ).toBeVisible();
@@ -31,9 +33,11 @@ test.describe("Mobile BottomNav — unauthenticated", () => {
     async ({ page }) => {
       await page.goto("/");
       const bottomNav = page.locator("nav.fixed.inset-x-0.bottom-0").first();
-      await bottomNav.locator('a[href="/markets"]').click();
+      await bottomNav.locator('a[href$="/markets"]').click();
       await page.waitForURL(/\/markets(\?|$)/, { timeout: 10_000 });
-      expect(new URL(page.url()).pathname).toBe("/markets");
+      // Pathname carries the active locale prefix on this build (e.g.
+      // `/en/markets`), so match the suffix rather than an exact path.
+      expect(new URL(page.url()).pathname).toMatch(/\/markets$/);
     }
   );
 

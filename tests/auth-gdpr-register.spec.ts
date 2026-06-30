@@ -1,5 +1,10 @@
 import { test, expect } from "../fixtures/base";
 
+const IS_BOT_BUILD =
+  !!process.env.BOT_BUILD ||
+  !process.env.BASE_URL ||
+  /web-bot/.test(process.env.BASE_URL ?? "");
+
 // Register page H1 is "BankID-verifiering" / "BankID Verification"
 // (`auth.register.step1Title`). BankID action buttons share copy with the
 // login page — see auth.spec.ts BANKID_BUTTON_RE.
@@ -11,6 +16,7 @@ test.describe("Authentication — register page compliance", () => {
     "register page loads with BankID verification step",
     { tag: ["@smoke"] },
     async ({ page }) => {
+      test.skip(IS_BOT_BUILD, "No BankID verification step on the bot build — register is email/password (see auth.spec.ts)");
       await page.goto("/register");
       await expect(page.locator("main").first()).toBeVisible({
         timeout: 10_000,
@@ -35,6 +41,7 @@ test.describe("Authentication — register page compliance", () => {
     "register page shows two-step BankID verification flow",
     { tag: ["@compliance"] },
     async ({ page }) => {
+      test.skip(IS_BOT_BUILD, "No BankID two-step verification on the bot build");
       await page.goto("/register");
       // Should show step indicator: "Steg 1 av 2" / "Step 1 of 2"
       const hasStep = await page

@@ -1,11 +1,11 @@
 import { test, expect } from "../fixtures/base";
 
-// SCRUM-228 updated for the SCRUM-797 Kalshi redesign as it ships today.
-// The new `featured-market-card` uses a role=link wrapper (aria-label = market
-// question) and renders the question as a styled div (no h3 heading), with a
-// combined YES / NO probability bar (role=img, aria-label="JA 21% / NEJ 79%")
-// plus individual YES + NO pill buttons (aria-label="JA 21%" / "NEJ 79%").
-// Thumbnails, volume badges, and bookmark counts were intentionally removed.
+// SCRUM-228 — re-pointed at the bot legislation build (English locale, EUR).
+// Market cards render as <article> elements (the old `featured-market-card`
+// data-testid was dropped) wrapping a link to /en/markets/<id>, the market
+// question as a link, two YES/NO pill buttons whose accessible names read
+// "YES — 51% — 1.97×" / "NO — 49% — 2.03×", and a "€59.9K volume · 317 traders"
+// stat row. There is no combined role=img probability bar on this build.
 
 test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-797)", () => {
   test("home page loads without error", async ({ page }) => {
@@ -15,7 +15,8 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
 
   test("home page renders at least one featured-market-card", async ({ page }) => {
     await page.goto("/");
-    const cards = page.locator('[data-testid="featured-market-card"]');
+    // Bot build dropped the data-testid; grid cards render as <article>.
+    const cards = page.getByRole("article");
     await expect(cards.first()).toBeVisible({ timeout: 10000 });
     const count = await cards.count();
     expect(count).toBeGreaterThan(0);
@@ -24,14 +25,14 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
   test("market card shows a Yes probability pill button", async ({ page }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("button", { name: /^(yes|ja)\s+\d+%/i }).first()
+      page.getByRole("button", { name: /^(yes|ja)\b.*\d+%/i }).first()
     ).toBeVisible({ timeout: 10000 });
   });
 
   test("market card shows a No probability pill button", async ({ page }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("button", { name: /^(no|nej)\s+\d+%/i }).first()
+      page.getByRole("button", { name: /^(no|nej)\b.*\d+%/i }).first()
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -40,9 +41,9 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
   }) => {
     await page.goto("/");
     const marketLink = page
-      .locator('[data-testid="featured-market-card"]')
+      .getByRole("article")
       .first()
-      .locator('a[href*="/markets/"]')
+      .getByRole("link")
       .first();
     await expect(marketLink).toBeAttached({ timeout: 10000 });
     const href = await marketLink.getAttribute("href");
@@ -52,9 +53,9 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
   test("clicking a market card navigates to the market detail page", async ({ page }) => {
     await page.goto("/");
     const marketLink = page
-      .locator('[data-testid="featured-market-card"]')
+      .getByRole("article")
       .first()
-      .locator('a[href*="/markets/"]')
+      .getByRole("link")
       .first();
     const href = await marketLink.getAttribute("href");
     await page.goto(href!);
@@ -64,10 +65,11 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
 
   test("Yes pill probability percentage is a number between 0-100", async ({ page }) => {
     await page.goto("/");
-    const yesPill = page.getByRole("button", { name: /^(yes|ja)\s+\d+%/i }).first();
+    const yesPill = page.getByRole("button", { name: /^(yes|ja)\b.*\d+%/i }).first();
     await expect(yesPill).toBeVisible({ timeout: 10000 });
     const label = await yesPill.getAttribute("aria-label");
-    const match = label?.match(/(yes|ja)\s+(\d+)%/i);
+    // Bot build label format: "YES — 51% — 1.97×".
+    const match = label?.match(/(yes|ja)\D*(\d+)%/i);
     expect(match).not.toBeNull();
     const pct = Number(match![2]);
     expect(pct).toBeGreaterThanOrEqual(0);
@@ -76,18 +78,16 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
 
   test("Yes + No probabilities on a card sum to approximately 100", async ({ page }) => {
     await page.goto("/");
-    // The combined probability bar is a role=img with aria-label formatted as
-    // "JA 21% / NEJ 79%" (or "YES 21% / NO 79%"). Parse both percentages from
-    // that single label to avoid cross-card mismatches.
-    const bar = page
-      .getByRole("img", { name: /^(ja|yes)\s+\d+%\s*\/\s*(nej|no)\s+\d+%/i })
-      .first();
-    await expect(bar).toBeVisible({ timeout: 10000 });
-    const label = (await bar.getAttribute("aria-label")) ?? "";
-    const m = label.match(/(?:ja|yes)\s+(\d+)%\s*\/\s*(?:nej|no)\s+(\d+)%/i);
-    expect(m).not.toBeNull();
-    const yesPct = Number(m![1]);
-    const noPct = Number(m![2]);
+    // The combined probability bar was replaced by two pill buttons per card:
+    // "YES — 51% — 1.97×" and "NO — 49% — 2.03×". Read both from one card.
+    const card = page.getByRole("article").first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    const yesLabel =
+      (await card.getByRole("button", { name: /^(yes|ja)\b/i }).getAttribute("aria-label")) ?? "";
+    const noLabel =
+      (await card.getByRole("button", { name: /^(no|nej)\b/i }).getAttribute("aria-label")) ?? "";
+    const yesPct = Number(yesLabel.match(/(\d+)%/)?.[1]);
+    const noPct = Number(noLabel.match(/(\d+)%/)?.[1]);
     expect(yesPct + noPct).toBeGreaterThanOrEqual(99);
     expect(yesPct + noPct).toBeLessThanOrEqual(101);
   });
@@ -97,7 +97,7 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
     await page.goto("/");
     await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     await expect(
-      page.locator('[data-testid="featured-market-card"]').first()
+      page.getByRole("article").first()
     ).toBeVisible({ timeout: 10000 });
   });
 });

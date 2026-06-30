@@ -1,9 +1,13 @@
 import { test, expect } from "../fixtures/base";
 import { goToFirstMarket } from "../helpers/go-to-market";
-import {
-  MOBILE_VIEWPORT,
-  getQuickBetYesTrigger,
-} from "../helpers/order-form";
+import { MOBILE_VIEWPORT } from "../helpers/order-form";
+
+// The market buy button is now labelled `YES — {pct}% — {odds}×` (English EUR
+// bot build); the shared `Köp ja / Buy yes` trigger is stale, so match the new
+// leading `YES` accessible name locally.
+function getQuickBetYesTrigger(page: import("@playwright/test").Page) {
+  return page.getByRole("button", { name: /^YES\b/ }).first();
+}
 
 // SCRUM-539: Min/max stake display on order panel.
 //
@@ -87,7 +91,7 @@ test.describe("SCRUM-539: Min/max stake display on order panel", () => {
       await expect(feeToggle).toBeVisible();
       await feeToggle.click();
       await expect(
-        dialog.getByText(/möjlig utbetalning|possible payout/i).first(),
+        dialog.getByText(/möjlig utbetalning|potential payout/i).first(),
       ).toBeVisible();
     },
   );

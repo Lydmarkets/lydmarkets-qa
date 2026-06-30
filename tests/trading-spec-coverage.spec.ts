@@ -36,17 +36,20 @@ test.describe("Trading spec — E2E coverage", () => {
   );
 
   test(
-    "market detail amounts are displayed in SEK (kr)",
+    "market detail amounts are displayed in EUR (€)",
     { tag: ["@trading"] },
     async ({ page }) => {
       await goToFirstMarket(page);
 
-      await expect(page.getByText(/kr/i).first()).toBeVisible({
+      // Bot build trades in EUR — the detail page volume/total stats render
+      // like "€0 traded 24h · €948.7 total". (kr only appears inside the
+      // QuickBet stake input/presets, which isn't open here.)
+      await expect(page.getByText(/€/).first()).toBeVisible({
         timeout: 10_000,
       });
 
       const mainText = await page.locator("main").innerText();
-      expect(mainText).toMatch(/kr/i);
+      expect(mainText).toMatch(/€/);
     },
   );
 
