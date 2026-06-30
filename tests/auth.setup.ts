@@ -9,12 +9,20 @@ const REGISTER_PASSWORD = "QaTest1234!";
 function hasValidSession(): boolean {
   try {
     const data = JSON.parse(fs.readFileSync(AUTH_FILE, "utf-8"));
-    const sessionCookie = data.cookies?.find(
-      (c: { name: string }) =>
-        c.name.includes("session-token") || c.name.includes("authjs"),
+    // Match the auth session cookie ONLY. The old `|| includes("authjs")`
+    // fallback matched `__Host-authjs.csrf-token` first (it also contains
+    // "authjs"), which is a session cookie with expires=-1, so the check below
+    // always bailed — the real session-token was never inspected.
+    const sessionCookie = data.cookies?.find((c: { name: string }) =>
+      c.name.includes("session-token"),
     );
     if (!sessionCookie?.expires || sessionCookie.expires <= 0) return false;
-    return sessionCookie.expires * 1000 > Date.now() + 86_400_000;
+    // Reuse the cached session while it has at least 1h of life left. The bot
+    // build issues 24h tokens, so requiring >24h remaining (the old threshold)
+    // meant a fresh session never qualified and every run re-registered —
+    // pointlessly hammering the rate-limited register endpoint. 1h is enough
+    // headroom to finish a full suite run on a session minted earlier today.
+    return sessionCookie.expires * 1000 > Date.now() + 3_600_000;
   } catch {
     return false;
   }
