@@ -37,10 +37,10 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     // price-history chart (role=img) and the settlement stat are absent on the
     // bot build. The hero is a role=region carrying the "collective assessment"
     // lede plus the YES/NO pill buttons ("YES — 51% — 1.97×").
-    await expect(page.getByText(/collective assessment/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/collective assessment/i)).toBeVisible({ timeout: 25_000 });
     await expect(
       page.getByRole("button", { name: /^yes\b.*\d+%/i }).first()
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible({ timeout: 25_000 });
     await expect(
       page.getByRole("button", { name: /^no\b.*\d+%/i }).first()
     ).toBeVisible();
@@ -52,7 +52,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     // "Featured markets" h2, no "sorted by volume · 7 days" caption and no
     // role=img probability bar on the bot build. Cards render as <article>.
     const cards = page.getByRole("article");
-    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
+    await expect(cards.first()).toBeVisible({ timeout: 25_000 });
     expect(await cards.count()).toBeGreaterThan(0);
 
     await expect(
@@ -63,7 +63,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
   // SCRUM-1073 regression guard.
   test("no card on the home page renders 'Invalid Date'", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("article").first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("article").first()).toBeVisible({ timeout: 25_000 });
 
     const invalid = await page.getByText(/invalid date/i).count();
     expect(invalid).toBe(0);
@@ -75,21 +75,22 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     // Landmark is a role=region "Trending now"; the "last 2 hours" caption was
     // replaced by a JA / 7 D toggle on the bot build.
     const trending = page.getByRole("region", { name: /trending now/i });
-    await expect(trending).toBeVisible({ timeout: 10_000 });
+    await expect(trending).toBeVisible({ timeout: 25_000 });
 
     await expect(
       trending.getByRole("heading", { level: 3, name: /trending now/i })
     ).toBeVisible();
 
+    // Auto-retry until all five links are present — a plain count() snapshots
+    // too early (the list streams in) and flakes under load.
     const items = trending.getByRole("link");
-    await expect(items.first()).toBeVisible({ timeout: 10_000 });
-    expect(await items.count()).toBe(5);
+    await expect(items).toHaveCount(5, { timeout: 25_000 });
   });
 
   test("sidebar exposes a 'Join Lydmarkets' sign-up CTA", async ({ page }) => {
     await page.goto("/");
     const cta = page.getByRole("region", { name: /join lydmarkets/i });
-    await expect(cta).toBeVisible({ timeout: 10_000 });
+    await expect(cta).toBeVisible({ timeout: 25_000 });
     await expect(
       cta.getByRole("heading", { level: 3, name: /join lydmarkets/i })
     ).toBeVisible();
@@ -102,7 +103,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     // "Learn more" is a nav landmark (aria-label), not an <h2> section, on the
     // bot build; it lives inside the footer (contentinfo).
     const learn = page.getByRole("navigation", { name: /learn more/i });
-    await expect(learn).toBeVisible({ timeout: 10_000 });
+    await expect(learn).toBeVisible({ timeout: 25_000 });
 
     for (const name of [
       /how prediction markets work/i,
@@ -119,7 +120,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     // path-based links (Popular/Sports/Politics/Finance/...); there are no
     // per-category counts and the reset link is "Popular", not "All".
     const filters = page.getByRole("navigation", { name: /market sections/i });
-    await expect(filters).toBeVisible({ timeout: 10_000 });
+    await expect(filters).toBeVisible({ timeout: 25_000 });
 
     for (const name of [/^popular$/i, /^sports$/i, /^politics$/i, /^finance$/i]) {
       await expect(filters.getByRole("link", { name }).first()).toBeVisible();
@@ -133,7 +134,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     const rg = page.getByRole("complementary", {
       name: /responsible gambling tools|spelansvarsverktyg/i,
     });
-    await expect(rg).toBeVisible({ timeout: 10_000 });
+    await expect(rg).toBeVisible({ timeout: 25_000 });
 
     // Three chips ship today: Spelpaus, Spelgränser, Självtest. The earlier
     // "24h pause" chip was dropped from the strip — self-exclusion is reached
@@ -151,7 +152,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
   test("footer renders copyright and the canonical nav links", async ({ page }) => {
     await page.goto("/");
     const footer = page.getByRole("contentinfo");
-    await expect(footer).toBeVisible({ timeout: 10_000 });
+    await expect(footer).toBeVisible({ timeout: 25_000 });
 
     await expect(footer.getByText(/lydmarkets ab.*stockholm/i)).toBeVisible();
 

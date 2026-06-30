@@ -21,7 +21,10 @@ bun install --frozen-lockfile 2>/dev/null || true
 E2E_TEST_SECRET="${E2E_TEST_SECRET:-}"
 START_TIME=$(date +%s)
 set +e
-BASE_URL="$BASE_URL" E2E_TEST_SECRET="$E2E_TEST_SECRET" bun run test:e2e 2>&1 | tee "$LOG_FILE"
+# 2 workers (not the config's CI default of 4): the bot build serves the home
+# markets grid slowly under concurrent load, which flaked timing-sensitive
+# home/market-detail tests at 4 workers. 2 trades ~3min of wall-clock for stability.
+BASE_URL="$BASE_URL" E2E_TEST_SECRET="$E2E_TEST_SECRET" bun run test:e2e -- --workers=2 2>&1 | tee "$LOG_FILE"
 EXIT_CODE=${PIPESTATUS[0]}
 set -e
 END_TIME=$(date +%s)

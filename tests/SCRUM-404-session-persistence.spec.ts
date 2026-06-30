@@ -54,31 +54,31 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   test("public market detail page does not redirect unauthenticated users", async ({ page }) => {
     await page.goto("/");
     const marketLink = page.locator('main a[href*="/markets/"]:visible').first();
-    await expect(marketLink).toBeVisible({ timeout: 15_000 });
+    await expect(marketLink).toBeVisible({ timeout: 25_000 });
     const href = await marketLink.getAttribute("href");
     await page.goto(href!);
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 20000 });
   });
 
   test("reloading the home page preserves public content without redirect", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 20000 });
     // Reload
     await page.reload();
-    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 20000 });
     await expect(page).not.toHaveURL(/\/login/);
   });
 
   test("reloading a market detail page keeps user on that page", async ({ page }) => {
     await page.goto("/");
     const marketLink = page.locator('main a[href*="/markets/"]:visible').first();
-    await expect(marketLink).toBeVisible({ timeout: 15_000 });
+    await expect(marketLink).toBeVisible({ timeout: 25_000 });
     const href = await marketLink.getAttribute("href");
     await page.goto(href!);
-    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 20000 });
     await page.reload();
-    await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 20000 });
     await expect(page).toHaveURL(new RegExp("/markets/"));
   });
 
