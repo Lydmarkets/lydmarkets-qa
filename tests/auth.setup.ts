@@ -6,24 +6,61 @@ const AUTH_FILE = "playwright/.auth/user.json";
 const BOT_BASE = "https://web-bot-production-518c.up.railway.app";
 const REGISTER_PASSWORD = "QaTest1234!";
 
-function hasValidSession(): boolean {
+type StoredCookie = { name: string; expires?: number };
+
+function readCachedCookies(): StoredCookie[] | null {
   try {
     const data = JSON.parse(fs.readFileSync(AUTH_FILE, "utf-8"));
+    const cookies = data.cookies as StoredCookie[] | undefined;
     // Match the auth session cookie ONLY. The old `|| includes("authjs")`
     // fallback matched `__Host-authjs.csrf-token` first (it also contains
     // "authjs"), which is a session cookie with expires=-1, so the check below
     // always bailed — the real session-token was never inspected.
-    const sessionCookie = data.cookies?.find((c: { name: string }) =>
-      c.name.includes("session-token"),
-    );
-    if (!sessionCookie?.expires || sessionCookie.expires <= 0) return false;
-    // Reuse the cached session while it has at least 1h of life left. The bot
-    // build issues 24h tokens, so requiring >24h remaining (the old threshold)
-    // meant a fresh session never qualified and every run re-registered —
-    // pointlessly hammering the rate-limited register endpoint. 1h is enough
-    // headroom to finish a full suite run on a session minted earlier today.
-    return sessionCookie.expires * 1000 > Date.now() + 3_600_000;
+    const sessionCookie = cookies?.find((c) => c.name.includes("session-token"));
+    // Require at least 1h of cookie life left before we bother probing.
+    if (
+      !sessionCookie?.expires ||
+      sessionCookie.expires * 1000 <= Date.now() + 3_600_000
+    ) {
+      return null;
+    }
+    return cookies ?? [];
   } catch {
+    return null;
+  }
+}
+
+/**
+ * A non-expired session-token cookie is NOT proof of a usable session.
+ * compliance-service force-ends a session server-side (reality-check idle cap,
+ * default 4h — see SCRUM-1838) long before the 24h cookie expires, writing a
+ * Redis `bl:user` revocation that the web app's jwt() callback rejects on every
+ * request → 307 to /login. Since the nightly reuses one cookie for ~23h, it
+ * routinely starts on an already-force-ended session. So probe an auth-gated
+ * route with the cached cookies and only reuse when the server still serves it
+ * (200); re-register otherwise.
+ */
+async function cachedSessionWorks(
+  page: import("@playwright/test").Page,
+  baseURL: string,
+): Promise<boolean> {
+  const cookies = readCachedCookies();
+  if (!cookies) return false;
+  try {
+    await page.context().addCookies(cookies as Parameters<
+      ReturnType<typeof page.context>["addCookies"]
+    >[0]);
+    // /en/portfolio is locale-prefixed + protected, so an authenticated hit is
+    // a clean 200 and an unauthenticated (or force-ended) one is a 3xx to
+    // /en/login. maxRedirects:0 keeps the redirect visible instead of following.
+    const res = await page.request.get(`${baseURL}/en/portfolio`, {
+      maxRedirects: 0,
+      timeout: 30_000,
+    });
+    return res.status() === 200;
+  } catch {
+    // Playwright throws on a redirect with maxRedirects:0 — treat any non-200
+    // outcome as "session no longer accepted".
     return false;
   }
 }
@@ -100,12 +137,15 @@ async function registerNewUser(
 }
 
 setup("authenticate", { timeout: 90_000 }, async ({ page, baseURL }) => {
-  if (hasValidSession()) {
-    console.log("[auth.setup] Reusing cached session");
+  const base = baseURL || BOT_BASE;
+
+  if (await cachedSessionWorks(page, base)) {
+    console.log("[auth.setup] Reusing cached session (server still accepts it)");
     return;
   }
-
-  const base = baseURL || BOT_BASE;
+  // Probe added the (stale) cached cookies to the context — drop them so the
+  // fresh registration below starts from a clean slate.
+  await page.context().clearCookies();
 
   // Force English locale on the saved storageState — middleware reads this
   // cookie to decide which language to serve. Tests use English text selectors.
