@@ -6,7 +6,7 @@ const AUTH_FILE = "playwright/.auth/user.json";
 const BOT_BASE = "https://web-bot-production-518c.up.railway.app";
 const REGISTER_PASSWORD = "QaTest1234!";
 
-type StoredCookie = { name: string; expires?: number };
+type StoredCookie = { name: string; value: string; expires?: number };
 
 function readCachedCookies(): StoredCookie[] | null {
   try {
@@ -39,28 +39,29 @@ function readCachedCookies(): StoredCookie[] | null {
  * routinely starts on an already-force-ended session. So probe an auth-gated
  * route with the cached cookies and only reuse when the server still serves it
  * (200); re-register otherwise.
+ *
+ * Uses plain fetch, NOT page.request: Playwright's APIRequestContext is broken
+ * under Bun — on any response carrying Set-Cookie, Bun's node:http shim hands
+ * Playwright "/" as the response URL and _parseSetCookieHeader's new URL("/")
+ * throws an unhandled TypeError that fails the whole setup (2026-07-02 nightly,
+ * 252 skipped). Reproduced on playwright 1.58.2 + bun 1.3.11.
  */
-async function cachedSessionWorks(
-  page: import("@playwright/test").Page,
-  baseURL: string,
-): Promise<boolean> {
+async function cachedSessionWorks(baseURL: string): Promise<boolean> {
   const cookies = readCachedCookies();
   if (!cookies) return false;
   try {
-    await page.context().addCookies(cookies as Parameters<
-      ReturnType<typeof page.context>["addCookies"]
-    >[0]);
     // /en/portfolio is locale-prefixed + protected, so an authenticated hit is
     // a clean 200 and an unauthenticated (or force-ended) one is a 3xx to
-    // /en/login. maxRedirects:0 keeps the redirect visible instead of following.
-    const res = await page.request.get(`${baseURL}/en/portfolio`, {
-      maxRedirects: 0,
-      timeout: 30_000,
+    // /en/login. redirect:"manual" keeps the redirect visible instead of following.
+    const res = await fetch(`${baseURL}/en/portfolio`, {
+      headers: {
+        cookie: cookies.map((c) => `${c.name}=${c.value}`).join("; "),
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(30_000),
     });
-    return res.status() === 200;
+    return res.status === 200;
   } catch {
-    // Playwright throws on a redirect with maxRedirects:0 — treat any non-200
-    // outcome as "session no longer accepted".
     return false;
   }
 }
@@ -83,7 +84,10 @@ async function registerNewUser(
   try {
     // Wake the bot service first — it can cold-start on the first hit of a
     // nightly run, and a cold navigation can otherwise blow the test timeout.
-    await page.request.get(`${baseURL}/`, { timeout: 60_000 }).catch(() => {});
+    // fetch, not page.request — see cachedSessionWorks.
+    await fetch(`${baseURL}/`, { signal: AbortSignal.timeout(60_000) }).catch(
+      () => {},
+    );
 
     await page.goto(`${baseURL}/register`, { timeout: 60_000 });
 
@@ -139,13 +143,10 @@ async function registerNewUser(
 setup("authenticate", { timeout: 90_000 }, async ({ page, baseURL }) => {
   const base = baseURL || BOT_BASE;
 
-  if (await cachedSessionWorks(page, base)) {
+  if (await cachedSessionWorks(base)) {
     console.log("[auth.setup] Reusing cached session (server still accepts it)");
     return;
   }
-  // Probe added the (stale) cached cookies to the context — drop them so the
-  // fresh registration below starts from a clean slate.
-  await page.context().clearCookies();
 
   // Force English locale on the saved storageState — middleware reads this
   // cookie to decide which language to serve. Tests use English text selectors.
