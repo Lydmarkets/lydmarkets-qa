@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base";
+import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 
 // SCRUM-1079 — Home layout regression suite.
 //
@@ -127,7 +128,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     }
   });
 
-  test("responsible-gambling tools strip exposes Spelpaus + Spelgränser + Självtest", async ({ page }) => {
+  test("responsible-gambling tools strip exposes the Spelpaus chip", async ({ page }) => {
     await page.goto("/");
     // Unauthenticated visitors get the SV locale by default, so the
     // complementary landmark's aria-label is "Spelansvarsverktyg".
@@ -136,12 +137,14 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     });
     await expect(rg).toBeVisible({ timeout: 25_000 });
 
-    // Three chips ship today: Spelpaus, Spelgränser, Självtest. The earlier
-    // "24h pause" chip was dropped from the strip — self-exclusion is reached
-    // via the Spelpaus chip's /self-exclusion target.
-    await expect(rg.getByText("Spelpaus", { exact: true })).toBeVisible();
-    await expect(rg.getByText("Spelgränser", { exact: true })).toBeVisible();
-    await expect(rg.getByText("Självtest", { exact: true })).toBeVisible();
+    // The Spelpaus chip is the one constant across builds — on the bot build
+    // it renders as "Bot Spelpaus" and is the *only* chip; the Spelgränser and
+    // Självtest chips ship on the Swedish build.
+    await expect(rg.getByText(/spelpaus/i).first()).toBeVisible();
+    if (!IS_BOT_BUILD) {
+      await expect(rg.getByText("Spelgränser", { exact: true })).toBeVisible();
+      await expect(rg.getByText("Självtest", { exact: true })).toBeVisible();
+    }
 
     // Spelpaus chip should point to the local /self-exclusion deep-link
     // (which itself links out to spelpaus.se for the national register).
@@ -154,7 +157,14 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     const footer = page.getByRole("contentinfo");
     await expect(footer).toBeVisible({ timeout: 25_000 });
 
-    await expect(footer.getByText(/lydmarkets ab.*stockholm/i)).toBeVisible();
+    // The bot build scrubs the legal entity out of the copyright line
+    // ("© 2026 LYD Markets (Bot) · — · Org. —"), so assert the registered
+    // company details on the Swedish build only.
+    if (IS_BOT_BUILD) {
+      await expect(footer.getByText(/©\s*\d{4}\s*LYD Markets/i)).toBeVisible();
+    } else {
+      await expect(footer.getByText(/lydmarkets ab.*stockholm/i)).toBeVisible();
+    }
 
     for (const name of [
       /how it works/i,

@@ -1,5 +1,7 @@
 import { test, expect } from "../fixtures/base";
 import { isAuthenticated } from "../helpers/is-authenticated";
+import { IS_BOT_BUILD } from "../helpers/is-bot-build";
+import { openUserMenu, getMenuTrigger } from "../helpers/user-menu";
 
 const MOBILE_VIEWPORT = { width: 393, height: 851 };
 
@@ -17,9 +19,7 @@ test.describe("SCRUM-408: Mobile navigation — unauthenticated", () => {
 
   test("unauthenticated mobile header exposes the UserMenu trigger", async ({ page }) => {
     await page.goto("/");
-    await expect(
-      page.getByRole("button", { name: /öppna meny|open menu/i })
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(getMenuTrigger(page)).toBeVisible({ timeout: 10_000 });
   });
 
   test("unauthenticated mobile home renders the BottomNav with Markets tab", async ({
@@ -38,7 +38,7 @@ test.describe("SCRUM-408: Mobile navigation — unauthenticated", () => {
     page,
   }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
+    await openUserMenu(page);
 
     await expect(
       page.getByRole("link", { name: /^logga in$|^sign in$/i })
@@ -69,39 +69,50 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
       return;
     }
 
-    const menuBtn = page.getByRole("button", { name: /öppna meny|open menu/i });
-    await expect(menuBtn).toBeVisible({ timeout: 5_000 });
-    await menuBtn.click();
+    await openUserMenu(page);
 
     await expect(
       page.getByRole("link", { name: /^my profile$|^min profil$/i })
     ).toBeVisible({ timeout: 5_000 });
   });
 
-  test("UserMenu drawer shows theme and language toggles", async ({ page }) => {
+  test("UserMenu drawer shows the theme toggle", async ({ page }) => {
     await page.goto("/");
     if (!(await isAuthenticated(page))) {
       test.skip(true, "Requires authenticated session");
       return;
     }
 
-    await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
+    await openUserMenu(page);
 
-    // Language toggle button is composed as "<icon> <label> <state>",
-    // e.g. "Språk SV" / "Language EN" (nav.languageLabel + locale code).
-    // Asserting it also implicitly confirms the drawer opened.
-    await expect(
-      page.getByRole("button", {
-        name: /(språk|language)\s+(en|sv)/i,
-      })
-    ).toBeVisible({ timeout: 5_000 });
     // Theme toggle composes as "Tema Mörkt|Ljust" / "Theme Dark|Light"
     // (nav.themeLabel + nav.themeDark|nav.themeLight).
     await expect(
       page.getByRole("button", {
         name: /(tema|theme)\s+(mörkt|ljust|dark|light)/i,
       })
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 5_000 });
+  });
+
+  // The language toggle was dropped from the drawer on the English-only bot
+  // build. Still asserted on the bilingual staging build.
+  test("UserMenu drawer shows the language toggle", async ({ page }) => {
+    test.skip(IS_BOT_BUILD, "English-only bot build ships no language toggle");
+    await page.goto("/");
+    if (!(await isAuthenticated(page))) {
+      test.skip(true, "Requires authenticated session");
+      return;
+    }
+
+    await openUserMenu(page);
+
+    // Language toggle button is composed as "<icon> <label> <state>",
+    // e.g. "Språk SV" / "Language EN" (nav.languageLabel + locale code).
+    await expect(
+      page.getByRole("button", {
+        name: /(språk|language)\s+(en|sv)/i,
+      })
+    ).toBeVisible({ timeout: 5_000 });
   });
 
   test("UserMenu drawer surfaces the session timer and balance for authenticated users", async ({
@@ -116,7 +127,7 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
       return;
     }
 
-    await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
+    await openUserMenu(page);
 
     // Session timer format: "0 min" / "5 min" / "43 mins" / "1 tim 23 min".
     await expect(
@@ -140,9 +151,7 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
       return;
     }
 
-    const menuBtn = page.getByRole("button", { name: /öppna meny|open menu/i });
-    await expect(menuBtn).toBeVisible({ timeout: 5_000 });
-    await menuBtn.click();
+    await openUserMenu(page);
 
     const profileLink = page.getByRole("link", {
       name: /^my profile$|^min profil$/i,

@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base";
+import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 test.describe("Compliance — responsible gambling visibility", () => {
   test(
     "nav bar has 18+ responsible gambling link",
@@ -18,6 +19,9 @@ test.describe("Compliance — responsible gambling visibility", () => {
     "game rules page mentions Stodlinjen helpline number",
     { tag: ["@compliance"] },
     async ({ page }) => {
+      // Bot build scrubs real support organisations (Stödlinjen → "Chatterly").
+      test.skip(IS_BOT_BUILD, "Bot build scrubs Stödlinjen — staging-only assertion");
+
       await page.goto("/game-rules");
       await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
 

@@ -63,15 +63,19 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
     await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
   });
 
+  // The pills carry no `aria-label` — their accessible name comes from the child
+  // text nodes ("YES 49% 2.02×"). `getAttribute("aria-label")` therefore returns
+  // null, and `null?.match(...)` yields undefined, which slips past
+  // `expect(match).not.toBeNull()` and only blows up on the array index. Read
+  // the rendered text instead. Percentage position varies by card variant
+  // ("YES 49% 2.02×" vs "YES 1.81× 55%"), so match the `%` token, not an offset.
   test("Yes pill probability percentage is a number between 0-100", async ({ page }) => {
     await page.goto("/");
     const yesPill = page.getByRole("button", { name: /^(yes|ja)\b.*\d+%/i }).first();
     await expect(yesPill).toBeVisible({ timeout: 10000 });
-    const label = await yesPill.getAttribute("aria-label");
-    // Bot build label format: "YES — 51% — 1.97×".
-    const match = label?.match(/(yes|ja)\D*(\d+)%/i);
-    expect(match).not.toBeNull();
-    const pct = Number(match![2]);
+
+    const pct = Number((await yesPill.innerText()).match(/(\d+)\s*%/)?.[1]);
+    expect(Number.isFinite(pct)).toBeTruthy();
     expect(pct).toBeGreaterThanOrEqual(0);
     expect(pct).toBeLessThanOrEqual(100);
   });
@@ -79,15 +83,16 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
   test("Yes + No probabilities on a card sum to approximately 100", async ({ page }) => {
     await page.goto("/");
     // The combined probability bar was replaced by two pill buttons per card:
-    // "YES — 51% — 1.97×" and "NO — 49% — 2.03×". Read both from one card.
+    // "YES 49% 2.02×" and "NO 51% 1.98×". Read both from one card.
     const card = page.getByRole("article").first();
     await expect(card).toBeVisible({ timeout: 10000 });
-    const yesLabel =
-      (await card.getByRole("button", { name: /^(yes|ja)\b/i }).getAttribute("aria-label")) ?? "";
-    const noLabel =
-      (await card.getByRole("button", { name: /^(no|nej)\b/i }).getAttribute("aria-label")) ?? "";
-    const yesPct = Number(yesLabel.match(/(\d+)%/)?.[1]);
-    const noPct = Number(noLabel.match(/(\d+)%/)?.[1]);
+
+    const yesText = await card.getByRole("button", { name: /^(yes|ja)\b/i }).innerText();
+    const noText = await card.getByRole("button", { name: /^(no|nej)\b/i }).innerText();
+    const yesPct = Number(yesText.match(/(\d+)\s*%/)?.[1]);
+    const noPct = Number(noText.match(/(\d+)\s*%/)?.[1]);
+
+    expect(Number.isFinite(yesPct) && Number.isFinite(noPct)).toBeTruthy();
     expect(yesPct + noPct).toBeGreaterThanOrEqual(99);
     expect(yesPct + noPct).toBeLessThanOrEqual(101);
   });

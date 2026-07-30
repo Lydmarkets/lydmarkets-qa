@@ -48,14 +48,15 @@ test.describe("SCRUM-539: Min/max stake display on order panel", () => {
   );
 
   test(
-    "order dialog shows four preset amount buttons in kr",
+    "order dialog shows four preset amount buttons",
     { tag: ["@regression"] },
     async ({ page }) => {
       const dialog = await openDialogForYes(page);
       // Preset amounts scale with NEXT_PUBLIC_MIN_STAKE_SEK (e.g. min=50 →
-      // [50, 100, 250, 500]). Assert the count + kr formatting rather than
-      // specific values.
-      const presets = dialog.getByRole("button", { name: /^\d+\s*kr$/i });
+      // [50, 100, 250, 500]) and the currency differs per build ("€10" on the
+      // English bot build, "10 kr" on the Swedish one). Assert the count +
+      // either currency shape rather than specific values.
+      const presets = dialog.getByRole("button", { name: /^(€\s*\d+|\d+\s*kr)$/i });
       await expect(presets).toHaveCount(4);
       for (const i of [0, 1, 2, 3]) {
         await expect(presets.nth(i)).toBeVisible();
@@ -71,7 +72,7 @@ test.describe("SCRUM-539: Min/max stake display on order panel", () => {
 
       // Select the first preset to populate the breakdown.
       await dialog
-        .getByRole("button", { name: /^\d+\s*kr$/i })
+        .getByRole("button", { name: /^(€\s*\d+|\d+\s*kr)$/i })
         .first()
         .click()
         .catch(() => {});
