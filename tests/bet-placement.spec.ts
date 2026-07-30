@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures/base";
 import { goToFirstMarket } from "../helpers/go-to-market";
 import { hasAuthSession } from "../helpers/has-auth";
+import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 import { MOBILE_VIEWPORT } from "../helpers/order-form";
 
 // The market buy buttons are now labelled `YES — {pct}% — {odds}×` /
@@ -35,10 +36,17 @@ function getQuickBetNoTrigger(page: import("@playwright/test").Page) {
  */
 
 // Preset amounts scale with `NEXT_PUBLIC_MIN_STAKE_SEK`:
-//   - <=10 → [10, 25, 50, 100] kr
+//   - <=10 → [10, 25, 50, 100]
 //   - >10  → [MIN, MIN*2, MIN*5, MIN*10] (e.g. 50 → [50, 100, 250, 500])
-// Match any "<digits> kr" preset button rather than hard-coding amounts.
-const PRESET_BUTTON_RE = /^\d+\s*kr$/i;
+// The currency prefix/suffix differs per build — the English bot build renders
+// "€10" (the old mixed kr/€ i18n bug is fixed) while the Swedish build renders
+// "10 kr". Match either shape rather than hard-coding amounts or a currency.
+const PRESET_BUTTON_RE = /^(€\s*\d+|\d+\s*kr)$/i;
+
+// Order submission moved from `/api/v2/orders` to `/api/v2/book/orders`. The
+// old glob silently matched nothing, so the mock never fired: the "captured
+// payload" assertion saw `null` while the bet went through to the real backend.
+const ORDERS_ENDPOINT = "**/api/v2/book/orders";
 
 async function openQuickBetYes(page: import("@playwright/test").Page) {
   const yesBtn = getQuickBetYesTrigger(page);
@@ -46,12 +54,12 @@ async function openQuickBetYes(page: import("@playwright/test").Page) {
   await yesBtn.click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible({ timeout: 5_000 });
-  // Click the first preset (smallest) so the payout breakdown populates.
-  await dialog
-    .getByRole("button", { name: PRESET_BUTTON_RE })
-    .first()
-    .click()
-    .catch(() => {});
+  // Click the first preset (smallest) so the payout breakdown populates and the
+  // Place CTA leaves its disabled (stake = 0) state. Deliberately NOT wrapped in
+  // a `.catch()`: silently swallowing this made a stale preset selector surface
+  // as four unrelated "Place button never became enabled" timeouts instead of
+  // one obvious failure.
+  await dialog.getByRole("button", { name: PRESET_BUTTON_RE }).first().click();
 }
 
 // QuickBetModal is the mobile-only entry point on the detail page.
@@ -140,7 +148,7 @@ test.describe("Bet placement — QuickBet modal", () => {
   // ─────────────────────────────────────────────────────────────
 
   test(
-    "modal shows four amount preset buttons in kr",
+    "modal shows four amount preset buttons",
     { tag: ["@trading", "@smoke"] },
     async ({ page }) => {
       await goToFirstMarket(page);
@@ -238,6 +246,10 @@ test.describe("Bet placement — QuickBet modal", () => {
     "all amounts in modal are displayed in SEK (kr)",
     { tag: ["@trading", "@compliance"] },
     async ({ page }) => {
+      // The bot build is a EUR play-money demo — every amount renders as "€".
+      // The SEK requirement applies to the Swedish licensed build only.
+      test.skip(IS_BOT_BUILD, "Bot build prices in € — SEK assertion is staging-only");
+
       await goToFirstMarket(page);
       await openQuickBetYes(page);
 
@@ -248,6 +260,25 @@ test.describe("Bet placement — QuickBet modal", () => {
       // dialogs render more (input suffix, fee row, etc.).
       const krMatches = text.match(/kr/gi) || [];
       expect(krMatches.length).toBeGreaterThanOrEqual(4);
+    },
+  );
+
+  test(
+    "modal renders a single, consistent currency across all amounts",
+    { tag: ["@trading", "@compliance"] },
+    async ({ page }) => {
+      // Replaces the SEK-only assertion above on the bot build. The original
+      // mixed kr/€ i18n bug is fixed, so this guards against it regressing:
+      // whichever currency the build uses, the modal must not mix the two.
+      await goToFirstMarket(page);
+      await openQuickBetYes(page);
+
+      const text = await page.getByRole("dialog").innerText();
+      const hasKr = /\d\s*kr\b/i.test(text);
+      const hasEur = /€\s*\d/.test(text);
+
+      expect(hasKr || hasEur).toBeTruthy();
+      expect(hasKr && hasEur).toBeFalsy();
     },
   );
 
@@ -385,22 +416,39 @@ test.describe("Bet placement — QuickBet modal", () => {
     );
 
     test(
-      "placing a bet sends POST to /api/v2/orders and shows the receipt",
+      "placing a bet sends POST to the book-orders endpoint and shows the receipt",
       { tag: ["@trading", "@critical"] },
       async ({ page }) => {
         let capturedBody: Record<string, unknown> | null = null;
-        await page.route("**/api/v2/orders", async (route) => {
+        await page.route(ORDERS_ENDPOINT, async (route) => {
           const request = route.request();
+          // The order book is fetched with a GET on this same path — only the
+          // submission is a POST, so let everything else through untouched.
+          if (request.method() !== "POST") return route.fallback();
           capturedBody = JSON.parse(request.postData() || "{}");
+          const quantity = Number(capturedBody?.quantity ?? 20);
+          const limitPrice = Number(capturedBody?.limitPrice ?? 0.5);
+          // Must mirror `BookOrderPlacement` in the web app's TradeSlip — the
+          // client reads `res.json()` straight through with no envelope, so a
+          // wrong-shaped body renders no receipt at all.
           await route.fulfill({
             status: 200,
             contentType: "application/json",
             body: JSON.stringify({
-              orderId: "mock-order-123",
-              status: "filled",
+              bookOrderId: "mock-order-123",
+              marketId: capturedBody?.marketId,
               side: capturedBody?.side,
-              avgPrice: 0.5,
-              quantity: 20,
+              type: capturedBody?.type ?? "buy",
+              limitPrice,
+              quantity,
+              filledQuantity: quantity,
+              status: "filled",
+              heldOre: 0,
+              lockedShares: 0,
+              goodTill: null,
+              fills: [{ qty: quantity, price: limitPrice }],
+              feeOre: 0,
+              totalCostOre: Math.round(quantity * limitPrice * 100),
             }),
           });
         });
@@ -419,9 +467,12 @@ test.describe("Bet placement — QuickBet modal", () => {
         await placeBtn.click();
 
         // Receipt drawer takes over the modal on success — its title is
-        // `receipts.drawer.title`. Match any of the receipt-style copy.
+        // `receipts.drawer.title`, rendered as the dialog's accessible name.
+        // Deliberately NOT a loose /order|receipt/ page-text match: that also
+        // hits "Order type" / "Order amount" / "Order book" in the still-open
+        // bet modal, so it passed even when no order was ever submitted.
         await expect(
-          page.getByText(/order|kvitto|receipt|mottagen|received|placed/i).first(),
+          page.getByRole("dialog", { name: /order receipt|orderkvitto/i }),
         ).toBeVisible({ timeout: 10_000 });
 
         // Verify the API was called with correct payload
@@ -435,7 +486,8 @@ test.describe("Bet placement — QuickBet modal", () => {
       "API error keeps the modal open",
       { tag: ["@trading", "@critical"] },
       async ({ page }) => {
-        await page.route("**/api/v2/orders", async (route) => {
+        await page.route(ORDERS_ENDPOINT, async (route) => {
+          if (route.request().method() !== "POST") return route.fallback();
           await route.fulfill({
             status: 400,
             contentType: "application/json",

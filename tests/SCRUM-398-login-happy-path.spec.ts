@@ -1,4 +1,6 @@
 import { test, expect } from "../fixtures/base";
+import { openUserMenu } from "../helpers/user-menu";
+
 test.describe("SCRUM-398: Login happy path — successful login redirects to dashboard", () => {
   test("login page renders with email/password sign-in form", async ({ page }) => {
     await page.goto("/login");
@@ -48,7 +50,7 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
     // Register now live inside the UserMenu drawer, opened via the "Öppna
     // meny" / "Open menu" hamburger button in the top header.
     await page.goto("/");
-    await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
+    await openUserMenu(page);
     await expect(
       page.getByRole("link", { name: /^logga in$|^sign in$/i })
     ).toBeVisible({ timeout: 10000 });
@@ -59,7 +61,7 @@ test.describe("SCRUM-398: Login happy path — successful login redirects to das
 
   test("clicking Sign in from the drawer navigates to the login page", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
+    await openUserMenu(page);
     await page
       .getByRole("link", { name: /^logga in$|^sign in$/i })
       .click();

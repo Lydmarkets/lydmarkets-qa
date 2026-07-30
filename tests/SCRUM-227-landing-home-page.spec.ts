@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base";
+import { openUserMenu } from "../helpers/user-menu";
 import { hasAuthSession } from "../helpers/has-auth";
 
 // The bot legislation build has no `/settings` route family (it 404s; account
@@ -112,7 +113,7 @@ test.describe("SCRUM-227 — Landing / home page (Kalshi redesign, SCRUM-797)", 
     // SCRUM-1090 removed the inline NavAuthControls — auth CTAs live in the
     // drawer now.
     await page.goto("/");
-    await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
+    await openUserMenu(page);
     await expect(
       page.getByRole("link", { name: /^logga in$|^sign in$/i })
     ).toBeVisible({ timeout: 8000 });

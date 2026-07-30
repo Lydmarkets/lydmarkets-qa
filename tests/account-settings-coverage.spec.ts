@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
+import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 
 test.describe("Account settings — coverage gaps", () => {
   test.use({ storageState: "playwright/.auth/user.json" });
@@ -133,6 +134,11 @@ test.describe("Account settings — coverage gaps", () => {
     "Responsible gambling page shows Stodlinjen and Spelpaus links",
     { tag: ["@compliance", "@critical"] },
     async ({ page }) => {
+      // The bot build is a play-money demo with every real-world support
+      // organisation scrubbed: Stödlinjen renders as "Chatterly" and the
+      // helpline is an empty `tel:` link. Spelpaus survives as "Bot Spelpaus".
+      test.skip(IS_BOT_BUILD, "Bot build scrubs Stödlinjen — staging-only assertion");
+
       await page.goto("/responsible-gambling");
       await dismissLimitsDialog(page);
 

@@ -19,24 +19,24 @@ test.describe("Market detail — chart + activity + header", () => {
   );
 
   test(
-    "chart exposes timeframe tabs (Allt default-selected)",
+    "chart exposes timeframe tabs (All default-selected)",
     { tag: ["@trading", "@regression"] },
     async ({ page }) => {
       await goToFirstMarket(page);
 
-      // Swedish-abbreviated timeframe tabs (untranslated on the EN bot build):
-      // 1T, 1D, 1V, 1M, 3M, Allt — there is no "1Å" tab, and "Allt" (all
-      // history) is the default-selected period.
-      for (const name of [/^1T$/, /^1D$/, /^1V$/, /^1M$/, /^3M$/, /^Allt$/i]) {
+      // The timeframe tabs were previously untranslated Swedish abbreviations
+      // (1T/1V/Allt) on the EN build; that i18n bug is fixed, so they now
+      // localise: 1H|1T, 1D, 1W|1V, 1M, 3M, All|Allt. There is no "1Å"/"1Y"
+      // tab, and "All" (full history) is the default-selected period.
+      for (const name of [/^1[HT]$/, /^1D$/, /^1[WV]$/, /^1M$/, /^3M$/, /^(All|Allt)$/i]) {
         await expect(page.getByRole("tab", { name })).toBeVisible({
           timeout: 5_000,
         });
       }
 
-      await expect(page.getByRole("tab", { name: /^Allt$/i })).toHaveAttribute(
-        "aria-selected",
-        "true"
-      );
+      await expect(
+        page.getByRole("tab", { name: /^(All|Allt)$/i })
+      ).toHaveAttribute("aria-selected", "true");
     }
   );
 

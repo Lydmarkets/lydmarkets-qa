@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { hasAuthSession } from "../helpers/has-auth";
+import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 
 test.describe("Compliance spec — E2E coverage", () => {
   // ── Unauthenticated redirect tests ──────────────────────────────────
@@ -61,9 +62,12 @@ test.describe("Compliance spec — E2E coverage", () => {
           page.getByRole("heading", { name: /responsible gambling|ansvarsfullt spelande/i, level: 1 }),
         ).toBeVisible({ timeout: 10_000 });
 
-        // Stödlinjen and Spelpaus must be listed
-        await expect(page.getByText(/stödlinjen|stodlinjen/i).first()).toBeVisible();
+        // Spelpaus survives on the bot build as "Bot Spelpaus"; Stödlinjen is
+        // scrubbed to the fictional "Chatterly", so assert it on staging only.
         await expect(page.getByText(/spelpaus/i).first()).toBeVisible();
+        if (!IS_BOT_BUILD) {
+          await expect(page.getByText(/stödlinjen|stodlinjen/i).first()).toBeVisible();
+        }
       },
     );
 
@@ -73,7 +77,10 @@ test.describe("Compliance spec — E2E coverage", () => {
       async ({ page }) => {
         // The inline 9-question PGSI form was replaced by a link to the
         // Stödlinjen-hosted PGSI test — the authoritative version run by
-        // the national helpline.
+        // the national helpline. The bot build points every support link at a
+        // lydmarkets.com placeholder instead.
+        test.skip(IS_BOT_BUILD, "Bot build has no external Stödlinjen PGSI link");
+
         await page.goto("/responsible-gambling");
         await dismissLimitsDialog(page);
 
@@ -86,7 +93,7 @@ test.describe("Compliance spec — E2E coverage", () => {
     );
 
     test(
-      "responsible gambling page shows platform tools with links to settings",
+      "responsible gambling page shows platform tools linking to the limit controls",
       { tag: ["@compliance"] },
       async ({ page }) => {
         await page.goto("/responsible-gambling");
@@ -94,13 +101,15 @@ test.describe("Compliance spec — E2E coverage", () => {
 
         await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
 
-        // Platform tools section links to /settings for limit configuration.
-        // Hrefs carry the active locale prefix on this build (e.g.
-        // `/en/settings`), so match the path suffix.
-        const settingsLinks = page.locator('a[href$="/settings"]');
-        await expect(settingsLinks.first()).toBeVisible({ timeout: 5_000 });
-        const linkCount = await settingsLinks.count();
-        expect(linkCount).toBeGreaterThanOrEqual(1);
+        // The platform-tools cards used to point at a /settings route that
+        // 404'd on this build; they now deep-link to the live controls at
+        // /limits and /self-exclusion. Hrefs carry the active locale prefix
+        // (e.g. `/en/limits`), so match the path suffix.
+        const toolLinks = page.locator(
+          'a[href$="/limits"], a[href$="/self-exclusion"], a[href$="/settings"]',
+        );
+        await expect(toolLinks.first()).toBeVisible({ timeout: 5_000 });
+        expect(await toolLinks.count()).toBeGreaterThanOrEqual(1);
       },
     );
 

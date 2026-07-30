@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base";
+import { openUserMenu } from "../helpers/user-menu";
 
 const IS_BOT_BUILD =
   !!process.env.BOT_BUILD ||
@@ -12,10 +13,11 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
 
   test("unauthenticated user sees Sign in and Sign up in the nav", async ({ page }) => {
     // The header collapses auth links into the Open-menu drawer. Open the
-    // hamburger ("Öppna meny" / "Open menu") first, then the /login + /register
-    // links are visible inside the drawer.
+    // hamburger first, then the /login + /register links are visible inside it.
+    // Uses the shared helper because the guest trigger's accessible name flips
+    // from "Open menu" to "Sign in" across hydration — see helpers/user-menu.ts.
     await page.goto("/");
-    await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
+    await openUserMenu(page);
     await expect(
       page.getByRole("link", { name: /^(logga in|sign in)$/i }),
     ).toBeVisible({ timeout: 10000 });
