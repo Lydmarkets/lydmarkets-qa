@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { hasAuthSession } from "../helpers/has-auth";
+import { isNotFoundPage } from "../helpers/not-found";
 
 // SCRUM-249: E2E tests for SCRUM-220 — Unauthorized login attempt notification (SIFS 9 kap. 4§)
 //
@@ -253,11 +254,7 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
       // notifications are delivered via the NotificationBell panel (covered by
       // the tests above). Accept a 404 here rather than fail. (Reported as a
       // suspected missing-route bug.)
-      const is404 = await page
-        .getByRole("heading", { name: /^404$/, level: 1 })
-        .isVisible()
-        .catch(() => false);
-      if (is404) {
+      if (await isNotFoundPage(page)) {
         test.skip(true, "/notifications route not present on this build (notifications via bell panel)");
         return;
       }

@@ -8,7 +8,9 @@ test.describe("Accessibility (a11y) tests", () => {
   });
 
   test("interior pages have an H1", async ({ page }) => {
-    await page.goto("/leaderboard");
+    // `/leaderboard` was never a route in apps/web — /game-rules is a real
+    // public interior page on every build.
+    await page.goto("/game-rules");
     const h1 = await page.locator("h1").count();
     expect(h1).toBeGreaterThan(0);
   });
