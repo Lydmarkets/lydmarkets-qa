@@ -20,7 +20,9 @@ test.describe("Portfolio spec — E2E coverage", () => {
     await page.goto("/portfolio");
     await page.waitForURL(/\/login/, { timeout: 10_000 });
     expect(page.url()).toContain("/login");
-    expect(page.url()).toContain("redirect=%2Fportfolio");
+    // The redirect target carries the canonical locale prefix (SCRUM-1764),
+    // e.g. `redirect=%2Fen%2Fportfolio`.
+    expect(page.url()).toMatch(/redirect=%2F(?:[a-z]{2}%2F)?portfolio/);
   });
 
   test("legacy /orders route no longer exists (404)", { tag: ["@portfolio"] }, async ({ page }) => {
