@@ -1,6 +1,5 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
-import { hasAuthSession } from "../helpers/has-auth";
 
 test.describe("Remaining spec coverage", () => {
   // ── /markets category filter bar ──────────────────────────────────
@@ -131,10 +130,6 @@ test.describe("Remaining spec coverage", () => {
   // ── Authenticated tests ───────────────────────────────────────────
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
-
-    test.beforeEach(({ }, testInfo) => {
-      if (!hasAuthSession()) testInfo.skip();
-    });
 
     // ── Theme toggle (moved to navbar header) ─────────────────────
     test(

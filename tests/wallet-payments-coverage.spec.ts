@@ -1,13 +1,8 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
-import { hasAuthSession } from "../helpers/has-auth";
 
 test.describe("Wallet & payments — authenticated coverage", () => {
   test.use({ storageState: "playwright/.auth/user.json" });
-
-  test.beforeEach(({}, testInfo) => {
-    if (!hasAuthSession()) testInfo.skip();
-  });
 
   // ── SIFS: balance reachable on every screen ────────────────────────
   // SCRUM-1090 moved the inline header balance into the UserMenu drawer.
@@ -46,10 +41,7 @@ test.describe("Wallet & payments — authenticated coverage", () => {
       await page.goto("/");
       await dismissLimitsDialog(page);
 
-      if (page.url().includes("/login")) {
-        test.skip(true, "Session expired");
-        return;
-      }
+        await expect(page).not.toHaveURL(/\/login/);
 
       expect(await balanceReachableInDrawer(page)).toBeTruthy();
     },
@@ -62,10 +54,7 @@ test.describe("Wallet & payments — authenticated coverage", () => {
       await page.goto("/portfolio");
       await dismissLimitsDialog(page);
 
-      if (page.url().includes("/login")) {
-        test.skip(true, "Session expired");
-        return;
-      }
+        await expect(page).not.toHaveURL(/\/login/);
 
       expect(await balanceReachableInDrawer(page)).toBeTruthy();
     },
@@ -80,10 +69,7 @@ test.describe("Wallet & payments — authenticated coverage", () => {
       await page.goto("/wallet");
       await dismissLimitsDialog(page);
 
-      if (page.url().includes("/login")) {
-        test.skip(true, "Session expired");
-        return;
-      }
+        await expect(page).not.toHaveURL(/\/login/);
 
       await expect(page.locator("main").first()).toBeVisible({
         timeout: 10_000,
@@ -122,10 +108,7 @@ test.describe("Wallet & payments — authenticated coverage", () => {
       await page.goto("/wallet");
       await dismissLimitsDialog(page);
 
-      if (page.url().includes("/login")) {
-        test.skip(true, "Session expired");
-        return;
-      }
+        await expect(page).not.toHaveURL(/\/login/);
 
       await expect(page.locator("main").first()).toBeVisible({
         timeout: 10_000,
@@ -160,10 +143,7 @@ test.describe("Wallet & payments — authenticated coverage", () => {
       await page.goto("/wallet");
       await dismissLimitsDialog(page);
 
-      if (page.url().includes("/login")) {
-        test.skip(true, "Session expired");
-        return;
-      }
+        await expect(page).not.toHaveURL(/\/login/);
 
       await expect(page.locator("main").first()).toBeVisible({
         timeout: 10_000,
@@ -173,14 +153,9 @@ test.describe("Wallet & payments — authenticated coverage", () => {
       const depositBtn = page
         .getByRole("button", { name: /deposit|sätt in/i })
         .first();
-      const hasBtn = await depositBtn
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      if (!hasBtn) {
-        test.skip(true, "Deposit button not visible on wallet page");
-        return;
-      }
+      // A wallet with no reachable way to fund it is a broken wallet, so this
+      // asserts rather than skips.
+      await expect(depositBtn).toBeVisible({ timeout: 10_000 });
 
       await depositBtn.click();
 
@@ -226,10 +201,7 @@ test.describe("Wallet & payments — authenticated coverage", () => {
       await page.goto("/wallet/transactions");
       await dismissLimitsDialog(page);
 
-      if (page.url().includes("/login")) {
-        test.skip(true, "Session expired");
-        return;
-      }
+        await expect(page).not.toHaveURL(/\/login/);
 
       await expect(page.locator("main").first()).toBeVisible({
         timeout: 10_000,

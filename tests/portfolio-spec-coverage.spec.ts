@@ -1,6 +1,5 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
-import { hasAuthSession } from "../helpers/has-auth";
 
 /**
  * Portfolio spec — E2E coverage
@@ -34,10 +33,6 @@ test.describe("Portfolio spec — E2E coverage", () => {
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
-
-    test.beforeEach(({}, testInfo) => {
-      if (!hasAuthSession()) testInfo.skip();
-    });
 
     test(
       "portfolio page loads with header, status filter pills, and a date trigger",

@@ -1,73 +1,54 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
-import { hasAuthSession } from "../helpers/has-auth";
-import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 
 test.describe("Account settings — coverage gaps", () => {
   test.use({ storageState: "playwright/.auth/user.json" });
 
-  test.beforeEach(({}, testInfo) => {
-    if (!hasAuthSession()) testInfo.skip();
-  });
-
-  // ── Privacy settings page ──────────────────────────────────────────
+  // ── Privacy / GDPR surface ─────────────────────────────────────────
+  //
+  // The /settings route family (including /settings/privacy) was removed and
+  // now 404s. The GDPR surface it carried — subject-access data export — lives
+  // on /profile.
 
   test(
-    "privacy settings page loads with GDPR options",
+    "profile page exposes the GDPR data export",
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
-      const response = await page.goto("/settings/privacy");
+      await page.goto("/profile");
       await dismissLimitsDialog(page);
+      await expect(page).not.toHaveURL(/\/login/);
 
-      // The /settings route family (including /settings/privacy) returns 404 on
-      // the bot legislation build — the settings area is not present. See the
-      // SUSPECTED REAL BUGS note in the QA triage report.
-      if (!response || response.status() === 404) {
-        test.skip(true, "/settings/privacy returns 404 on this build (route missing)");
-        return;
-      }
-
-      if (page.url().includes("/login")) {
-        test.skip(true, "Session expired");
-        return;
-      }
-
-      await expect(page.locator("main").first()).toBeVisible({
-        timeout: 10_000,
-      });
-
-      const hasPrivacy = await page
-        .getByText(/privacy|data export|account deletion|integritet|radering/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasGdpr = await page
-        .getByText(/gdpr|personuppgift/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasHeading = await page
-        .getByRole("heading")
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      expect(hasPrivacy || hasGdpr || hasHeading).toBeTruthy();
+      await expect(
+        page.getByRole("heading", { name: /my profile|min profil/i, level: 1 }),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(
+        page.getByRole("heading", { name: /data export|dataexport/i }),
+      ).toBeVisible();
+      // Art. 15 GDPR: the copy has to be obtainable, not just described.
+      await expect(
+        page.getByRole("button", { name: /download|ladda ner|hämta/i }),
+      ).toBeVisible();
     },
   );
 
-  // ── Notification preferences ───────────────────────────────────────
+  test(
+    "profile page exposes the personal data it holds",
+    { tag: ["@regression", "@compliance"] },
+    async ({ page }) => {
+      await page.goto("/profile");
+      await dismissLimitsDialog(page);
+      await expect(page).not.toHaveURL(/\/login/);
 
-  test.skip(
-    "settings page has notification preference section",
-    { tag: ["@regression"] },
-    async () => {
-      // The top-level `/settings` route currently has no `page.tsx` (returns
-      // 404) and the notification-preference surface from the old account
-      // area was not ported to the new settings/* subroutes. Re-enable when
-      // the feature returns at a stable URL.
+      await expect(
+        page.getByRole("heading", { name: /personal information|personuppgifter/i }),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(
+        page.getByRole("heading", { name: /contact details|kontaktuppgifter/i }),
+      ).toBeVisible();
+      // Art. 16 GDPR: rectification has to be reachable from the same place.
+      await expect(
+        page.getByRole("button", { name: /^edit$|^redigera$/i }).first(),
+      ).toBeVisible();
     },
   );
 
@@ -75,81 +56,30 @@ test.describe("Account settings — coverage gaps", () => {
   // was intentionally removed from the notifications tab — Lydmarkets does
   // not run a marketing channel, so the consent surface was dropped rather
   // than shipped as a no-op. Do not re-add without a new feature ticket.
-
-  // ── PGSI self-assessment questionnaire ─────────────────────────────
-
-  test(
-    "PGSI questionnaire is visible on responsible gambling tab",
-    { tag: ["@compliance", "@regression"] },
-    async ({ page }) => {
-      const response = await page.goto("/responsible-gambling");
-      await dismissLimitsDialog(page);
-
-      if (
-        !response ||
-        response.status() === 404 ||
-        page.url().includes("/login")
-      ) {
-        test.skip(true, "Page not accessible — 404 or session expired");
-        return;
-      }
-
-      await expect(page.locator("main").first()).toBeVisible({
-        timeout: 10_000,
-      });
-
-      // Look for the PGSI questionnaire section
-      const hasSelfAssessment = await page
-        .getByText(/self-assessment|självtest|pgsi/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      const hasQuestionText = await page
-        .getByText(/never|aldrig|sometimes|ibland/i)
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      if (!hasSelfAssessment && !hasQuestionText) {
-        test.skip(
-          true,
-          "PGSI questionnaire not visible — may not be deployed yet",
-        );
-        return;
-      }
-
-      expect(hasSelfAssessment || hasQuestionText).toBeTruthy();
-    },
-  );
-
-  // The "PGSI score interpretation guide" test was removed — the inline
-  // 9-question self-assessment (and its score-interpretation legend) was
-  // dropped in favour of linking out to Stödlinjen's authoritative version,
-  // so the "0 points / moderate risk / problem gambling" rows no longer
-  // exist on our page. The external link is asserted in
-  // compliance-spec-coverage.spec.ts.
+  //
+  // The "notification preference section" and inline "PGSI questionnaire"
+  // placeholders were deleted rather than left permanently skipped: neither
+  // surface exists on any deployed build. Notification preferences were never
+  // ported off the old account area, and the 9-question PGSI form was replaced
+  // by a link out to the helpline's authoritative version — which is asserted
+  // in compliance-spec-coverage.spec.ts. Re-add real tests with the features.
 
   test(
-    "Responsible gambling page shows Stodlinjen and Spelpaus links",
+    "Responsible gambling page shows the helpline and Spelpaus",
     { tag: ["@compliance", "@critical"] },
     async ({ page }) => {
-      // The bot build is a play-money demo with every real-world support
-      // organisation scrubbed: Stödlinjen renders as "Chatterly" and the
-      // helpline is an empty `tel:` link. Spelpaus survives as "Bot Spelpaus".
-      test.skip(IS_BOT_BUILD, "Bot build scrubs Stödlinjen — staging-only assertion");
-
       await page.goto("/responsible-gambling");
       await dismissLimitsDialog(page);
 
       await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
 
-      // Stödlinjen helpline
+      // Helpline: "Stödlinjen" on the licensed build, scrubbed to "Chatterly"
+      // on the bot legislation build.
       await expect(
-        page.getByText(/stödlinjen|020.819/i).first(),
+        page.getByText(/stödlinjen|020.819|chatterly/i).first(),
       ).toBeVisible({ timeout: 5_000 });
 
-      // Spelpaus self-exclusion
+      // Self-exclusion register: "Spelpaus" / "Bot Spelpaus".
       await expect(
         page.getByText(/spelpaus/i).first(),
       ).toBeVisible({ timeout: 5_000 });

@@ -39,12 +39,12 @@ test.describe("Header — Open-menu drawer", () => {
     await expect(drawer.getByRole("button", { name: /^theme|^tema/i })).toBeVisible();
   });
 
-  // The Language toggle was dropped from the drawer on the English-only bot
-  // build. Still asserted on the bilingual staging build.
-  test("drawer exposes the Language toggle", async ({ page }) => {
-    test.skip(IS_BOT_BUILD, "English-only bot build ships no language toggle");
+  // A single-language build must not advertise a language switch it cannot
+  // honour. The bilingual build ships one; the English-only bot build must not.
+  test("drawer's language toggle matches the build's locale support", async ({ page }) => {
     const drawer = getUserMenuDrawer(page);
-    await expect(drawer.getByRole("button", { name: /^language|^språk/i })).toBeVisible();
+    const languageToggle = drawer.getByRole("button", { name: /^language|^språk/i });
+    await expect(languageToggle).toHaveCount(IS_BOT_BUILD ? 0 : 1);
   });
 
   test("Transfers group lists Deposit / Withdrawal / Transaction History", async ({
@@ -81,18 +81,46 @@ test.describe("Header — Open-menu drawer", () => {
 
   // The bot build's RG drawer group was reduced to Self-exclusion only; the
   // Stödlinjen PGSI self-test deep-link and the Limits shortcut were dropped
-  // along with the rest of its real-world compliance references.
-  test("Responsible-gambling group also covers Self-test / Limits", async ({ page }) => {
-    test.skip(IS_BOT_BUILD, "Bot build's RG drawer group is Self-exclusion only");
+  // along with the rest of its real-world compliance references. /limits itself
+  // 404s on this build, so the drawer must NOT offer it — a dead RG link is
+  // worse than a missing one.
+  test("Responsible-gambling group offers no dead links", async ({ page }) => {
     const drawer = getUserMenuDrawer(page);
 
-    // Self-test deep-links to Stödlinjen's PGSI test.
-    await expect(
-      drawer.getByRole("link", { name: /^self.?test$/i })
-    ).toHaveAttribute("href", /stodlinjen\.se/);
-    await expect(drawer.getByRole("link", { name: /^limits$/i }).first()).toHaveAttribute(
-      "href",
-      /\/limits$/
-    );
+    const selfTest = drawer.getByRole("link", { name: /^self.?test$/i });
+    const limits = drawer.getByRole("link", { name: /^limits$/i });
+
+    if (IS_BOT_BUILD) {
+      await expect(selfTest).toHaveCount(0);
+      await expect(limits).toHaveCount(0);
+    } else {
+      // Self-test deep-links to Stödlinjen's PGSI test.
+      await expect(selfTest).toHaveAttribute("href", /stodlinjen\.se/);
+      await expect(limits.first()).toHaveAttribute("href", /\/limits$/);
+    }
+  });
+
+  // Every internal drawer link must resolve — the drawer is the only path to
+  // the auth pages and the RG tooling, so a 404 in here strands the user.
+  test("every internal drawer link resolves", async ({ page, baseURL }) => {
+    const drawer = getUserMenuDrawer(page);
+    const hrefs = await drawer
+      .getByRole("link")
+      .evaluateAll((els) =>
+        els
+          .map((e) => e.getAttribute("href"))
+          .filter((h): h is string => !!h && h.startsWith("/")),
+      );
+    expect(hrefs.length).toBeGreaterThan(0);
+
+    for (const href of [...new Set(hrefs)]) {
+      // Plain fetch, NOT Playwright's `request` fixture — APIRequestContext is
+      // broken under Bun (see auth.setup.ts). Guest links are expected to bounce
+      // to /login, which is a 3xx/200, not a dead link.
+      const res = await fetch(new URL(href, baseURL!), {
+        signal: AbortSignal.timeout(30_000),
+      });
+      expect(res.status, `${href} should not be a dead link`).toBeLessThan(400);
+    }
   });
 });

@@ -1,6 +1,5 @@
 import { test, expect } from "../fixtures/base";
 import { goToFirstMarket } from "../helpers/go-to-market";
-import { hasAuthSession } from "../helpers/has-auth";
 
 /**
  * Trading spec — E2E coverage
@@ -85,10 +84,6 @@ test.describe("Trading spec — E2E coverage", () => {
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
-
-    test.beforeEach(({ }, testInfo) => {
-      if (!hasAuthSession()) testInfo.skip();
-    });
 
     test(
       "market detail shows trading content for authenticated user",

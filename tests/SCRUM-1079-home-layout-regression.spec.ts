@@ -21,15 +21,27 @@ import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 test.describe("SCRUM-1079 — Home layout regression", () => {
   test.describe.configure({ mode: "default" });
 
-  test("hero renders the H1 tagline and three stat tiles", async ({ page }) => {
-    test.skip(
-      true,
-      "Bot build home has no <h1> tagline ('The market predicts. You trade.') and " +
-        "no active-markets / volume(7d) / vs-last-week stat tiles. The hero is a " +
-        "role=region named after the featured market question. Reported as a " +
-        "design divergence / suspected a11y regression (no top-level heading)."
-    );
+  // The editorial masthead ("The market predicts. You trade.") and its
+  // active-markets / volume(7d) / vs-last-week stat tiles were removed by
+  // design: the featured market question is the page's headline now. What still
+  // has to hold is that the hero is an addressable, named landmark — otherwise
+  // screen-reader users get an unlabelled region where the headline should be.
+  //
+  // NOTE: the hero title is styled at 72px but is a <a>, not a heading, so the
+  // page has no <h1> at all. That is a real a11y gap tracked separately; this
+  // test asserts the labelled-landmark contract that holds either way.
+  test("hero is a landmark named after the featured market", async ({ page }) => {
     await page.goto("/");
+
+    const hero = page.getByRole("region").filter({ hasText: /collective assessment/i }).first();
+    await expect(hero).toBeVisible({ timeout: 25_000 });
+
+    // The landmark's accessible name must be the featured market question —
+    // i.e. non-empty and matching the hero's own title link.
+    const heroTitle = hero.getByRole("link").first();
+    const title = (await heroTitle.textContent())?.trim();
+    expect(title).toBeTruthy();
+    await expect(hero).toHaveAccessibleName(title!);
   });
 
   test("featured hero card renders the market title and Yes/No probability", async ({ page }) => {

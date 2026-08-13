@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { hasAuthSession } from "../helpers/has-auth";
-import { isNotFoundPage } from "../helpers/not-found";
 
 // SCRUM-249: E2E tests for SCRUM-220 — Unauthorized login attempt notification (SIFS 9 kap. 4§)
 //
@@ -57,10 +55,6 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
-
-    test.beforeEach(({ }, testInfo) => {
-      if (!hasAuthSession()) testInfo.skip();
-    });
 
     test("NotificationBell is present in the navigation for authenticated users", async ({
       page,
@@ -241,25 +235,21 @@ test.describe("SCRUM-249 — Unauthorized login attempt notification (SCRUM-220)
       expect(hasBadge || hasBellCount || hasPage).toBeTruthy();
     });
 
-    test("notifications page/section is accessible via direct URL", async ({ page }) => {
-      await page.goto("/notifications");
-      const isRedirected = page.url().includes("/login") || page.url().includes("/auth");
-      if (isRedirected) {
-        // Accepted if /notifications is a protected route requiring login
-        expect(true).toBeTruthy();
-        return;
-      }
+    // There is no standalone /notifications route on this build — notifications
+    // are delivered in-app (covered by the tests above). That is only safe as
+    // long as nothing points users at the missing route, so assert both halves:
+    // the route 404s, AND no page links to it.
+    test("no page offers a link to the absent /notifications route", async ({ page }) => {
+      const response = await page.goto("/notifications");
+      expect(response?.status()).toBe(404);
 
-      // On the bot build there is no standalone /notifications route — it 404s;
-      // notifications are delivered via the NotificationBell panel (covered by
-      // the tests above). Accept a 404 here rather than fail. (Reported as a
-      // suspected missing-route bug.)
-      if (await isNotFoundPage(page)) {
-        test.skip(true, "/notifications route not present on this build (notifications via bell panel)");
-        return;
+      for (const path of ["/", "/markets", "/profile"]) {
+        await page.goto(path);
+        await expect(
+          page.locator('a[href$="/notifications"]'),
+          `${path} must not link to the missing /notifications route`,
+        ).toHaveCount(0);
       }
-
-      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     });
   });
 

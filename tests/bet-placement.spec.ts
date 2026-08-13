@@ -1,7 +1,5 @@
 import { test, expect } from "../fixtures/base";
 import { goToFirstMarket } from "../helpers/go-to-market";
-import { hasAuthSession } from "../helpers/has-auth";
-import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 import { MOBILE_VIEWPORT } from "../helpers/order-form";
 
 // The market buy buttons are now labelled `YES — {pct}% — {odds}×` /
@@ -180,17 +178,42 @@ test.describe("Bet placement — QuickBet modal", () => {
     },
   );
 
-  // SUSPECTED APP BUG (logged-out): the payout breakdown does not recompute
-  // when a different stake preset is selected. Collapsed, the fee summary is
-  // frozen at "Platform fee (0.0%)" / €0.00 regardless of the chosen stake;
-  // expanded it shows real values but stays frozen at whatever was first
-  // computed even after switching presets — only the stake <input> value
-  // updates (verified live on web-bot 2026-06-29). Skipped until the breakdown
-  // updates reactively for unauthenticated users.
-  test.skip(
+  // Regression guard for a fixed bug: the payout breakdown used to freeze at
+  // whatever was first computed, so switching presets moved only the stake
+  // <input> while the fee and payout stayed stale — a user could read a payout
+  // that did not belong to the stake they were about to place. Re-verified
+  // reactive on web-bot 2026-08-13.
+  test(
     "clicking a different preset updates the payout breakdown",
-    { tag: ["@trading"] },
-    async () => {},
+    { tag: ["@trading", "@compliance"] },
+    async ({ page }) => {
+      await goToFirstMarket(page);
+      await openQuickBetYes(page);
+
+      const dialog = page.getByRole("dialog");
+      const presets = dialog.getByRole("button", { name: /^(€\s*\d+|\d+\s*kr)$/i });
+      await expect(presets).toHaveCount(4);
+
+      // The label and its amount sit in sibling nodes, so read the payout out of
+      // the dialog's rendered text rather than off a single element.
+      const readPayout = async () => {
+        const text = await dialog.innerText();
+        return /(?:möjlig utbetalning|potential payout)\s*\+?\s*(?:€|kr)?\s*([\d.,]+)/i
+          .exec(text)?.[1] ?? "";
+      };
+
+      const readings: string[] = [];
+      for (const i of [0, 1, 2, 3]) {
+        await presets.nth(i).click();
+        // Each preset must settle on a payout that differs from the previous
+        // one — a frozen breakdown repeats the same value.
+        await expect.poll(readPayout, { timeout: 10_000 }).not.toBe(readings.at(-1) ?? "");
+        readings.push(await readPayout());
+      }
+
+      expect(readings.every((r) => r !== "")).toBe(true);
+      expect(new Set(readings).size).toBe(4);
+    },
   );
 
   // ─────────────────────────────────────────────────────────────
@@ -209,13 +232,7 @@ test.describe("Bet placement — QuickBet modal", () => {
       const feeToggle = dialog.getByRole("button", {
         name: /plattformsavgift|platform fee/i,
       });
-      const hasFee = await feeToggle
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-      if (!hasFee) {
-        test.skip(true, "Market has 0 stake limits — no breakdown available");
-        return;
-      }
+      await expect(feeToggle).toBeVisible({ timeout: 10_000 });
 
       await expect(feeToggle).toHaveAttribute("aria-expanded", "false");
 
@@ -242,34 +259,17 @@ test.describe("Bet placement — QuickBet modal", () => {
     },
   );
 
-  test(
-    "all amounts in modal are displayed in SEK (kr)",
-    { tag: ["@trading", "@compliance"] },
-    async ({ page }) => {
-      // The bot build is a EUR play-money demo — every amount renders as "€".
-      // The SEK requirement applies to the Swedish licensed build only.
-      test.skip(IS_BOT_BUILD, "Bot build prices in € — SEK assertion is staging-only");
-
-      await goToFirstMarket(page);
-      await openQuickBetYes(page);
-
-      const dialog = page.getByRole("dialog");
-      const text = await dialog.innerText();
-
-      // At minimum the four preset buttons each surface "kr". Realistic
-      // dialogs render more (input suffix, fee row, etc.).
-      const krMatches = text.match(/kr/gi) || [];
-      expect(krMatches.length).toBeGreaterThanOrEqual(4);
-    },
-  );
-
+  // The SEK-only assertion that used to sit here was deleted rather than left
+  // permanently skipped: the bot build is a EUR play-money demo, and the
+  // currency contract that matters on every build — one currency, consistently
+  // — is asserted below.
   test(
     "modal renders a single, consistent currency across all amounts",
     { tag: ["@trading", "@compliance"] },
     async ({ page }) => {
-      // Replaces the SEK-only assertion above on the bot build. The original
-      // mixed kr/€ i18n bug is fixed, so this guards against it regressing:
-      // whichever currency the build uses, the modal must not mix the two.
+      // The original mixed kr/€ i18n bug is fixed, so this guards against it
+      // regressing: whichever currency the build uses, it must not mix the two,
+      // and every amount in the dialog must carry it.
       await goToFirstMarket(page);
       await openQuickBetYes(page);
 
@@ -294,13 +294,7 @@ test.describe("Bet placement — QuickBet modal", () => {
       const feeToggle = dialog.getByRole("button", {
         name: /plattformsavgift|platform fee/i,
       });
-      const hasFee = await feeToggle
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-      if (!hasFee) {
-        test.skip(true, "Market has 0 stake limits — no breakdown available");
-        return;
-      }
+      await expect(feeToggle).toBeVisible({ timeout: 10_000 });
 
       // The toggle's label embeds "(X%)" — assert a percentage appears.
       const text = (await feeToggle.innerText()).trim();
@@ -368,8 +362,7 @@ test.describe("Bet placement — QuickBet modal", () => {
   test.describe("authenticated — place a bet", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
 
-    test.beforeEach(async ({ page }, testInfo) => {
-      if (!hasAuthSession()) testInfo.skip();
+    test.beforeEach(async ({ page }) => {
       // Mock wallet balance so the CTA is enabled.
       await page.route("**/api/v2/wallet", async (route) => {
         await route.fulfill({
@@ -398,20 +391,9 @@ test.describe("Bet placement — QuickBet modal", () => {
           name: /^(logga in|log in|sign in)$/i,
         });
 
-        const hasPlace = await placeBtn
-          .first()
-          .isVisible({ timeout: 5_000 })
-          .catch(() => false);
-        const hasSignIn = await signInLink
-          .isVisible({ timeout: 2_000 })
-          .catch(() => false);
-
-        if (!hasPlace && hasSignIn) {
-          test.skip(true, "Auth session expired — user sees sign-in link");
-          return;
-        }
-
-        await expect(placeBtn.first()).toBeVisible();
+        // An authenticated user gets the Place CTA, never the guest sign-in link.
+        await expect(signInLink).toHaveCount(0);
+        await expect(placeBtn.first()).toBeVisible({ timeout: 10_000 });
       },
     );
 
@@ -458,11 +440,7 @@ test.describe("Bet placement — QuickBet modal", () => {
 
         const dialog = page.getByRole("dialog");
         const placeBtn = dialog.getByRole("button", { name: /^(placera|place)\b/i }).first();
-        const hasPlace = await placeBtn.isVisible({ timeout: 5_000 }).catch(() => false);
-        if (!hasPlace) {
-          test.skip(true, "Auth session expired — Place button not visible");
-          return;
-        }
+        await expect(placeBtn).toBeVisible({ timeout: 10_000 });
 
         await placeBtn.click();
 
@@ -500,11 +478,7 @@ test.describe("Bet placement — QuickBet modal", () => {
 
         const dialog = page.getByRole("dialog");
         const placeBtn = dialog.getByRole("button", { name: /^(placera|place)\b/i }).first();
-        const hasPlace = await placeBtn.isVisible({ timeout: 5_000 }).catch(() => false);
-        if (!hasPlace) {
-          test.skip(true, "Auth session expired");
-          return;
-        }
+        await expect(placeBtn).toBeVisible({ timeout: 10_000 });
 
         await placeBtn.click();
 

@@ -87,8 +87,19 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
     const card = page.getByRole("article").first();
     await expect(card).toBeVisible({ timeout: 10000 });
 
-    const yesText = await card.getByRole("button", { name: /^(yes|ja)\b/i }).innerText();
-    const noText = await card.getByRole("button", { name: /^(no|nej)\b/i }).innerText();
+    // Read both pills from ONE DOM snapshot. Reading them with two sequential
+    // awaits let a live price tick land in between, so YES could be pre-tick and
+    // NO post-tick and the pair no longer summed to 100 — the source of a
+    // run-to-run flake, not a real pricing bug.
+    const [yesText, noText] = await card.evaluate((el) => {
+      const label = (re: RegExp) =>
+        [...el.querySelectorAll("button")]
+          .map((b) => (b.textContent ?? "").replace(/\s+/g, " ").trim())
+          .find((t) => re.test(t)) ?? "";
+      // No `\b` after the side: the rendered label runs the parts together
+      // ("YES2.01×50%"), so there is no word boundary to match.
+      return [label(/^(yes|ja)/i), label(/^(no|nej)/i)];
+    });
     const yesPct = Number(yesText.match(/(\d+)\s*%/)?.[1]);
     const noPct = Number(noText.match(/(\d+)\s*%/)?.[1]);
 

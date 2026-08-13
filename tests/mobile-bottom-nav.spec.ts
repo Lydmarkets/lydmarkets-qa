@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base";
+import { getUserMenuDrawer, openUserMenu } from "../helpers/user-menu";
 
 // The mobile BottomNav renders below lg for everyone and after SCRUM-1090 has
 // three entries: Markets (link), Search (button), My Positions (link). The
@@ -41,23 +42,34 @@ test.describe("Mobile BottomNav — unauthenticated", () => {
     }
   );
 
-  test.fixme(
-    "header drawer closes when the backdrop is clicked",
+  test(
+    "header drawer closes on backdrop click and on Escape",
     { tag: ["@regression"] },
     async ({ page }) => {
-      // Mobile has a known UX issue: the compliance "Spelansvarsverktyg" aside
-      // pinned at top z-50 overlaps the drawer's Close button and also seems
-      // to swallow backdrop clicks / Escape keys don't dismiss the custom
-      // aside. Keeping this test as fixme until the product issue is fixed —
-      // see triage notes / staging bug referenced in the PR body.
+      // This was fixme'd as a product bug ("backdrop clicks and Escape don't
+      // dismiss the drawer"). They do — the drawer is never unmounted. It slides
+      // out via `translate-x-full` and is marked `inert`, and a translated
+      // element still has a bounding box, so `toBeHidden()` can never pass. The
+      // closed state to assert is `inert`: that is what actually takes the
+      // drawer's contents out of the a11y tree and out of tab order.
+      // Use openUserMenu, not a hardcoded name: the guest trigger's accessible
+      // name flips "Open menu" → "Sign in" across hydration (see helpers/user-menu).
+      const drawer = getUserMenuDrawer(page);
+
       await page.goto("/");
-      await page.getByRole("button", { name: /öppna meny|open menu/i }).click();
-      const loginLink = page.getByRole("link", { name: /^logga in$|^sign in$/i });
-      await expect(loginLink).toBeVisible({ timeout: 5_000 });
-      await page
-        .getByRole("button", { name: /stäng meny|close menu/i })
-        .click({ force: true });
-      await expect(loginLink).toBeHidden({ timeout: 5_000 });
+      await openUserMenu(page);
+      await expect(drawer).not.toHaveAttribute("inert");
+
+      // Backdrop covers the viewport; the drawer is pinned right (w-80), so the
+      // far-left edge is backdrop on this 390px-wide viewport.
+      await page.mouse.click(8, 400);
+      await expect(drawer).toHaveAttribute("inert", /.*/, { timeout: 5_000 });
+
+      await openUserMenu(page);
+      await expect(drawer).not.toHaveAttribute("inert");
+
+      await page.keyboard.press("Escape");
+      await expect(drawer).toHaveAttribute("inert", /.*/, { timeout: 5_000 });
     }
   );
 

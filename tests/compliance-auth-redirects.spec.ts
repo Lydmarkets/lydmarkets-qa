@@ -1,16 +1,11 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
-import { hasAuthSession } from "../helpers/has-auth";
 
 test.describe("Compliance — auth redirects", () => {
   // ── Authenticated user redirect from /login ────────────────────────
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
-
-    test.beforeEach(({}, testInfo) => {
-      if (!hasAuthSession()) testInfo.skip();
-    });
 
     test(
       "authenticated user hitting /login is redirected away",

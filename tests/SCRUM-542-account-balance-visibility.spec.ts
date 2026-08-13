@@ -1,7 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import type { Page } from "@playwright/test";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
-import { isAuthenticated } from "../helpers/is-authenticated";
 
 /**
  * SCRUM-542: Account balance visibility on every screen.
@@ -61,10 +60,7 @@ test.describe("SCRUM-542: Account balance visibility", () => {
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      if (!(await isAuthenticated(page))) {
-        test.skip(true, "Requires authenticated session — skipping");
-        return;
-      }
+    await expect(page).not.toHaveURL(/\/login/);
 
       expect(await balanceReachable(page)).toBeTruthy();
     },
@@ -76,10 +72,7 @@ test.describe("SCRUM-542: Account balance visibility", () => {
       { tag: ["@regression", "@compliance"] },
       async ({ page }) => {
         await page.goto(path);
-        if (!(await isAuthenticated(page))) {
-          test.skip(true, "Requires authenticated session — skipping");
-          return;
-        }
+    await expect(page).not.toHaveURL(/\/login/);
 
         expect(await balanceReachable(page)).toBeTruthy();
       },
@@ -91,10 +84,7 @@ test.describe("SCRUM-542: Account balance visibility", () => {
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      if (!(await isAuthenticated(page))) {
-        test.skip(true, "Requires authenticated session — skipping");
-        return;
-      }
+    await expect(page).not.toHaveURL(/\/login/);
 
       const rail = rgRail(page);
       const toggle = rail.getByRole("button", { name: SHOW_BALANCE_RE }).first();
@@ -115,10 +105,7 @@ test.describe("SCRUM-542: Account balance visibility", () => {
     async ({ page }) => {
       await page.goto("/markets");
       await dismissLimitsDialog(page);
-      if (!(await isAuthenticated(page))) {
-        test.skip(true, "Requires authenticated session — skipping");
-        return;
-      }
+    await expect(page).not.toHaveURL(/\/login/);
 
       expect(await balanceReachable(page)).toBeTruthy();
 

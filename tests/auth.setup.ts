@@ -66,11 +66,6 @@ async function cachedSessionWorks(baseURL: string): Promise<boolean> {
   }
 }
 
-function saveEmptyAuth(): void {
-  fs.mkdirSync("playwright/.auth", { recursive: true });
-  fs.writeFileSync(AUTH_FILE, JSON.stringify({ cookies: [], origins: [] }));
-}
-
 /**
  * Register a fresh account on the bot legislation build (email/password,
  * no BankID). Each setup run creates a new unique user — there is no shared
@@ -169,7 +164,13 @@ setup("authenticate", { timeout: 90_000 }, async ({ page, baseURL }) => {
 
   if (await registerNewUser(page, base)) return;
 
-  // Registration failed — save empty auth so tests run unauthenticated
-  console.warn("[auth.setup] Registration failed — running unauthenticated");
-  saveEmptyAuth();
+  // Hard-fail rather than writing an empty auth file. This project has two
+  // retries, so a transient blip is absorbed; a persistent failure (rate limit,
+  // registration outage) then fails the run with ONE clear error instead of
+  // silently skipping every authenticated test — which is how a broken login
+  // used to read as a green nightly with 40 skips.
+  throw new Error(
+    `[auth.setup] Could not obtain a session for ${base}. Every authenticated ` +
+      `test depends on this; see the registration warning above.`,
+  );
 });
