@@ -10,21 +10,20 @@ import { dismissLimitsDialog } from "./dismiss-limits-dialog";
  * Falls back to the second link if all cards are 0%.
  */
 export async function goToFirstMarket(page: Page): Promise<string> {
-  await page.goto("/");
+  // Use /markets, not the home page. The helper only needs *a* tradable market,
+  // and the home page is the documented slow spot on the bot build — its grid
+  // sits behind a hero, a trending widget and a positions rail, and under
+  // 2-worker nightly load it regularly missed a 15s wait, taking every test
+  // that calls this helper down with it. /markets is the purpose-built listing:
+  // same <article> cards, far less to render.
+  await page.goto("/markets");
   await dismissLimitsDialog(page);
 
-  // Click "All" filter — "Trending/Live" may be empty on staging.
-  await page
-    .getByRole("button", { name: /^(all|alla)\s*\d*$/i })
-    .first()
-    .click({ timeout: 5_000 })
-    .catch(() => {});
-
-  // SCRUM-797 renders duplicate desktop/mobile hero sections — one is always
-  // hidden via `hidden lg:block` / `lg:hidden`. Filter to visible matches so
-  // the helper works on both mobile and desktop viewports.
+  // SCRUM-797 renders duplicate desktop/mobile sections — one is always hidden
+  // via `hidden lg:block` / `lg:hidden`. Filter to visible matches so the
+  // helper works on both mobile and desktop viewports.
   const marketLinks = page.locator('main a[href*="/markets/"]:visible');
-  await marketLinks.first().waitFor({ state: "visible", timeout: 15_000 });
+  await marketLinks.first().waitFor({ state: "visible", timeout: 30_000 });
   const count = await marketLinks.count();
 
   // Pick the first market whose card doesn't show a "0%" button (dead side)
