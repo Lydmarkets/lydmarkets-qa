@@ -5,17 +5,20 @@ test.describe("Resolution & Settlement", () => {
   // ── Unauthenticated: resolved market detail page ───────────────────
 
   // COVERAGE GAP — the post-resolution UI (outcome badge, trading disabled) is
-  // NOT covered, and cannot be from here:
-  //   * the environment holds no resolved markets (28/28 ACTIVE), so the old
-  //     test skipped every single night waiting for data that never arrives;
-  //   * the detail page renders the market server-side and only client-fetches
-  //     price-history / book-depth / price, so `page.route` cannot inject a
-  //     resolved state either.
-  // Mocking a RESOLVED market into the listing was tried and rejected: the API
-  // never serves resolved markets in the list, so asserting on that path would
-  // test behaviour the product does not implement and report a false bug.
-  // To close this properly, seed one resolved market in the demo data — then
-  // re-add an outcome + trading-disabled assertion here.
+  // NOT covered, because on this build it does not exist to be tested.
+  //
+  // Resolved markets DO exist (11 of them: `status='CLOSED'` +
+  // `closed_reason='resolved'` + `resolved_outcome`; `market_status` has no
+  // RESOLVED member, which is why `?status=resolved` 400s and the listing —
+  // ACTIVE-only — looks like there are none). They are listable via
+  // `GET /api/v2/markets?status=CLOSED`.
+  //
+  // But every one of them is unreachable in the UI: `GET /api/v2/markets/:id`
+  // returns 404 for a CLOSED market, and `/en/markets/:id` consequently renders
+  // the Next 404 page. So there is no outcome badge and no disabled trading to
+  // assert — a user who held a position cannot see how it settled.
+  // Reported as a product bug; do NOT "fix" this test by asserting the 404,
+  // which would cement the behaviour.
   //
   // What IS asserted below is the pre-resolution half of the same contract: a
   // market must state how and when it settles before anyone trades it.
