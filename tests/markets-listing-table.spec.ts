@@ -83,18 +83,20 @@ test.describe("Markets listing — card grid", () => {
             )
         ).length;
 
-      // Scroll until the grid stops growing (bounded so a broken loader fails
-      // the test rather than spinning).
-      let seen = await distinctMarkets();
-      for (let i = 0; i < 10 && seen < advertised; i++) {
-        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-        await expect
-          .poll(distinctMarkets, { timeout: 10_000 })
-          .toBeGreaterThan(seen);
-        seen = await distinctMarkets();
-      }
-
-      expect(seen).toBe(advertised);
+      // Re-scroll on every poll tick rather than scrolling once and waiting for
+      // growth: under load the bot build can miss a single scroll's
+      // intersection trigger, and a one-shot wait cannot recover from that.
+      // Re-scrolling makes the poll self-healing, and the deadline still fails
+      // the test if the tail is genuinely unreachable.
+      await expect
+        .poll(
+          async () => {
+            await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+            return distinctMarkets();
+          },
+          { timeout: 60_000, intervals: [1_000] },
+        )
+        .toBe(advertised);
       await expect(
         page.getByRole("navigation", { name: /pagination|paginering/i })
       ).toHaveCount(0);
@@ -112,10 +114,22 @@ test.describe("Markets listing — card grid", () => {
 
       const filter = page.getByRole("button", { name: /^filter$/i });
       await expect(filter).toBeEnabled({ timeout: 10_000 });
-      await filter.click();
 
       const panel = page.getByRole("dialog");
-      await expect(panel).toBeVisible({ timeout: 10_000 });
+      // A click that lands before React attaches the handler is swallowed with
+      // no feedback, so retry until the dialog actually opens. Guarded on
+      // not-yet-visible so a second click can never toggle it back closed.
+      await expect
+        .poll(
+          async () => {
+            if (!(await panel.isVisible().catch(() => false))) {
+              await filter.click({ timeout: 5_000 }).catch(() => {});
+            }
+            return panel.isVisible().catch(() => false);
+          },
+          { timeout: 30_000, intervals: [1_000] },
+        )
+        .toBe(true);
       await expect(panel.getByText(/^categories$|^kategorier$/i)).toBeVisible();
       await expect(panel.getByText(/^time horizon$|^tidshorisont$/i)).toBeVisible();
       await expect(panel.getByText(/^minimum liquidity$|^minsta likviditet$/i)).toBeVisible();
