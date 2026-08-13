@@ -35,17 +35,24 @@ test.describe("Accessibility (a11y) tests", () => {
   });
 
   test("links have descriptive text or aria-label", async ({ page }) => {
-    // KNOWN APP BUG: the market-card overlay <a> on the home grid has neither
-    // text nor aria-label (href only), so this fails. Tracked as a real a11y
-    // bug — un-fixme once the overlay link gets an aria-label.
-    test.fixme(true, "Market-card overlay links lack text/aria-label (a11y bug — see findings)");
     await page.goto("/");
-    const links = await page.locator("a").all();
-    for (const link of links) {
-      const text = await link.textContent();
-      const ariaLabel = await link.getAttribute("aria-label");
-      expect(text?.trim() || ariaLabel).toBeTruthy();
-    }
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 15_000 });
+
+    // Only links that are actually IN the accessibility tree need a name.
+    // MarketCard renders a full-card "stretched link" overlay with
+    // `aria-hidden="true"` + `tabIndex={-1}` — the correct pattern: the card's
+    // real, named title link is what screen readers and keyboards get, and the
+    // overlay exists purely for mouse/touch. Requiring a name on it would push
+    // the app to announce every card twice. This previously read as an app bug
+    // and had the test fixme'd.
+    const unnamed = await page.locator("a").evaluateAll((links) =>
+      links
+        .filter((a) => a.getAttribute("aria-hidden") !== "true" && a.getAttribute("tabindex") !== "-1")
+        .filter((a) => !(a.textContent ?? "").trim() && !a.getAttribute("aria-label") && !a.getAttribute("title"))
+        .map((a) => a.getAttribute("href") ?? "(no href)"),
+    );
+
+    expect(unnamed, `links exposed to assistive tech with no accessible name`).toEqual([]);
   });
 
   test("text has readable font sizes", async ({ page }) => {

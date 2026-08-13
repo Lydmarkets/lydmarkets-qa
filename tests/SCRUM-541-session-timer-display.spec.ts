@@ -1,11 +1,5 @@
 import { test, expect } from "../fixtures/base";
-import { isAuthenticated } from "../helpers/is-authenticated";
 import { SESSION_TIMER_REGEX, openUserMenu } from "../helpers/user-menu";
-
-const IS_BOT_BUILD =
-  !!process.env.BOT_BUILD ||
-  !process.env.BASE_URL ||
-  /web-bot/.test(process.env.BASE_URL ?? "");
 
 /**
  * SCRUM-541: Session timer — persistent, non-dismissible on all screens.
@@ -16,16 +10,19 @@ const IS_BOT_BUILD =
  * The SessionTimer component still renders with `role="timer"` and
  * `aria-label="Session time: ..."` — it just isn't inside `<header>` /
  * `[role="banner"]` anymore.
+ *
+ * The session comes from `auth.setup.ts`, which probes it against a live
+ * auth-gated request and re-registers when the server has force-ended it — so
+ * these tests assert outright instead of skipping on a missing session.
  */
 
-// `/settings` is a route group without its own page.tsx — only nested
-// subpages exist (`/settings/privacy`). Hitting `/settings` returns 404.
-// Use `/settings/privacy` to cover the settings area.
+// The `/settings` route family was removed (404). The account surface it used
+// to cover now lives at /profile.
 const AUTHENTICATED_PAGES = [
   { path: "/markets", name: "Markets" },
   { path: "/portfolio", name: "Portfolio" },
   { path: "/wallet", name: "Wallet" },
-  { path: "/settings/privacy", name: "Settings" },
+  { path: "/profile", name: "Profile" },
 ];
 
 test.use({ storageState: "playwright/.auth/user.json" });
@@ -36,11 +33,6 @@ test.describe("SCRUM-541: Session timer display", () => {
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      if (!(await isAuthenticated(page))) {
-        test.skip(true, "Requires authenticated session — skipping");
-        return;
-      }
-
       await openUserMenu(page);
       await expect(
         page.getByText(SESSION_TIMER_REGEX).first()
@@ -53,15 +45,8 @@ test.describe("SCRUM-541: Session timer display", () => {
       `session timer is reachable from the UserMenu on ${name} page (${path})`,
       { tag: ["@regression", "@compliance"] },
       async ({ page }) => {
-        test.skip(
-          IS_BOT_BUILD && path.startsWith("/settings"),
-          "/settings* returns 404 on the bot build",
-        );
         await page.goto(path);
-        if (!(await isAuthenticated(page))) {
-          test.skip(true, "Requires authenticated session — skipping");
-          return;
-        }
+        await expect(page).not.toHaveURL(/\/login/);
 
         await openUserMenu(page);
         await expect(
@@ -77,21 +62,7 @@ test.describe("SCRUM-541: Session timer display", () => {
     async ({ page }) => {
       test.setTimeout(120_000);
       await page.goto("/markets");
-      if (!(await isAuthenticated(page))) {
-        test.skip(true, "Requires authenticated session — skipping");
-        return;
-      }
-
-      // Guard against a stale session: if the sign-in form is shown, the
-      // storageState has expired — skip rather than fail.
-      const onSignIn = await page
-        .getByRole("button", { name: /sign in with email/i })
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-      if (onSignIn) {
-        test.skip(true, "Stale session — sign-in form shown");
-        return;
-      }
+      await expect(page).not.toHaveURL(/\/login/);
 
       await openUserMenu(page);
       const timerEl = page.getByText(SESSION_TIMER_REGEX).first();
@@ -114,11 +85,6 @@ test.describe("SCRUM-541: Session timer display", () => {
     { tag: ["@regression", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      if (!(await isAuthenticated(page))) {
-        test.skip(true, "Requires authenticated session — skipping");
-        return;
-      }
-
       await openUserMenu(page);
       const timerEl = page.getByText(SESSION_TIMER_REGEX).first();
       await expect(timerEl).toBeVisible({ timeout: 5_000 });

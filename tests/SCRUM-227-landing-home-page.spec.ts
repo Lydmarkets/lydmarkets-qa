@@ -1,13 +1,5 @@
 import { test, expect } from "../fixtures/base";
 import { openUserMenu } from "../helpers/user-menu";
-import { hasAuthSession } from "../helpers/has-auth";
-
-// The bot legislation build has no `/settings` route family (it 404s; account
-// management lives at `/profile`). Gate settings-specific assertions on it.
-const IS_BOT_BUILD =
-  !!process.env.BOT_BUILD ||
-  !process.env.BASE_URL ||
-  /web-bot/.test(process.env.BASE_URL ?? "");
 
 // The bot build intermittently bounces a valid session to /login on the first
 // hit of a protected route (server-side session validation flakes under the
@@ -47,15 +39,16 @@ test.describe("SCRUM-227 — Landing / home page (Kalshi redesign, SCRUM-797)", 
     await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
   });
 
-  test("root `/` renders the editorial masthead headline", async ({ page }) => {
-    test.skip(
-      true,
-      "Bot build home page has no editorial masthead: there is no <h1> (or any " +
-        "heading above level 3) and no home-masthead-desktop test id. The hero is " +
-        "a role=region named after the featured market question instead. Reported " +
-        "as a suspected a11y/design regression rather than test drift."
-    );
+  // The editorial masthead was removed: the featured market question is the
+  // headline now, rendered as the hero landmark's accessible name. (It is a
+  // styled <a> rather than an <h1> — a real a11y gap tracked separately, see
+  // SCRUM-1079-home-layout-regression.spec.ts.)
+  test("root `/` leads with the featured market as its headline", async ({ page }) => {
     await page.goto("/");
+
+    const hero = page.getByRole("region").filter({ hasText: /collective assessment/i }).first();
+    await expect(hero).toBeVisible({ timeout: 25_000 });
+    await expect(hero.getByRole("link").first()).not.toBeEmpty();
   });
 
   test("root `/` renders a featured hero section", async ({ page }) => {
@@ -125,10 +118,6 @@ test.describe("SCRUM-227 — Landing / home page (Kalshi redesign, SCRUM-797)", 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
 
-    test.beforeEach(({}, testInfo) => {
-      if (!hasAuthSession()) testInfo.skip();
-    });
-
     test("authenticated user visiting `/` stays on `/` and sees the markets page", async ({
       page,
     }) => {
@@ -138,10 +127,10 @@ test.describe("SCRUM-227 — Landing / home page (Kalshi redesign, SCRUM-797)", 
       expect(page.url()).not.toMatch(/\/onboarding/);
     });
 
-    test("authenticated /settings route is accessible without regression", async ({ page }) => {
-      test.skip(IS_BOT_BUILD, "/settings returns 404 on the bot build (account mgmt is at /profile)");
-      await page.goto("/settings");
-      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+    // Account management moved off the removed /settings route onto /profile.
+    test("authenticated /profile route is accessible without regression", async ({ page }) => {
+      await gotoAuthed(page, "/profile");
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 25000 });
       expect(page.url()).not.toMatch(/\/login/);
     });
 

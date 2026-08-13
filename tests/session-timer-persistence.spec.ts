@@ -1,60 +1,34 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
-import { hasAuthSession } from "../helpers/has-auth";
+import { SESSION_TIMER_REGEX, openUserMenu } from "../helpers/user-menu";
 
 test.describe("Session timer — persistence across navigation", () => {
   test.use({ storageState: "playwright/.auth/user.json" });
-
-  test.beforeEach(({}, testInfo) => {
-    if (!hasAuthSession()) testInfo.skip();
-  });
 
   test(
     "session timer persists from markets to portfolio",
     { tag: ["@critical"] },
     async ({ page }) => {
+      // SCRUM-1090 moved the timer into the UserMenu drawer and changed the
+      // format from `HH:MM:SS` to `"X min"` / `"Y tim X min"` — see
+      // SESSION_TIMER_REGEX.
       await page.goto("/");
       await dismissLimitsDialog(page);
+      await expect(page).not.toHaveURL(/\/login/);
 
-      if (page.url().includes("/login")) {
-        test.skip(true, "Session expired");
-        return;
-      }
+      await openUserMenu(page);
+      const timer = page.getByText(SESSION_TIMER_REGEX).first();
+      await expect(timer).toBeVisible({ timeout: 10_000 });
+      expect(await timer.textContent()).toMatch(SESSION_TIMER_REGEX);
 
-      // Check timer is visible on markets page
-      const timer = page.getByRole("timer");
-      const timerAlt = page.getByText(/\d{2}:\d{2}:\d{2}/).first();
-
-      const hasTimer = await timer
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-      const hasTimerAlt = await timerAlt
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      if (!hasTimer && !hasTimerAlt) {
-        test.skip(true, "Session timer not visible — may require fresh login");
-        return;
-      }
-
-      // Read timer value on first page
-      const timerEl = hasTimer ? timer : timerAlt;
-      const timeOnMarkets = await timerEl.textContent();
-      expect(timeOnMarkets).toMatch(/\d{2}:\d{2}:\d{2}/);
-
-      // Navigate to portfolio
       await page.goto("/portfolio");
       await dismissLimitsDialog(page);
+      await expect(page).not.toHaveURL(/\/login/);
 
-      // Timer should still be visible on portfolio page
-      const timerAfterNav = hasTimer
-        ? page.getByRole("timer")
-        : page.getByText(/\d{2}:\d{2}:\d{2}/).first();
-
-      await expect(timerAfterNav).toBeVisible({ timeout: 5_000 });
-
-      const timeOnPortfolio = await timerAfterNav.textContent();
-      expect(timeOnPortfolio).toMatch(/\d{2}:\d{2}:\d{2}/);
+      await openUserMenu(page);
+      const timerAfterNav = page.getByText(SESSION_TIMER_REGEX).first();
+      await expect(timerAfterNav).toBeVisible({ timeout: 10_000 });
+      expect(await timerAfterNav.textContent()).toMatch(SESSION_TIMER_REGEX);
     },
   );
 });

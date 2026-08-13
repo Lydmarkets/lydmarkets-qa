@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 test.describe("Compliance — responsible gambling visibility", () => {
   test(
     "nav bar has 18+ responsible gambling link",
@@ -16,18 +15,17 @@ test.describe("Compliance — responsible gambling visibility", () => {
   );
 
   test(
-    "game rules page mentions Stodlinjen helpline number",
+    "game rules page points players at the gambling helpline",
     { tag: ["@compliance"] },
     async ({ page }) => {
-      // Bot build scrubs real support organisations (Stödlinjen → "Chatterly").
-      test.skip(IS_BOT_BUILD, "Bot build scrubs Stödlinjen — staging-only assertion");
-
       await page.goto("/game-rules");
       await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
 
-      // Swedish: "ring Stödlinjen 020-819 100"
+      // The responsible-gambling section must name the helpline to call. The
+      // licensed Swedish build says "ring Stödlinjen 020-819 100"; the bot
+      // legislation build scrubs real support organisations to "Chatterly".
       await expect(
-        page.getByText(/stödlinjen|020-819/i).first(),
+        page.getByText(/stödlinjen|020-819|chatterly/i).first(),
       ).toBeVisible({ timeout: 5_000 });
     },
   );

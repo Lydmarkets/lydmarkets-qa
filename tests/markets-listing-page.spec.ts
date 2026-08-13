@@ -59,16 +59,20 @@ test.describe("Markets listing page (/markets)", () => {
   );
 
   test(
-    "/markets?page=2 loads page two of the listing",
+    "/markets ignores a stale ?page= query instead of rendering an empty listing",
     { tag: ["@regression"] },
     async ({ page }) => {
-      test.skip(
-        true,
-        "Bot build /markets has no pagination: ?page=2 renders the same single " +
-          "page and there is no 'page 2 of N' indicator. Reported as a missing " +
-          "feature on this build, not test drift."
-      );
-      await page.goto("/markets?page=2");
+      // There is no pagination any more — every market is on one page. A
+      // bookmarked or crawler-supplied `?page=2` must therefore still serve the
+      // full listing rather than 404ing or rendering nothing.
+      const response = await page.goto("/markets?page=2");
+      expect(response?.status()).toBe(200);
+      await expect(
+        page.getByText(/\d+\s+markets/i).first()
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.locator('main a[href*="/markets/"]').first()
+      ).toBeVisible({ timeout: 10_000 });
     }
   );
 

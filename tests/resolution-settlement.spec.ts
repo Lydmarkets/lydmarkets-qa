@@ -1,90 +1,44 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
-import { hasAuthSession } from "../helpers/has-auth";
 
 test.describe("Resolution & Settlement", () => {
   // ── Unauthenticated: resolved market detail page ───────────────────
 
+  // COVERAGE GAP — the post-resolution UI (outcome badge, trading disabled) is
+  // NOT covered, and cannot be from here:
+  //   * the environment holds no resolved markets (28/28 ACTIVE), so the old
+  //     test skipped every single night waiting for data that never arrives;
+  //   * the detail page renders the market server-side and only client-fetches
+  //     price-history / book-depth / price, so `page.route` cannot inject a
+  //     resolved state either.
+  // Mocking a RESOLVED market into the listing was tried and rejected: the API
+  // never serves resolved markets in the list, so asserting on that path would
+  // test behaviour the product does not implement and report a false bug.
+  // To close this properly, seed one resolved market in the demo data — then
+  // re-add an outcome + trading-disabled assertion here.
+  //
+  // What IS asserted below is the pre-resolution half of the same contract: a
+  // market must state how and when it settles before anyone trades it.
   test(
-    "resolved market displays outcome and disables trading",
+    "market detail states its settlement terms before trading",
     { tag: ["@smoke", "@critical"] },
     async ({ page }) => {
-      await page.goto("/");
-      // Look for any market card that shows a "Resolved" badge or status
-      const resolvedBadge = page
-        .getByText(/resolved|avgjord|stängd|closed/i)
-        .first();
-      const hasResolved = await resolvedBadge
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
+      await page.goto("/markets");
+      const marketLink = page.locator('main a[href*="/markets/"]').first();
+      await expect(marketLink).toBeVisible({ timeout: 15_000 });
+      await page.goto((await marketLink.getAttribute("href"))!);
 
-      if (!hasResolved) {
-        // Try scrolling to load more markets or check if there's a filter
-        const loadMore = page.getByRole("button", {
-          name: /load more|ladda fler/i,
-        });
-        const hasLoadMore = await loadMore
-          .isVisible({ timeout: 3_000 })
-          .catch(() => false);
+      await expect(page.locator("main").first()).toBeVisible({ timeout: 15_000 });
 
-        if (hasLoadMore) {
-          await loadMore.click();
-          await page.waitForTimeout(2_000);
-        }
-
-        const hasResolvedAfterLoad = await resolvedBadge
-          .isVisible({ timeout: 3_000 })
-          .catch(() => false);
-
-        if (!hasResolvedAfterLoad) {
-          test.skip(
-            true,
-            "No resolved markets visible on homepage — staging may not have any",
-          );
-          return;
-        }
-      }
-
-      // Find and navigate to a resolved market
-      const resolvedLink = page
-        .locator('a[href*="/markets/"]')
-        .filter({ hasText: /resolved|avgjord/i })
-        .first();
-      const hasLink = await resolvedLink
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-
-      if (!hasLink) {
-        test.skip(
-          true,
-          "Cannot find a clickable link to a resolved market",
-        );
-        return;
-      }
-
-      const href = await resolvedLink.getAttribute("href");
-      await page.goto(href!);
-      // Verify the resolved market page shows the outcome
-      await expect(page.locator("main").first()).toBeVisible({
-        timeout: 10_000,
-      });
-
-      // Should show resolved status indicator
+      // Close date is on the hero, and the "About the market" list carries the
+      // resolution date plus the source that will decide the outcome.
       await expect(
-        page.getByText(/resolved|avgjord|settled/i).first(),
-      ).toBeVisible({ timeout: 5_000 });
-
-      // Trading buttons (Buy Yes / Buy No) should be hidden or disabled
-      const buyYes = page.getByRole("button", { name: /buy yes/i });
-      const isBuyYesVisible = await buyYes
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-
-      if (isBuyYesVisible) {
-        // If visible, it should be disabled
-        await expect(buyYes).toBeDisabled();
-      }
-      // If not visible at all, that's also correct (hidden)
+        page.getByText(/closes\s+\d|stänger\s+\d/i).first(),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText(/^resolves$|^avgörs$/i).first()).toBeVisible();
+      await expect(
+        page.getByText(/^resolution source$|^verification source$/i).first(),
+      ).toBeVisible();
     },
   );
 
@@ -92,10 +46,6 @@ test.describe("Resolution & Settlement", () => {
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
-
-    test.beforeEach(({}, testInfo) => {
-      if (!hasAuthSession()) testInfo.skip();
-    });
 
     test(
       "order history tab in /portfolio loads and shows order history or empty state",
@@ -106,10 +56,7 @@ test.describe("Resolution & Settlement", () => {
         await dismissLimitsDialog(page);
 
         // May redirect to /login if session expired
-        if (page.url().includes("/login")) {
-          test.skip(true, "Session expired — redirected to login");
-          return;
-        }
+        await expect(page).not.toHaveURL(/\/login/);
 
         await expect(page.locator("main").first()).toBeVisible({
           timeout: 10_000,
@@ -145,10 +92,7 @@ test.describe("Resolution & Settlement", () => {
         await page.goto("/portfolio");
         await dismissLimitsDialog(page);
 
-        if (page.url().includes("/login")) {
-          test.skip(true, "Session expired — redirected to login");
-          return;
-        }
+        await expect(page).not.toHaveURL(/\/login/);
 
         await expect(page.locator("main").first()).toBeVisible({
           timeout: 10_000,

@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { isAuthenticated } from "../helpers/is-authenticated";
 import { SESSION_TIMER_REGEX, openUserMenu } from "../helpers/user-menu";
 /**
  * SCRUM-546: Automatic session logout on time limit expiry.
@@ -24,10 +23,7 @@ test.describe("SCRUM-546: Automatic session logout on time limit", () => {
     { tag: ["@smoke", "@compliance"] },
     async ({ page }) => {
       await page.goto("/markets");
-      if (!(await isAuthenticated(page))) {
-        test.skip(true, "Requires authenticated session — skipping");
-        return;
-      }
+    await expect(page).not.toHaveURL(/\/login/);
 
       // SCRUM-1090 relocated the timer into the UserMenu drawer. The new
       // minute-level format is "X min" / "Y tim X min".

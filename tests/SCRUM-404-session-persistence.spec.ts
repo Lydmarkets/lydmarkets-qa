@@ -1,11 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { openUserMenu } from "../helpers/user-menu";
 
-const IS_BOT_BUILD =
-  !!process.env.BOT_BUILD ||
-  !process.env.BASE_URL ||
-  /web-bot/.test(process.env.BASE_URL ?? "");
-
 test.describe("SCRUM-404: Session persistence — auth survives page reload and token refresh", () => {
   // NOTE: Tests that require an authenticated session are marked with a comment explaining
   // they need a storageState fixture. The test structure is complete — a future sprint will
@@ -26,9 +21,10 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
     ).toBeVisible();
   });
 
-  test("protected route /settings redirects to /login when unauthenticated", async ({ page }) => {
-    test.skip(IS_BOT_BUILD, "/settings returns 404 on bot build, no redirect");
-    await page.goto("/settings");
+  // /settings was removed and now 404s — it has no auth guard left to assert.
+  // /profile is the protected account route on this build.
+  test("protected route /profile redirects to /login when unauthenticated", async ({ page }) => {
+    await page.goto("/profile");
     await page.waitForURL(/\/login/, { timeout: 10000 });
     await expect(page).toHaveURL(/\/login/);
   });

@@ -1,7 +1,6 @@
 import { test, expect } from "../fixtures/base";
-import { isAuthenticated } from "../helpers/is-authenticated";
 import { IS_BOT_BUILD } from "../helpers/is-bot-build";
-import { openUserMenu, getMenuTrigger } from "../helpers/user-menu";
+import { openUserMenu, getMenuTrigger, SESSION_TIMER_REGEX } from "../helpers/user-menu";
 
 const MOBILE_VIEWPORT = { width: 393, height: 851 };
 
@@ -64,10 +63,7 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
     // button. Until then the drawer exposes account management via My Profile,
     // which is the existing route for account settings.
     await page.goto("/");
-    if (!(await isAuthenticated(page))) {
-      test.skip(true, "Requires authenticated session");
-      return;
-    }
+    await expect(page).not.toHaveURL(/\/login/);
 
     await openUserMenu(page);
 
@@ -78,10 +74,7 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
 
   test("UserMenu drawer shows the theme toggle", async ({ page }) => {
     await page.goto("/");
-    if (!(await isAuthenticated(page))) {
-      test.skip(true, "Requires authenticated session");
-      return;
-    }
+    await expect(page).not.toHaveURL(/\/login/);
 
     await openUserMenu(page);
 
@@ -94,25 +87,22 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
     ).toBeVisible({ timeout: 5_000 });
   });
 
-  // The language toggle was dropped from the drawer on the English-only bot
-  // build. Still asserted on the bilingual staging build.
-  test("UserMenu drawer shows the language toggle", async ({ page }) => {
-    test.skip(IS_BOT_BUILD, "English-only bot build ships no language toggle");
+  // A single-language build must not advertise a language switch it cannot
+  // honour. The bilingual build ships one; the English-only bot build must not.
+  test("UserMenu drawer's language toggle matches the build's locale support", async ({
+    page,
+  }) => {
     await page.goto("/");
-    if (!(await isAuthenticated(page))) {
-      test.skip(true, "Requires authenticated session");
-      return;
-    }
+    await expect(page).not.toHaveURL(/\/login/);
 
     await openUserMenu(page);
 
     // Language toggle button is composed as "<icon> <label> <state>",
     // e.g. "Språk SV" / "Language EN" (nav.languageLabel + locale code).
-    await expect(
-      page.getByRole("button", {
-        name: /(språk|language)\s+(en|sv)/i,
-      })
-    ).toBeVisible({ timeout: 5_000 });
+    const languageToggle = page.getByRole("button", {
+      name: /(språk|language)\s+(en|sv)/i,
+    });
+    await expect(languageToggle).toHaveCount(IS_BOT_BUILD ? 0 : 1);
   });
 
   test("UserMenu drawer surfaces the session timer and balance for authenticated users", async ({
@@ -122,17 +112,18 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
     // drawer header. A Logout button is planned in SCRUM-1092 — add a test
     // for it once that ticket ships.
     await page.goto("/");
-    if (!(await isAuthenticated(page))) {
-      test.skip(true, "Requires authenticated session");
-      return;
-    }
+    await expect(page).not.toHaveURL(/\/login/);
 
     await openUserMenu(page);
 
-    // Session timer format: "0 min" / "5 min" / "43 mins" / "1 tim 23 min".
+    // Session timer format: "0 min" / "5 min" / "43 mins" / "1 tim 23 min" /
+    // "22 hrs 4 mins". The anchored `^\d+\s*(min|tim)` used here before could
+    // not match the hours form ("22 hrs …" starts with a number followed by
+    // "hrs"), so which node it matched depended on render timing — that was the
+    // flake. Use the shared, unanchored regex.
     await expect(
-      page.getByText(/^\d+\s*(min|tim)/i).first()
-    ).toBeVisible({ timeout: 5_000 });
+      page.getByText(SESSION_TIMER_REGEX).first()
+    ).toBeVisible({ timeout: 10_000 });
     // The balance (in €) is privacy-masked behind a "Show balance" toggle in
     // the rail; its presence proves the balance is reachable on this screen.
     await expect(
@@ -146,10 +137,7 @@ test.describe("SCRUM-408: Mobile navigation — authenticated drawer", () => {
 
   test("My Profile link in drawer navigates to /profile", async ({ page }) => {
     await page.goto("/");
-    if (!(await isAuthenticated(page))) {
-      test.skip(true, "Requires authenticated session");
-      return;
-    }
+    await expect(page).not.toHaveURL(/\/login/);
 
     await openUserMenu(page);
 

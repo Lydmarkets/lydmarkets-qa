@@ -51,15 +51,14 @@ test.describe("SCRUM-402: Search combobox and /markets category filter bar", () 
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("/markets sort controls include Volume / Newest / Traders toggles", async ({ page }) => {
-    test.skip(
-      true,
-      "Bot build /markets has no [aria-label=Sortering] toggle group with " +
-        "Volume/Newest/Traders buttons. Sorting is a single 'Newest first' " +
-        "dropdown button next to a 'Filter' button. Reported as a design " +
-        "divergence, not test drift."
-    );
+  test("/markets exposes sort and filter controls above the listing", async ({ page }) => {
+    // The old [aria-label="Sortering"] Volume/Newest/Traders toggle group was
+    // replaced by a sort control naming the active order plus a Filter dialog.
     await page.goto("/markets");
+    await expect(
+      page.getByRole("button", { name: /newest first|oldest first|volume|senaste först/i }).first()
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: /^filter$/i })).toBeVisible();
   });
 
   test("category navigation includes one link per category (path-based)", async ({
