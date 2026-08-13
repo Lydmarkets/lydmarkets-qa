@@ -5,34 +5,36 @@ import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 test.describe("Compliance spec — E2E coverage", () => {
   // ── Unauthenticated redirect tests ──────────────────────────────────
 
+  // These use the plain `page` fixture, NOT a hand-rolled `browser.newContext()`.
+  // The tests outside the "authenticated" describe below already run as a guest,
+  // so the extra context was redundant — and it skipped fixtures/base, losing the
+  // `locale=en` cookie and the seeded cookie consent. That is what made
+  // "publicly accessible" the one hard failure on the VPS run: no seeded consent
+  // means the banner renders and the page settles slower, and 10s was not enough
+  // for the h1 under 2-worker load.
   test(
     "/responsible-gambling is publicly accessible",
     { tag: ["@compliance"] },
-    async ({ browser }) => {
-      const context = await browser.newContext();
-      const page = await context.newPage();
+    async ({ page }) => {
       await page.goto("/responsible-gambling");
       // Public page — should NOT redirect to login
-      await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
+      await expect(page).not.toHaveURL(/\/login/);
+      await expect(page.locator("main").last()).toBeVisible({ timeout: 20_000 });
       await expect(
         page.getByRole("heading", { name: /responsible gambling|ansvarsfullt spelande/i, level: 1 }),
-      ).toBeVisible();
-      await context.close();
+      ).toBeVisible({ timeout: 20_000 });
     },
   );
 
   test(
     "legacy /settings/self-exclusion route is gone (404)",
     { tag: ["@compliance"] },
-    async ({ browser }) => {
+    async ({ page }) => {
       // The self-exclusion tool was promoted out of the (now removed) /settings
       // area to a top-level /self-exclusion route. The old nested path returns
       // 404 rather than redirecting to login.
-      const context = await browser.newContext();
-      const page = await context.newPage();
       const response = await page.goto("/settings/self-exclusion");
       expect(response?.status()).toBe(404);
-      await context.close();
     },
   );
 
