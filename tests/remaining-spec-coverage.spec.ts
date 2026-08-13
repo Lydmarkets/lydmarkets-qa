@@ -32,10 +32,11 @@ test.describe("Remaining spec coverage", () => {
       // (<article>) plus a YES price button.
       await page.goto("/");
       // The home markets grid is data-fetched and renders slowly under load;
-      // give it generous headroom so it doesn't flake on the nightly.
+      // give it generous headroom so it doesn't flake on the nightly. 25s was
+      // still not enough at 2 workers — measured on the VPS.
       await expect(
         page.getByRole("article").first()
-      ).toBeVisible({ timeout: 25_000 });
+      ).toBeVisible({ timeout: 40_000 });
       await expect(
         page.getByRole("button", { name: /YES|JA/ }).first()
       ).toBeVisible({ timeout: 25_000 });

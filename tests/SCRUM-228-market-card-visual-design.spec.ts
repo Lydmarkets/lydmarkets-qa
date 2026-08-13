@@ -16,10 +16,14 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
   test("home page renders at least one featured-market-card", async ({ page }) => {
     await page.goto("/");
     // Bot build dropped the data-testid; grid cards render as <article>.
+    //
+    // `toBeVisible()` followed by a separate `count()` is NOT atomic: the grid
+    // re-renders as its data settles, and a count taken after the visibility
+    // check has already returned 0 on the nightly while the assertion above
+    // passed. `toHaveCount` retries, so it can't tear like that.
     const cards = page.getByRole("article");
-    await expect(cards.first()).toBeVisible({ timeout: 10000 });
-    const count = await cards.count();
-    expect(count).toBeGreaterThan(0);
+    await expect(cards).not.toHaveCount(0, { timeout: 30_000 });
+    await expect(cards.first()).toBeVisible();
   });
 
   test("market card shows a Yes probability pill button", async ({ page }) => {
