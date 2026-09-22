@@ -3,7 +3,9 @@ set -euo pipefail
 
 # ── Config ──────────────────────────────────────────────────────────
 PROJECT_DIR="/opt/lydmarkets-qa"
-DISCORD_WEBHOOK="https://discordapp.com/api/webhooks/1486391192517087403/bNr9mIfzS_hJkzN0NofmRcYSvEHkON58m5mLyvsJG8Chd1Y-lhuVupR3jj8HrgYcKnWQ"
+# Secrets (DISCORD_WEBHOOK) live in the gitignored .env
+[[ -f "$PROJECT_DIR/.env" ]] && set -a && source "$PROJECT_DIR/.env" && set +a
+DISCORD_WEBHOOK="${DISCORD_WEBHOOK:?DISCORD_WEBHOOK not set — add it to $PROJECT_DIR/.env}"
 BASE_URL="${BASE_URL:-https://web-staging-71a7.up.railway.app}"
 K6="$(command -v k6)"
 LOG_FILE="$PROJECT_DIR/results/nightly-load-$(date +%F).log"

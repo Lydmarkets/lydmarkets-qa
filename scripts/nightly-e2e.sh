@@ -3,7 +3,6 @@ set -euo pipefail
 
 # ── Config ──────────────────────────────────────────────────────────
 PROJECT_DIR="/opt/lydmarkets-qa"
-DISCORD_WEBHOOK="https://discordapp.com/api/webhooks/1486391192517087403/bNr9mIfzS_hJkzN0NofmRcYSvEHkON58m5mLyvsJG8Chd1Y-lhuVupR3jj8HrgYcKnWQ"
 BASE_URL="${BASE_URL:-https://web-staging-71a7.up.railway.app}"
 LOG_FILE="$PROJECT_DIR/results/nightly-$(date +%F).log"
 
@@ -12,6 +11,7 @@ export PATH="$HOME/.bun/bin:$PATH"
 export CI=1
 # Source secrets (E2E_TEST_SECRET for authenticated tests)
 [[ -f "$PROJECT_DIR/.env" ]] && set -a && source "$PROJECT_DIR/.env" && set +a
+DISCORD_WEBHOOK="${DISCORD_WEBHOOK:?DISCORD_WEBHOOK not set — add it to $PROJECT_DIR/.env}"
 cd "$PROJECT_DIR"
 mkdir -p results
 git pull --ff-only origin main 2>/dev/null || true
