@@ -50,9 +50,12 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   });
 
   test("public market detail page does not redirect unauthenticated users", async ({ page }) => {
-    await page.goto("/");
+    // Source the link from /markets rather than the home page: the home grid
+    // renders last on the bot build and left this test flaky. What is under
+    // test is the market *detail* page, so any market link will do.
+    await page.goto("/markets");
     const marketLink = page.locator('main a[href*="/markets/"]:visible').first();
-    await expect(marketLink).toBeVisible({ timeout: 25_000 });
+    await marketLink.waitFor({ state: "visible", timeout: 30_000 });
     const href = await marketLink.getAttribute("href");
     await page.goto(href!);
     await expect(page).not.toHaveURL(/\/login/);
@@ -69,9 +72,12 @@ test.describe("SCRUM-404: Session persistence — auth survives page reload and 
   });
 
   test("reloading a market detail page keeps user on that page", async ({ page }) => {
-    await page.goto("/");
+    // Source the link from /markets rather than the home page: the home grid
+    // renders last on the bot build and left this test flaky. What is under
+    // test is the market *detail* page, so any market link will do.
+    await page.goto("/markets");
     const marketLink = page.locator('main a[href*="/markets/"]:visible').first();
-    await expect(marketLink).toBeVisible({ timeout: 25_000 });
+    await marketLink.waitFor({ state: "visible", timeout: 30_000 });
     const href = await marketLink.getAttribute("href");
     await page.goto(href!);
     await expect(page.locator("main").first()).toBeVisible({ timeout: 20000 });

@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { IS_BOT_BUILD } from "../helpers/is-bot-build";
+import { SELF_EXCLUSION_NAME } from "../helpers/compliance-names";
 
 // SCRUM-1079 — Home layout regression suite.
 //
@@ -140,7 +141,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     }
   });
 
-  test("responsible-gambling tools strip exposes the Spelpaus chip", async ({ page }) => {
+  test("responsible-gambling tools strip exposes the self-exclusion chip", async ({ page }) => {
     await page.goto("/");
     // Unauthenticated visitors get the SV locale by default, so the
     // complementary landmark's aria-label is "Spelansvarsverktyg".
@@ -149,19 +150,19 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     });
     await expect(rg).toBeVisible({ timeout: 25_000 });
 
-    // The Spelpaus chip is the one constant across builds — on the bot build
-    // it renders as "Bot Spelpaus" and is the *only* chip; the Spelgränser and
-    // Självtest chips ship on the Swedish build.
-    await expect(rg.getByText(/spelpaus/i).first()).toBeVisible();
+    // The self-exclusion chip is the one constant across builds — on the bot
+    // build it is the *only* chip; the Spelgränser and Självtest chips ship on
+    // the Swedish build.
+    await expect(rg.getByText(SELF_EXCLUSION_NAME).first()).toBeVisible();
     if (!IS_BOT_BUILD) {
       await expect(rg.getByText("Spelgränser", { exact: true })).toBeVisible();
       await expect(rg.getByText("Självtest", { exact: true })).toBeVisible();
     }
 
-    // Spelpaus chip should point to the local /self-exclusion deep-link
-    // (which itself links out to spelpaus.se for the national register).
-    const spelpaus = rg.getByRole("link", { name: /spelpaus/i }).first();
-    await expect(spelpaus).toHaveAttribute("href", /\/self-exclusion|spelpaus\.se/);
+    // The chip points at the local /self-exclusion deep-link, which itself
+    // links out to the national register.
+    const chip = rg.getByRole("link", { name: SELF_EXCLUSION_NAME }).first();
+    await expect(chip).toHaveAttribute("href", /\/self-exclusion|spelpaus\.se/);
   });
 
   test("footer renders copyright and the canonical nav links", async ({ page }) => {

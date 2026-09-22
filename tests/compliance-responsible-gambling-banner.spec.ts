@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base";
+import { HELPLINE_NAME, SELF_EXCLUSION_NAME } from "../helpers/compliance-names";
 test.describe("Compliance — responsible gambling visibility", () => {
   test(
     "nav bar has 18+ responsible gambling link",
@@ -21,17 +22,15 @@ test.describe("Compliance — responsible gambling visibility", () => {
       await page.goto("/game-rules");
       await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
 
-      // The responsible-gambling section must name the helpline to call. The
-      // licensed Swedish build says "ring Stödlinjen 020-819 100"; the bot
-      // legislation build scrubs real support organisations to "Chatterly".
+      // The responsible-gambling section must name the helpline to call.
       await expect(
-        page.getByText(/stödlinjen|020-819|chatterly/i).first(),
+        page.getByText(HELPLINE_NAME).first(),
       ).toBeVisible({ timeout: 5_000 });
     },
   );
 
   test(
-    "game rules page mentions Spelpaus",
+    "game rules page names the self-exclusion register",
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/game-rules");
@@ -39,7 +38,7 @@ test.describe("Compliance — responsible gambling visibility", () => {
 
       // Swedish: "Stänga av dig själv när som helst via Spelpaus.se"
       await expect(
-        page.getByText(/spelpaus/i).first(),
+        page.getByText(SELF_EXCLUSION_NAME).first(),
       ).toBeVisible({ timeout: 5_000 });
     },
   );

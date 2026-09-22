@@ -114,7 +114,10 @@ test.describe("SCRUM-228 — Market card visual design (Kalshi redesign, SCRUM-7
 
   test("market list layout renders cards on a mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 393, height: 851 });
-    await page.goto("/");
+    // /markets, not "/": the home grid is the documented slow spot on the bot
+    // build (see helpers/go-to-market.ts) and made this test flaky. The cards
+    // under test are the same <article> cards either way.
+    await page.goto("/markets");
     await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
     await expect(
       page.getByRole("article").first()

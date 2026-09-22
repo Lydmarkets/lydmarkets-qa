@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
+import { HELPLINE_NAME, SELF_EXCLUSION_NAME } from "../helpers/compliance-names";
 
 test.describe("Account settings — coverage gaps", () => {
   test.use({ storageState: "playwright/.auth/user.json" });
@@ -65,7 +66,7 @@ test.describe("Account settings — coverage gaps", () => {
   // in compliance-spec-coverage.spec.ts. Re-add real tests with the features.
 
   test(
-    "Responsible gambling page shows the helpline and Spelpaus",
+    "Responsible gambling page shows the helpline and self-exclusion register",
     { tag: ["@compliance", "@critical"] },
     async ({ page }) => {
       await page.goto("/responsible-gambling");
@@ -73,15 +74,12 @@ test.describe("Account settings — coverage gaps", () => {
 
       await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
 
-      // Helpline: "Stödlinjen" on the licensed build, scrubbed to "Chatterly"
-      // on the bot legislation build.
       await expect(
-        page.getByText(/stödlinjen|020.819|chatterly/i).first(),
+        page.getByText(HELPLINE_NAME).first(),
       ).toBeVisible({ timeout: 5_000 });
 
-      // Self-exclusion register: "Spelpaus" / "Bot Spelpaus".
       await expect(
-        page.getByText(/spelpaus/i).first(),
+        page.getByText(SELF_EXCLUSION_NAME).first(),
       ).toBeVisible({ timeout: 5_000 });
     },
   );
