@@ -66,7 +66,7 @@ test.describe("Account settings — coverage gaps", () => {
   // in compliance-spec-coverage.spec.ts. Re-add real tests with the features.
 
   test(
-    "Responsible gambling page shows the helpline and Spelpaus",
+    "Responsible gambling page shows the helpline and self-exclusion register",
     { tag: ["@compliance", "@critical"] },
     async ({ page }) => {
       await page.goto("/responsible-gambling");

@@ -141,7 +141,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     }
   });
 
-  test("responsible-gambling tools strip exposes the Spelpaus chip", async ({ page }) => {
+  test("responsible-gambling tools strip exposes the self-exclusion chip", async ({ page }) => {
     await page.goto("/");
     // Unauthenticated visitors get the SV locale by default, so the
     // complementary landmark's aria-label is "Spelansvarsverktyg".
@@ -159,10 +159,10 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
       await expect(rg.getByText("Självtest", { exact: true })).toBeVisible();
     }
 
-    // Spelpaus chip should point to the local /self-exclusion deep-link
-    // (which itself links out to spelpaus.se for the national register).
-    const spelpaus = rg.getByRole("link", { name: /spelpaus/i }).first();
-    await expect(spelpaus).toHaveAttribute("href", /\/self-exclusion|spelpaus\.se/);
+    // The chip points at the local /self-exclusion deep-link, which itself
+    // links out to the national register.
+    const chip = rg.getByRole("link", { name: SELF_EXCLUSION_NAME }).first();
+    await expect(chip).toHaveAttribute("href", /\/self-exclusion|spelpaus\.se/);
   });
 
   test("footer renders copyright and the canonical nav links", async ({ page }) => {

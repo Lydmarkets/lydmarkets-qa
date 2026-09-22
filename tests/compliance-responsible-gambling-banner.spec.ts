@@ -30,7 +30,7 @@ test.describe("Compliance — responsible gambling visibility", () => {
   );
 
   test(
-    "game rules page mentions Spelpaus",
+    "game rules page names the self-exclusion register",
     { tag: ["@compliance"] },
     async ({ page }) => {
       await page.goto("/game-rules");
