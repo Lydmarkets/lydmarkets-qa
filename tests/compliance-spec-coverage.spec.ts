@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { IS_BOT_BUILD } from "../helpers/is-bot-build";
+import { HELPLINE_NAME, INDEFINITE_PERIOD, SELF_EXCLUSION_NAME } from "../helpers/compliance-names";
 
 test.describe("Compliance spec — E2E coverage", () => {
   // ── Unauthenticated redirect tests ──────────────────────────────────
@@ -59,9 +60,7 @@ test.describe("Compliance spec — E2E coverage", () => {
           page.getByRole("heading", { name: /responsible gambling|ansvarsfullt spelande/i, level: 1 }),
         ).toBeVisible({ timeout: 10_000 });
 
-        // Spelpaus survives on the bot build as "Bot Spelpaus"; Stödlinjen is
-        // scrubbed to the fictional "Chatterly", so assert it on staging only.
-        await expect(page.getByText(/spelpaus/i).first()).toBeVisible();
+        await expect(page.getByText(SELF_EXCLUSION_NAME).first()).toBeVisible();
         if (!IS_BOT_BUILD) {
           await expect(page.getByText(/stödlinjen|stodlinjen/i).first()).toBeVisible();
         }
@@ -75,13 +74,13 @@ test.describe("Compliance spec — E2E coverage", () => {
         // The inline 9-question PGSI form was replaced by a link to the
         // helpline-hosted PGSI test — the authoritative version. On the
         // licensed build that is Stödlinjen; the bot legislation build points
-        // its scrubbed "Chatterly" helpline at a lydmarkets.com placeholder.
-        // Either way the help card must offer a working way out to it.
+        // its scrubbed helpline at a lydmarkets.com placeholder. Either way
+        // the help card must offer a working way out to it.
         await page.goto("/responsible-gambling");
         await dismissLimitsDialog(page);
 
         await expect(
-          page.getByRole("heading", { name: /stödlinjen|chatterly/i }).first(),
+          page.getByRole("heading", { name: HELPLINE_NAME }).first(),
         ).toBeVisible({ timeout: 10_000 });
 
         const helpSection = page
@@ -164,7 +163,7 @@ test.describe("Compliance spec — E2E coverage", () => {
           /1 month|1 månad/i,
           /3 months|3 månader/i,
           /6 months|6 månader/i,
-          /indefinite|permanent|tills vidare/i,
+          INDEFINITE_PERIOD,
         ]) {
           await expect(periods.getByRole("option", { name: option })).toHaveCount(1);
         }
