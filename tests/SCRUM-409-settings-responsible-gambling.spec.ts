@@ -1,4 +1,6 @@
 import { test, expect } from "../fixtures/base";
+import { IS_BOT_BUILD } from "../helpers/is-bot-build";
+import { isNotFoundPage } from "../helpers/not-found";
 // SCRUM-409: Settings — responsible gambling limits and account controls
 // Acceptance criteria:
 // 1. Unauthenticated access to /settings redirects to sign-in with return URL
@@ -45,6 +47,11 @@ test.describe("SCRUM-409 — Settings / responsible gambling", () => {
   // user gets the exclusion control.
   test("responsible-gambling controls require sign-in for guests", async ({ page }) => {
     await page.goto("/self-exclusion");
+    if (IS_BOT_BUILD) {
+      // Play-money build: no self-exclusion surface at all (SCRUM-2271).
+      expect(await isNotFoundPage(page)).toBe(true);
+      return;
+    }
 
     await expect(
       page.getByRole("heading", { name: /self-exclusion|självavstängning/i, level: 1 }),
@@ -66,6 +73,10 @@ test.describe("SCRUM-409 — Settings / responsible gambling", () => {
 
     test("authenticated user sees the self-exclusion controls", async ({ page }) => {
       await page.goto("/self-exclusion");
+      if (IS_BOT_BUILD) {
+        expect(await isNotFoundPage(page)).toBe(true);
+        return;
+      }
 
       await expect(
         page.getByRole("heading", { name: /self-exclusion|självavstängning/i, level: 1 }),

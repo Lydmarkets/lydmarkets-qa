@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
+import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 
 test.describe("Wallet & payments — authenticated coverage", () => {
   test.use({ storageState: "playwright/.auth/user.json" });
@@ -148,6 +149,14 @@ test.describe("Wallet & payments — authenticated coverage", () => {
       await expect(page.locator("main").first()).toBeVisible({
         timeout: 10_000,
       });
+
+      if (IS_BOT_BUILD) {
+        // Play-money build: no deposit rail (SCRUM-2293) — /wallet lands on
+        // the transaction history and offers no deposit control.
+        await expect(page).toHaveURL(/\/wallet\/transactions$/);
+        await expect(page.getByRole("button", { name: /^deposit$|^sätt in$/i })).toHaveCount(0);
+        return;
+      }
 
       // Find and click the deposit button
       const depositBtn = page
