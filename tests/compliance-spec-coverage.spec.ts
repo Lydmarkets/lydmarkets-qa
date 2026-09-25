@@ -49,14 +49,14 @@ test.describe("Compliance spec — E2E coverage", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
 
     // ── Play-money build (bot) ─────────────────────────────────────────
-    // A play-money build has no regulated RG surface: /responsible-gambling
-    // is a static page pointing at independent help, and the self-exclusion
-    // and limits routes 404 (SCRUM-2271). The regulated tests below run
-    // against a licensed build only.
+    // A play-money build has no regulated RG page: /responsible-gambling is a
+    // static page pointing at independent help, and /limits 404s
+    // (SCRUM-2271). Bot keeps self-exclusion (SCRUM-2282), so the
+    // self-exclusion tests further down run on every build.
 
     if (IS_BOT_BUILD) {
       test(
-        "responsible gambling page points at independent help, not regulated tools",
+        "responsible gambling page points at independent help and self-exclusion, not limits",
         { tag: ["@compliance"] },
         async ({ page }) => {
           await page.goto("/responsible-gambling");
@@ -68,102 +68,98 @@ test.describe("Compliance spec — E2E coverage", () => {
           for (const host of ["gamblingtherapy.org", "gamblersanonymous.org", "gamcare.org.uk"]) {
             await expect(page.locator(`main a[href*="${host}"]`).first()).toBeVisible();
           }
-          await expect(
-            page.locator('main a[href$="/self-exclusion"], main a[href$="/limits"]'),
-          ).toHaveCount(0);
+          await expect(page.locator('main a[href$="/self-exclusion"]').first()).toBeVisible();
+          await expect(page.locator('main a[href$="/limits"]')).toHaveCount(0);
           await expect(page.locator("main").getByText(/demo helpline|demo self-exclusion/i)).toHaveCount(0);
         },
       );
 
-      for (const route of ["/self-exclusion", "/limits"]) {
-        test(`${route} 404s for a signed-in player`, { tag: ["@compliance"] }, async ({ page }) => {
-          await page.goto(route);
-          expect(await isNotFoundPage(page)).toBe(true);
-        });
-      }
-      return;
+      test("/limits 404s for a signed-in player", { tag: ["@compliance"] }, async ({ page }) => {
+        await page.goto("/limits");
+        expect(await isNotFoundPage(page)).toBe(true);
+      });
     }
 
-    // ── Responsible gambling (public page) ─────────────────────────────
+    if (!IS_BOT_BUILD) {
+      // ── Responsible gambling (public page) ─────────────────────────────
 
-    test(
-      "responsible gambling page shows support organisations",
-      { tag: ["@compliance"] },
-      async ({ page }) => {
-        await page.goto("/responsible-gambling");
-        await dismissLimitsDialog(page);
+      test(
+        "responsible gambling page shows support organisations",
+        { tag: ["@compliance"] },
+        async ({ page }) => {
+          await page.goto("/responsible-gambling");
+          await dismissLimitsDialog(page);
 
-        await expect(
-          page.getByRole("heading", { name: /responsible gambling|ansvarsfullt spelande/i, level: 1 }),
-        ).toBeVisible({ timeout: 10_000 });
+          await expect(
+            page.getByRole("heading", { name: /responsible gambling|ansvarsfullt spelande/i, level: 1 }),
+          ).toBeVisible({ timeout: 10_000 });
 
-        await expect(page.getByText(SELF_EXCLUSION_NAME).first()).toBeVisible();
-        if (!IS_BOT_BUILD) {
+          await expect(page.getByText(SELF_EXCLUSION_NAME).first()).toBeVisible();
           await expect(page.getByText(/stödlinjen|stodlinjen/i).first()).toBeVisible();
-        }
-      },
-    );
+        },
+      );
 
-    test(
-      "responsible gambling page links out to the helpline's self-test",
-      { tag: ["@compliance"] },
-      async ({ page }) => {
-        // The inline 9-question PGSI form was replaced by a link to the
-        // helpline-hosted PGSI test — the authoritative version. On the
-        // licensed build that is Stödlinjen; the bot legislation build points
-        // its scrubbed helpline at a lydmarkets.com placeholder. Either way
-        // the help card must offer a working way out to it.
-        await page.goto("/responsible-gambling");
-        await dismissLimitsDialog(page);
+      test(
+        "responsible gambling page links out to the helpline's self-test",
+        { tag: ["@compliance"] },
+        async ({ page }) => {
+          // The inline 9-question PGSI form was replaced by a link to the
+          // helpline-hosted PGSI test — the authoritative version. On the
+          // licensed build that is Stödlinjen; the bot legislation build points
+          // its scrubbed helpline at a lydmarkets.com placeholder. Either way
+          // the help card must offer a working way out to it.
+          await page.goto("/responsible-gambling");
+          await dismissLimitsDialog(page);
 
-        await expect(
-          page.getByRole("heading", { name: HELPLINE_NAME }).first(),
-        ).toBeVisible({ timeout: 10_000 });
+          await expect(
+            page.getByRole("heading", { name: HELPLINE_NAME }).first(),
+          ).toBeVisible({ timeout: 10_000 });
 
-        const helpSection = page
-          .getByRole("heading", { name: /help and support|hjälp och stöd/i })
-          .locator("..");
-        const externalLink = helpSection.getByRole("link", { name: /stodlinjen\.se|lydmarkets\.com/i });
-        await expect(externalLink.first()).toHaveAttribute("href", /^https?:\/\//);
-      },
-    );
+          const helpSection = page
+            .getByRole("heading", { name: /help and support|hjälp och stöd/i })
+            .locator("..");
+          const externalLink = helpSection.getByRole("link", { name: /stodlinjen\.se|lydmarkets\.com/i });
+          await expect(externalLink.first()).toHaveAttribute("href", /^https?:\/\//);
+        },
+      );
 
-    test(
-      "responsible gambling page shows platform tools linking to the limit controls",
-      { tag: ["@compliance"] },
-      async ({ page }) => {
-        await page.goto("/responsible-gambling");
-        await dismissLimitsDialog(page);
+      test(
+        "responsible gambling page shows platform tools linking to the limit controls",
+        { tag: ["@compliance"] },
+        async ({ page }) => {
+          await page.goto("/responsible-gambling");
+          await dismissLimitsDialog(page);
 
-        await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
+          await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
 
-        // The platform-tools cards used to point at a /settings route that
-        // 404'd on this build; they now deep-link to the live controls at
-        // /limits and /self-exclusion. Hrefs carry the active locale prefix
-        // (e.g. `/en/limits`), so match the path suffix.
-        const toolLinks = page.locator(
-          'a[href$="/limits"], a[href$="/self-exclusion"], a[href$="/settings"]',
-        );
-        await expect(toolLinks.first()).toBeVisible({ timeout: 5_000 });
-        expect(await toolLinks.count()).toBeGreaterThanOrEqual(1);
-      },
-    );
+          // The platform-tools cards used to point at a /settings route that
+          // 404'd on this build; they now deep-link to the live controls at
+          // /limits and /self-exclusion. Hrefs carry the active locale prefix
+          // (e.g. `/en/limits`), so match the path suffix.
+          const toolLinks = page.locator(
+            'a[href$="/limits"], a[href$="/self-exclusion"], a[href$="/settings"]',
+          );
+          await expect(toolLinks.first()).toBeVisible({ timeout: 5_000 });
+          expect(await toolLinks.count()).toBeGreaterThanOrEqual(1);
+        },
+      );
 
-    test(
-      "responsible gambling page has self-exclusion link",
-      { tag: ["@compliance"] },
-      async ({ page }) => {
-        await page.goto("/responsible-gambling");
-        await dismissLimitsDialog(page);
+      test(
+        "responsible gambling page has self-exclusion link",
+        { tag: ["@compliance"] },
+        async ({ page }) => {
+          await page.goto("/responsible-gambling");
+          await dismissLimitsDialog(page);
 
-        // Self-exclusion was promoted from /settings/self-exclusion to a
-        // top-level /self-exclusion route. Hrefs carry the active locale prefix
-        // on this build (e.g. `/en/self-exclusion`), so match anywhere in path.
-        await expect(
-          page.locator('a[href*="/self-exclusion"]').first(),
-        ).toBeVisible({ timeout: 10_000 });
-      },
-    );
+          // Self-exclusion was promoted from /settings/self-exclusion to a
+          // top-level /self-exclusion route. Hrefs carry the active locale prefix
+          // on this build (e.g. `/en/self-exclusion`), so match anywhere in path.
+          await expect(
+            page.locator('a[href*="/self-exclusion"]').first(),
+          ).toBeVisible({ timeout: 10_000 });
+        },
+      );
+    }
 
     // ── Self-exclusion ────────────────────────────────────────────────
 

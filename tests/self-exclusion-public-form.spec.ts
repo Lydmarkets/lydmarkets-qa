@@ -1,6 +1,4 @@
 import { test, expect } from "../fixtures/base";
-import { IS_BOT_BUILD } from "../helpers/is-bot-build";
-import { isNotFoundPage } from "../helpers/not-found";
 
 // /self-exclusion is the public deep-link target for the responsible-gambling
 // 24h-pause chip in the global RG strip. The page exposes two paths:
@@ -10,17 +8,7 @@ import { isNotFoundPage } from "../helpers/not-found";
 // The deep-link `/self-exclusion?step=form&period=24_hours` should land on
 // the same page (auth gate happens later when the user submits).
 
-// A play-money build (bot) has no self-exclusion surface at all: the route
-// 404s and the RG chrome links to independent help instead (SCRUM-2271).
 test.describe("Public /self-exclusion page", () => {
-  if (IS_BOT_BUILD) {
-    test("404s on the play-money build", async ({ page }) => {
-      await page.goto("/self-exclusion");
-      expect(await isNotFoundPage(page)).toBe(true);
-    });
-    return;
-  }
-
   test("page loads with the canonical heading and two exclusion paths", async ({
     page,
   }) => {
