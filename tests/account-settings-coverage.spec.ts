@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { HELPLINE_NAME, SELF_EXCLUSION_NAME } from "../helpers/compliance-names";
+import { IS_BOT_BUILD } from "../helpers/is-bot-build";
 
 test.describe("Account settings — coverage gaps", () => {
   test.use({ storageState: "playwright/.auth/user.json" });
@@ -73,6 +74,14 @@ test.describe("Account settings — coverage gaps", () => {
       await dismissLimitsDialog(page);
 
       await expect(page.locator("main").last()).toBeVisible({ timeout: 10_000 });
+
+      if (IS_BOT_BUILD) {
+        // Play-money build: no register, and the helpline is an independent
+        // organisation rather than the profile's placeholder (SCRUM-2271).
+        await expect(page.locator("main").getByText(/gambling therapy/i).first()).toBeVisible({ timeout: 5_000 });
+        await expect(page.locator("main").getByText(/demo helpline|demo self-exclusion/i)).toHaveCount(0);
+        return;
+      }
 
       await expect(
         page.getByText(HELPLINE_NAME).first(),

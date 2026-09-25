@@ -11,6 +11,10 @@ import { openUserMenu, getUserMenuDrawer } from "../helpers/user-menu";
 //   - "TRANSFERS" group with Deposit / Withdrawal / Transaction History
 //   - "RESPONSIBLE GAMBLING" group with Self-exclusion
 //
+// A play-money build (bot) has no cash rail and no self-exclusion surface:
+// Transfers keeps only Transaction History, and the RG group links to the
+// static /responsible-gambling page instead (SCRUM-2271 / SCRUM-2293).
+//
 // If any of these disappear unintentionally a user has no path to BankID
 // sign-in or to the RG tooling, so the drawer's contract is load-bearing.
 
@@ -47,7 +51,7 @@ test.describe("Header — Open-menu drawer", () => {
     await expect(languageToggle).toHaveCount(IS_BOT_BUILD ? 0 : 1);
   });
 
-  test("Transfers group lists Deposit / Withdrawal / Transaction History", async ({
+  test("Transfers group lists Deposit / Withdrawal / Transaction History (history only on play money)", async ({
     page,
   }) => {
     const drawer = getUserMenuDrawer(page);
@@ -55,6 +59,13 @@ test.describe("Header — Open-menu drawer", () => {
     // `/en/wallet/deposit`), so match the path suffix rather than an exact
     // string.
     await expect(drawer.getByText(/^transfers$/i)).toBeVisible();
+    if (IS_BOT_BUILD) {
+      await expect(drawer.getByRole("link", { name: /^deposit$|^withdrawal$/i })).toHaveCount(0);
+      await expect(
+        drawer.getByRole("link", { name: /^transaction history$/i })
+      ).toHaveAttribute("href", /\/wallet\/transactions$/);
+      return;
+    }
     await expect(drawer.getByRole("link", { name: /^deposit$/i })).toHaveAttribute(
       "href",
       /\/wallet\/deposit$/
@@ -68,9 +79,17 @@ test.describe("Header — Open-menu drawer", () => {
     ).toHaveAttribute("href", /\/wallet\/transactions$/);
   });
 
-  test("Responsible-gambling group covers Self-exclusion", async ({ page }) => {
+  test("Responsible-gambling group covers Self-exclusion (RG page on play money)", async ({ page }) => {
     const drawer = getUserMenuDrawer(page);
-    await expect(drawer.getByText(/^responsible gambling$/i)).toBeVisible();
+    await expect(drawer.getByText(/^responsible gambling$/i).first()).toBeVisible();
+
+    if (IS_BOT_BUILD) {
+      await expect(drawer.getByRole("link", { name: /^self.?exclusion$/i })).toHaveCount(0);
+      await expect(
+        drawer.getByRole("link", { name: /^responsible gambling$/i })
+      ).toHaveAttribute("href", /\/responsible-gambling$/);
+      return;
+    }
 
     // Internal links carry the active locale prefix (e.g. `/en/self-exclusion`)
     // on this build, so match the path suffix rather than an exact string.

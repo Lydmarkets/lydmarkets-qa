@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures/base";
 import { dismissLimitsDialog } from "../helpers/dismiss-limits-dialog";
 import { IS_BOT_BUILD } from "../helpers/is-bot-build";
+import { isNotFoundPage } from "../helpers/not-found";
 import { HELPLINE_NAME, INDEFINITE_PERIOD, SELF_EXCLUSION_NAME } from "../helpers/compliance-names";
 
 test.describe("Compliance spec — E2E coverage", () => {
@@ -46,6 +47,42 @@ test.describe("Compliance spec — E2E coverage", () => {
 
   test.describe("authenticated", () => {
     test.use({ storageState: "playwright/.auth/user.json" });
+
+    // ── Play-money build (bot) ─────────────────────────────────────────
+    // A play-money build has no regulated RG surface: /responsible-gambling
+    // is a static page pointing at independent help, and the self-exclusion
+    // and limits routes 404 (SCRUM-2271). The regulated tests below run
+    // against a licensed build only.
+
+    if (IS_BOT_BUILD) {
+      test(
+        "responsible gambling page points at independent help, not regulated tools",
+        { tag: ["@compliance"] },
+        async ({ page }) => {
+          await page.goto("/responsible-gambling");
+          await dismissLimitsDialog(page);
+
+          await expect(
+            page.getByRole("heading", { name: /responsible gambling/i, level: 1 }),
+          ).toBeVisible({ timeout: 10_000 });
+          for (const host of ["gamblingtherapy.org", "gamblersanonymous.org", "gamcare.org.uk"]) {
+            await expect(page.locator(`main a[href*="${host}"]`).first()).toBeVisible();
+          }
+          await expect(
+            page.locator('main a[href$="/self-exclusion"], main a[href$="/limits"]'),
+          ).toHaveCount(0);
+          await expect(page.locator("main").getByText(/demo helpline|demo self-exclusion/i)).toHaveCount(0);
+        },
+      );
+
+      for (const route of ["/self-exclusion", "/limits"]) {
+        test(`${route} 404s for a signed-in player`, { tag: ["@compliance"] }, async ({ page }) => {
+          await page.goto(route);
+          expect(await isNotFoundPage(page)).toBe(true);
+        });
+      }
+      return;
+    }
 
     // ── Responsible gambling (public page) ─────────────────────────────
 
