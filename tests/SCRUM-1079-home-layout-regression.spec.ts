@@ -141,7 +141,7 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     }
   });
 
-  test("responsible-gambling tools strip exposes the self-exclusion chip (18+ and help on play money)", async ({ page }) => {
+  test("responsible-gambling tools strip exposes the self-exclusion chip (plus 18+ and help on play money)", async ({ page }) => {
     await page.goto("/");
     // Unauthenticated visitors get the SV locale by default, so the
     // complementary landmark's aria-label is "Spelansvarsverktyg".
@@ -151,11 +151,12 @@ test.describe("SCRUM-1079 — Home layout regression", () => {
     await expect(rg).toBeVisible({ timeout: 25_000 });
 
     if (IS_BOT_BUILD) {
-      // Play-money build: the RG chips give way to an 18+ mark and a link to
-      // independent help (SCRUM-2271).
+      // Play-money build: the limits/self-test chips give way to an 18+ mark
+      // and a link to independent help; the self-exclusion chip stays
+      // (SCRUM-2271 / SCRUM-2282).
       await expect(rg.getByText("18+", { exact: true })).toBeVisible();
       await expect(rg.locator('a[href*="gamblingtherapy.org"]')).toBeVisible();
-      await expect(rg.locator('a[href*="/self-exclusion"]')).toHaveCount(0);
+      await expect(rg.locator('a[href$="/self-exclusion"]').first()).toBeVisible();
       return;
     }
 
